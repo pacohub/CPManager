@@ -34,11 +34,17 @@ export class SagaController {
     @Param('id') id: string,
     @Body() data: Partial<Saga>,
   ): Promise<Saga | null> {
-    return this.sagaService.update(Number(id), data);
+    // Filtrar 'ids' si accidentalmente llega en el body
+    const { ids, ...safeData } = data as any;
+    return this.sagaService.update(Number(id), safeData);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string): Promise<void> {
     return this.sagaService.remove(Number(id));
+  }
+  @Put('order')
+  async updateOrder(@Body() body: { ids: number[] }) {
+    return this.sagaService.saveOrder(body.ids);
   }
 }

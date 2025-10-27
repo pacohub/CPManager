@@ -10,4 +10,7 @@ export class Saga {
 
   @Column({ type: 'text', nullable: true })
   descripcion: string;
+
+  @Column({ type: 'int', default: 0 })
+  orden: number;
 }
