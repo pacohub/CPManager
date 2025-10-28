@@ -29,8 +29,16 @@ let SagaService = class SagaService {
         return this.sagaRepository.findOneBy({ id });
     }
     async create(data) {
-        const saga = this.sagaRepository.create({ ...data, orden: 5 });
-        console.log('[DEBUG] Valor de saga.orden antes de guardar:', saga.orden);
+        const maxOrderResult = await this.sagaRepository
+            .createQueryBuilder('saga')
+            .select('MAX(saga.order)', 'max')
+            .getRawOne();
+        const maxOrder = maxOrderResult?.max ?? 0;
+        const saga = this.sagaRepository.create({
+            ...data,
+            order: data.order ?? (Number(maxOrder) + 1),
+        });
+        console.log('[DEBUG] Saga order before save:', saga.order);
         return await this.sagaRepository.save(saga);
     }
     async update(id, data) {
@@ -43,11 +51,11 @@ let SagaService = class SagaService {
         await this.sagaRepository.delete(id);
     }
     async saveOrder(ids) {
-        console.log('[BACKEND] [ORDER] Intentando guardar orden. IDs recibidos:', ids);
+        console.log('[BACKEND] [ORDER] Trying to save order. Received IDs:', ids);
         for (let i = 0; i < ids.length; i++) {
             try {
-                const result = await this.sagaRepository.update(ids[i], { orden: i });
-                console.log(`[BACKEND] [ORDER] Actualizando saga id=${ids[i]} con orden=${i}`, result);
+                const result = await this.sagaRepository.update(ids[i], { order: i });
+                console.log(`[BACKEND] [ORDER] Updating saga id=${ids[i]} with order=${i}`, result);
             }
             catch (err) {
                 console.error(`[BACKEND] [ORDER] Error actualizando saga id=${ids[i]}:`, err);

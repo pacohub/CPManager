@@ -6,11 +6,11 @@ export class Saga {
   id: number;
 
   @Column({ length: 100 })
-  nombre: string;
+  name: string;
 
   @Column({ type: 'text', nullable: true })
-  descripcion: string;
+  description: string;
 
   @Column({ type: 'int', default: 0 })
-  orden: number;
+  order: number;
 }

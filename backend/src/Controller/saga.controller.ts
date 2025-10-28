@@ -43,6 +43,7 @@ export class SagaController {
   remove(@Param('id') id: string): Promise<void> {
     return this.sagaService.remove(Number(id));
   }
+
   @Put('order')
   async updateOrder(@Body() body: { ids: number[] }) {
     return this.sagaService.saveOrder(body.ids);

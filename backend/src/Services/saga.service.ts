@@ -5,6 +5,19 @@ import { Saga } from '../Entities/saga.entity';
 
 @Injectable()
 export class SagaService {
+  /**
+   * Actualiza el campo 'order' de las sagas según el array de IDs recibido.
+   * @param ids Array de IDs de sagas en el nuevo orden
+   */
+  async saveOrder(ids: number[]): Promise<{ success: boolean }> {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new Error('No saga IDs provided for ordering');
+    }
+    for (let i = 0; i < ids.length; i++) {
+      await this.sagaRepository.update(ids[i], { order: i });
+    }
+    return { success: true };
+  }
   constructor(
     @InjectRepository(Saga)
     private sagaRepository: Repository<Saga>,
@@ -19,9 +32,18 @@ export class SagaService {
   }
 
   async create(data: Partial<Saga>): Promise<Saga> {
-  const saga = this.sagaRepository.create({ ...data, orden: 5 });
-  console.log('[DEBUG] Valor de saga.orden antes de guardar:', saga.orden);
-  return await this.sagaRepository.save(saga);
+    // Get current max value of 'order'
+    const maxOrderResult = await this.sagaRepository
+      .createQueryBuilder('saga')
+      .select('MAX(saga.order)', 'max')
+      .getRawOne();
+    const maxOrder = maxOrderResult?.max ?? 0;
+    const saga = this.sagaRepository.create({
+      ...data,
+      order: data.order ?? (Number(maxOrder) + 1),
+    });
+    console.log('[DEBUG] Saga order before save:', saga.order);
+    return await this.sagaRepository.save(saga);
   }
 
   async update(id: number, data: Partial<Saga>): Promise<Saga | null> {
@@ -36,11 +58,11 @@ export class SagaService {
     await this.sagaRepository.delete(id);
   }
   async saveOrder(ids: number[]) {
-    console.log('[BACKEND] [ORDER] Intentando guardar orden. IDs recibidos:', ids);
+  console.log('[BACKEND] [ORDER] Trying to save order. Received IDs:', ids);
     for (let i = 0; i < ids.length; i++) {
       try {
-        const result = await this.sagaRepository.update(ids[i], { orden: i });
-        console.log(`[BACKEND] [ORDER] Actualizando saga id=${ids[i]} con orden=${i}`, result);
+  const result = await this.sagaRepository.update(ids[i], { order: i });
+  console.log(`[BACKEND] [ORDER] Updating saga id=${ids[i]} with order=${i}`, result);
       } catch (err) {
         console.error(`[BACKEND] [ORDER] Error actualizando saga id=${ids[i]}:`, err);
       }

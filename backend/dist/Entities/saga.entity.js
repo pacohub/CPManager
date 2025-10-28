@@ -13,9 +13,9 @@ exports.Saga = void 0;
 const typeorm_1 = require("typeorm");
 let Saga = class Saga {
     id;
-    nombre;
-    descripcion;
-    orden;
+    name;
+    description;
+    order;
 };
 exports.Saga = Saga;
 __decorate([
@@ -25,15 +25,15 @@ __decorate([
 __decorate([
     (0, typeorm_1.Column)({ length: 100 }),
     __metadata("design:type", String)
-], Saga.prototype, "nombre", void 0);
+], Saga.prototype, "name", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     __metadata("design:type", String)
-], Saga.prototype, "descripcion", void 0);
+], Saga.prototype, "description", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'int', default: 0 }),
     __metadata("design:type", Number)
-], Saga.prototype, "orden", void 0);
+], Saga.prototype, "order", void 0);
 exports.Saga = Saga = __decorate([
     (0, typeorm_1.Entity)()
 ], Saga);
