@@ -9,22 +9,14 @@ export class SagaService {
    * Actualiza el campo 'order' de las sagas según el array de IDs recibido.
    * @param ids Array de IDs de sagas en el nuevo orden
    */
-  async saveOrder(ids: number[]): Promise<{ success: boolean }> {
-    if (!Array.isArray(ids) || ids.length === 0) {
-      throw new Error('No saga IDs provided for ordering');
-    }
-    for (let i = 0; i < ids.length; i++) {
-      await this.sagaRepository.update(ids[i], { order: i });
-    }
-    return { success: true };
-  }
+
   constructor(
     @InjectRepository(Saga)
     private sagaRepository: Repository<Saga>,
   ) {}
 
   findAll(): Promise<Saga[]> {
-    return this.sagaRepository.find();
+    return this.sagaRepository.find({ order: { order: 'ASC' } });
   }
 
   findOne(id: number): Promise<Saga | null> {
@@ -49,6 +41,14 @@ export class SagaService {
   async update(id: number, data: Partial<Saga>): Promise<Saga | null> {
     // Filtrar 'ids' si accidentalmente llega en el body
     const { ids, ...safeData } = data as any;
+    if (!id || isNaN(id)) {
+      console.error('[BACKEND] [UPDATE SAGA] id inválido:', id);
+      throw new Error('ID inválido para actualizar saga');
+    }
+    if (!safeData || Object.keys(safeData).length === 0) {
+      console.error('[BACKEND] [UPDATE SAGA] body vacío:', safeData);
+      throw new Error('Datos vacíos para actualizar saga');
+    }
     console.log('[BACKEND] [UPDATE SAGA] id:', id, 'body recibido:', data, 'body enviado:', safeData);
     await this.sagaRepository.update(id, safeData);
     return this.findOne(id);
@@ -57,23 +57,21 @@ export class SagaService {
   async remove(id: number): Promise<void> {
     await this.sagaRepository.delete(id);
   }
-  async saveOrder(ids: number[]) {
-  console.log('[BACKEND] [ORDER] Trying to save order. Received IDs:', ids);
-    for (let i = 0; i < ids.length; i++) {
+
+    async saveOrder(ids: number[]): Promise<{ success: boolean }> {
       try {
-  const result = await this.sagaRepository.update(ids[i], { order: i });
-  console.log(`[BACKEND] [ORDER] Updating saga id=${ids[i]} with order=${i}`, result);
-      } catch (err) {
-        console.error(`[BACKEND] [ORDER] Error actualizando saga id=${ids[i]}:`, err);
+        if (!Array.isArray(ids) || ids.length === 0) {
+          throw new Error('No saga IDs provided for ordering');
+        }
+        console.log('[BACKEND] [saveOrder] Recibido ids:', ids);
+        for (let i = 0; i < ids.length; i++) {
+          const result = await this.sagaRepository.update(ids[i], { order: i });
+          console.log(`[BACKEND] [saveOrder] Actualizando saga id=${ids[i]} a order=${i}. Resultado:`, result);
+        }
+        return { success: true };
+      } catch (error) {
+        console.error('[BACKEND] [saveOrder] Error:', error);
+        throw error;
       }
     }
-    // Probar si la columna existe realmente
-    try {
-      const test = await this.sagaRepository.query('PRAGMA table_info(saga)');
-      console.log('[BACKEND] [ORDER] Estructura de la tabla saga:', test);
-    } catch (err) {
-      console.error('[BACKEND] [ORDER] Error consultando estructura de la tabla saga:', err);
-    }
-    return { success: true };
-  }
 }

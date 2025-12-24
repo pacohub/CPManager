@@ -29,15 +29,16 @@ let SagaController = class SagaController {
     create(data) {
         return this.sagaService.create(data);
     }
+    async updateOrder(body) {
+        return this.sagaService.saveOrder(body.ids);
+    }
     update(id, data) {
+        console.log('[BACKEND] [CONTROLLER] id recibido en update:', id);
         const { ids, ...safeData } = data;
         return this.sagaService.update(Number(id), safeData);
     }
     remove(id) {
         return this.sagaService.remove(Number(id));
-    }
-    async updateOrder(body) {
-        return this.sagaService.saveOrder(body.ids);
     }
 };
 exports.SagaController = SagaController;
@@ -62,6 +63,13 @@ __decorate([
     __metadata("design:returntype", Promise)
 ], SagaController.prototype, "create", null);
 __decorate([
+    (0, common_1.Put)('order'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], SagaController.prototype, "updateOrder", null);
+__decorate([
     (0, common_1.Put)(':id'),
     __param(0, (0, common_1.Param)('id')),
     __param(1, (0, common_1.Body)()),
@@ -76,13 +84,6 @@ __decorate([
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)
 ], SagaController.prototype, "remove", null);
-__decorate([
-    (0, common_1.Put)('order'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], SagaController.prototype, "updateOrder", null);
 exports.SagaController = SagaController = __decorate([
     (0, common_1.Controller)('sagas'),
     __metadata("design:paramtypes", [saga_service_1.SagaService])
