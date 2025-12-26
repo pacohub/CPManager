@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DndContext, closestCenter, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -6,7 +6,8 @@ import { Campaign } from '../interfaces/campaign';
 import CampaignCard from '../components/CampaignCard';
 import CampaignModal from '../components/CampaignModal';
 import { getCampaignsBySaga, createCampaign, updateCampaign, deleteCampaign } from './campaignApi';
-import { FaBookOpen, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle } from 'react-icons/fa';
+import { getAllChapters } from './chapterApi';
+import { FaBookOpen, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaMap } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 
 interface SagaType {
@@ -120,7 +121,12 @@ const DraggableCampaign: React.FC<DraggableCampaignProps> = ({ campaign, enabled
   );
 };
 
-const SagaPanel: React.FC = () => {
+interface SagaPanelProps {
+  onOpenCampaign?: (campaignId: number) => void;
+  onOpenMaps?: () => void;
+}
+
+const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps }) => {
   // Campañas por saga
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -129,22 +135,20 @@ const SagaPanel: React.FC = () => {
   const [confirmCampaignOpen, setConfirmCampaignOpen] = useState(false);
   const [pendingDeleteCampaign, setPendingDeleteCampaign] = useState<Campaign | null>(null);
   const [sagas, setSagas] = useState<SagaType[]>([]);
+  const [chaptersByCampaignId, setChaptersByCampaignId] = useState<Record<number, number>>({});
   const [form, setForm] = useState<Partial<SagaType>>({ name: '', description: '' });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
   // Drag and drop state for sagas
   const [dndEnabled, setDndEnabled] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
     // DnD Kit sensors
     const sensors = useSensors(
       useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
     );
 
     // Drag and drop handlers (sagas + campaigns)
-    const handleDragStart = () => setIsDragging(true);
     const handleDragEnd = async (event: any) => {
-      setIsDragging(false);
       const { active, over } = event;
       if (!over) return;
 
@@ -292,6 +296,30 @@ const SagaPanel: React.FC = () => {
     else setCampaigns([]);
   }, [sagas]);
 
+  // Cargar capítulos (global) para poder contar por campaña en las tarjetas
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const all = await getAllChapters();
+        if (cancelled) return;
+        const counts: Record<number, number> = {};
+        (all ?? []).forEach((ch) => {
+          const key = Number((ch as any).campaignId);
+          if (Number.isNaN(key)) return;
+          counts[key] = (counts[key] || 0) + 1;
+        });
+        setChaptersByCampaignId(counts);
+      } catch (e) {
+        if (cancelled) return;
+        setChaptersByCampaignId({});
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Drag and drop handlers removed
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) {
@@ -333,16 +361,6 @@ const SagaPanel: React.FC = () => {
     }
   }
 
-  const nameCounts = useMemo(() => {
-    const map: Record<string, number> = {};
-    sagas.forEach((s) => {
-      const key = (s.name || '').trim().toLowerCase();
-      if (!key) return;
-      map[key] = (map[key] || 0) + 1;
-    });
-    return map;
-  }, [sagas]);
-
   let filteredSagas: SagaType[] = [];
   let filteredCampaignsBySaga: Record<number, Campaign[]> = {};
   if (search.trim()) {
@@ -380,18 +398,28 @@ const SagaPanel: React.FC = () => {
       <div className="panel-sticky-header">
         <div className="panel-header">
           <h1>CPManager</h1>
-          <button
-            className="icon"
-            aria-label="Nueva Saga"
-            title="Nueva Saga"
-            onClick={() => {
-              setShowModal(true);
-              setEditingId(null);
-              setForm({ name: '', description: '' });
-            }}
-          >
-            <FaBookOpen size={28} color="#FFD700" />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              className="icon"
+              aria-label="Mapas"
+              title="Mapas"
+              onClick={() => onOpenMaps?.()}
+            >
+              <FaMap size={26} color="#FFD700" />
+            </button>
+            <button
+              className="icon"
+              aria-label="Nueva Saga"
+              title="Nueva Saga"
+              onClick={() => {
+                setShowModal(true);
+                setEditingId(null);
+                setForm({ name: '', description: '' });
+              }}
+            >
+              <FaBookOpen size={28} color="#FFD700" />
+            </button>
+          </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
           <input
@@ -412,11 +440,16 @@ const SagaPanel: React.FC = () => {
             {dndEnabled ? <FaLockOpen size={22} color="#FFD700" title="Drag and drop habilitado" /> : <FaLock size={22} color="#FFD700" title="Drag and drop deshabilitado" />}
           </button>
         </div>
+        {search.trim() ? (
+          <div style={{ marginTop: -8, marginBottom: 16, opacity: 0.9, fontSize: 13 }}>
+            Resultados: {filteredSagas.length}
+          </div>
+        ) : null}
       </div>
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
-        onDragStart={dndEnabled ? handleDragStart : undefined}
+        onDragStart={undefined}
         onDragEnd={dndEnabled ? handleDragEnd : undefined}
       >
         <SortableContext
@@ -427,14 +460,27 @@ const SagaPanel: React.FC = () => {
             {filteredSagas.map((saga) => {
               const expanded = expandedSagaIds.has(saga.id);
               const hasDescription = Boolean((saga.description ?? '').trim());
-              const campaignCount = campaigns.filter(c => c.sagaId === saga.id).length;
-              const hasCampaigns = campaignCount > 0;
-              const showWarning = !hasDescription || !hasCampaigns;
-              const warningText = !hasDescription && !hasCampaigns
-                ? 'Esta saga no tiene descripción y no tiene campañas.'
-                : !hasDescription
-                  ? 'Esta saga no tiene descripción.'
-                  : 'Esta saga no tiene campañas.';
+              const sagaCampaignsAll = campaigns.filter(c => c.sagaId === saga.id);
+              const hasCampaigns = sagaCampaignsAll.length > 0;
+              const hasIncompleteCampaigns = sagaCampaignsAll.some((c) => {
+                const chapterCount = chaptersByCampaignId[c.id] ?? 0;
+                const hasCDescription = Boolean((c.description ?? '').trim());
+                const hasCImage = Boolean(c.image);
+                const hasCFile = Boolean(c.file);
+                const hasCChapters = chapterCount > 0;
+                return !hasCDescription || !hasCImage || !hasCFile || !hasCChapters;
+              });
+
+              const missing: string[] = [];
+              if (!hasDescription) missing.push('descripción');
+              if (!hasCampaigns) missing.push('campañas');
+              if (hasIncompleteCampaigns) missing.push('campañas incompletas');
+
+              const showWarning = missing.length > 0;
+              const warningText =
+                missing.length === 1 && missing[0] === 'campañas incompletas'
+                  ? 'Esta saga tiene campañas incompletas.'
+                  : `Falta: ${missing.join(', ')}.`;
 
               return (
                 <SortableSagaCard
@@ -535,6 +581,8 @@ const SagaPanel: React.FC = () => {
                                 <DraggableCampaign campaign={cellCampaign} enabled={dndEnabled}>
                                   <CampaignCard
                                     campaign={cellCampaign}
+                                    chapterCount={chaptersByCampaignId[cellCampaign.id] ?? 0}
+                                    onOpen={() => onOpenCampaign?.(cellCampaign.id)}
                                     onEdit={() => {
                                       setCampaignInitial(cellCampaign);
                                       setCampaignSagaId(saga.id);
@@ -603,6 +651,32 @@ const SagaPanel: React.FC = () => {
         onCancel={() => {
           setConfirmOpen(false);
           setPendingDeleteId(null);
+        }}
+      />
+
+      <ConfirmModal
+        open={confirmCampaignOpen}
+        message={"¿Estás seguro de que deseas eliminar esta campaña?"}
+        onConfirm={async () => {
+          if (!pendingDeleteCampaign?.id) {
+            setConfirmCampaignOpen(false);
+            setPendingDeleteCampaign(null);
+            return;
+          }
+          const idToDelete = pendingDeleteCampaign.id;
+          try {
+            await deleteCampaign(idToDelete);
+            setCampaigns(prev => prev.filter(c => c.id !== idToDelete));
+          } catch (err) {
+            console.error('Error eliminando campaña', err);
+          } finally {
+            setConfirmCampaignOpen(false);
+            setPendingDeleteCampaign(null);
+          }
+        }}
+        onCancel={() => {
+          setConfirmCampaignOpen(false);
+          setPendingDeleteCampaign(null);
         }}
       />
       {showModal && (

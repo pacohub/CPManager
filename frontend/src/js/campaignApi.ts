@@ -26,6 +26,11 @@ export async function getCampaignsBySaga(sagaId: number): Promise<Campaign[]> {
   return ensureOk<Campaign[]>(res);
 }
 
+export async function getCampaign(id: number): Promise<Campaign> {
+  const res = await fetch(`${API_URL}/${id}`);
+  return ensureOk<Campaign>(res);
+}
+
 export async function createCampaign(data: FormData): Promise<Campaign> {
   const res = await fetch(API_URL, {
     method: 'POST',

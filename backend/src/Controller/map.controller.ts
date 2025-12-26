@@ -6,7 +6,6 @@ import {
   Param,
   Post,
   Put,
-  Query,
   UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
@@ -14,8 +13,8 @@ import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { Request } from 'express';
 import * as path from 'path';
-import { Chapter } from '../Entities/chapter.entity';
-import { ChapterService } from '../Services/chapter.service';
+import { Map } from '../Entities/map.entity';
+import { MapService } from '../Services/map.service';
 
 function fileName(req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) {
   const ext = path.extname(file.originalname);
@@ -23,21 +22,18 @@ function fileName(req: Request, file: Express.Multer.File, cb: (error: Error | n
   cb(null, `${base}-${Date.now()}${ext}`);
 }
 
-@Controller('chapters')
-export class ChapterController {
-  constructor(private readonly chapterService: ChapterService) {}
+@Controller('maps')
+export class MapController {
+  constructor(private readonly mapService: MapService) {}
 
   @Get()
-  async findAllByCampaign(@Query('campaignId') campaignId?: string): Promise<Chapter[]> {
-    if (campaignId === undefined || campaignId === null || campaignId === '') {
-      return this.chapterService.findAll();
-    }
-    return this.chapterService.findAllByCampaign(Number(campaignId));
+  async findAll(): Promise<Map[]> {
+    return this.mapService.findAll();
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<Chapter | null> {
-    return this.chapterService.findOne(Number(id));
+  async findOne(@Param('id') id: string): Promise<Map | null> {
+    return this.mapService.findOne(Number(id));
   }
 
   @Post()
@@ -60,11 +56,9 @@ export class ChapterController {
   async create(
     @Body() data: any,
     @UploadedFiles() files: { image?: Express.Multer.File[] },
-  ): Promise<Chapter> {
-    if (data?.campaignId !== undefined) data.campaignId = Number(data.campaignId);
-    if (data?.order !== undefined) data.order = Number(data.order);
+  ): Promise<Map> {
     if (files?.image?.[0]) data.image = `/uploads/images/${files.image[0].filename}`;
-    return this.chapterService.create(data);
+    return this.mapService.create(data);
   }
 
   @Put(':id')
@@ -88,15 +82,13 @@ export class ChapterController {
     @Param('id') id: string,
     @Body() data: any,
     @UploadedFiles() files: { image?: Express.Multer.File[] },
-  ): Promise<Chapter | null> {
-    if (data?.campaignId !== undefined) data.campaignId = Number(data.campaignId);
-    if (data?.order !== undefined) data.order = Number(data.order);
+  ): Promise<Map | null> {
     if (files?.image?.[0]) data.image = `/uploads/images/${files.image[0].filename}`;
-    return this.chapterService.update(Number(id), data);
+    return this.mapService.update(Number(id), data);
   }
 
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<void> {
-    return this.chapterService.remove(Number(id));
+    return this.mapService.remove(Number(id));
   }
 }

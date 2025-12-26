@@ -8,6 +8,8 @@ interface Props {
   campaign: Campaign;
   onEdit: () => void;
   onDelete: () => void;
+  onOpen?: () => void;
+  chapterCount?: number;
 }
 
 const getImageUrl = (img?: string) => {
@@ -17,7 +19,7 @@ const getImageUrl = (img?: string) => {
   return encodeURI(`http://localhost:4000/${img.replace(/^\/+/, '')}`);
 };
 
-const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete }) => {
+const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete, onOpen, chapterCount = 0 }) => {
   const [imageExists, setImageExists] = useState(true);
   useEffect(() => {
     if (!campaign.image) return setImageExists(true);
@@ -39,10 +41,12 @@ const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete }) => {
   const hasDescription = Boolean((campaign.description ?? '').trim());
   const hasImage = Boolean(campaign.image);
   const hasFile = Boolean(campaign.file);
+  const hasChapters = chapterCount > 0;
   const missing: string[] = [];
   if (!hasDescription) missing.push('descripción');
   if (!hasImage) missing.push('imagen');
   if (!hasFile) missing.push('archivo');
+  if (!hasChapters) missing.push('capítulos');
   const showWarning = missing.length > 0;
   const warningText = `Falta: ${missing.join(', ')}.`;
 
@@ -54,6 +58,7 @@ const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete }) => {
       }}
       tabIndex={0}
       aria-label={campaign.name}
+      onClick={() => onOpen?.()}
     >
       {showWarning ? (
         <span
@@ -68,7 +73,10 @@ const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete }) => {
       ) : null}
       {/* Overlay hover handled by CSS */}
       {/* Nombre de la campaña */}
-      <div className="campaign-title">{campaign.name}</div>
+      <div className="campaign-title">
+        <div>{campaign.name}</div>
+        <div className="campaign-subtitle">{chapterCount} capítulos</div>
+      </div>
       {/* Acciones solo en hover */}
       <div className="campaign-actions">
         {campaign.file ? (
@@ -76,54 +84,46 @@ const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete }) => {
             className="icon option"
             title="Descargar campaña"
             tabIndex={-1}
-            href={campaign.file.startsWith('http') ? campaign.file : `http://localhost:4000/${campaign.file.replace(/^\/+/,'')}`}
+            href={campaign.file.startsWith('http') ? campaign.file : `http://localhost:4000/${campaign.file.replace(/^\/+/, '')}`}
             download
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
           >
             <FaDownload size={14} />
           </a>
         ) : (
-          <>
-            <input
-              type="file"
-              id={`upload-campaign-${campaign.name}`}
-              style={{ display: 'none' }}
-              onClick={e => e.stopPropagation()}
-              onChange={async e => {
-                e.stopPropagation();
-                const file = e.target.files && e.target.files[0];
-                if (file) {
-                  // Subida real del archivo de campaña
-                  const formData = new FormData();
-                  formData.append('file', file);
-                  formData.append('name', campaign.name);
-                  formData.append('description', campaign.description);
-                  formData.append('sagaId', String(campaign.sagaId));
-                  if (campaign.id) {
-                    await updateCampaign(campaign.id, formData);
-                  } else {
-                    await createCampaign(formData);
-                  }
-                  window.location.reload(); // Refresca para ver el cambio
+          <button
+            className="icon option"
+            title="Poner link"
+            tabIndex={-1}
+            onClick={async (e) => {
+              e.stopPropagation();
+              const nextLink = window.prompt('Pega el link del archivo de la campaña (URL):', campaign.file ?? '');
+              if (nextLink === null) return;
+              const trimmed = nextLink.trim();
+              try {
+                const formData = new FormData();
+                formData.append('name', campaign.name);
+                formData.append('description', campaign.description);
+                formData.append('sagaId', String(campaign.sagaId));
+                formData.append('file', trimmed);
+                if (campaign.id) {
+                  await updateCampaign(campaign.id, formData);
+                } else {
+                  await createCampaign(formData);
                 }
-              }}
-            />
-            <button
-              className="icon option"
-              title="Subir campaña"
-              tabIndex={-1}
-              onClick={e => {
-                e.stopPropagation();
-                const input = document.getElementById(`upload-campaign-${campaign.name}`) as HTMLInputElement;
-                if (input) input.click();
-              }}
-            >
-              <FaUpload size={14} />
-            </button>
-          </>
+                window.location.reload();
+              } catch (err) {
+                console.error('Error guardando link de campaña', err);
+              }
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <FaUpload size={14} />
+          </button>
         )}
-        <button className="icon option" title="Editar" onClick={e => { e.stopPropagation(); onEdit(); }} tabIndex={-1}><FaEdit size={14} /></button>
-        <button className="icon option" title="Eliminar" onClick={e => { e.stopPropagation(); onDelete(); }} tabIndex={-1}><FaTrash size={14} /></button>
+        <button className="icon option" title="Editar" onClick={e => { e.stopPropagation(); onEdit(); }} onPointerDown={e => e.stopPropagation()} tabIndex={-1}><FaEdit size={14} /></button>
+        <button className="icon option" title="Eliminar" onClick={e => { e.stopPropagation(); onDelete(); }} onPointerDown={e => e.stopPropagation()} tabIndex={-1}><FaTrash size={14} /></button>
       </div>
       {/* Descripción solo en hover */}
       <div className="campaign-desc">

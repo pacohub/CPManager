@@ -1,0 +1,393 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { FaArrowLeft, FaEdit, FaTrash, FaBookmark, FaDownload, FaUpload, FaLock, FaLockOpen } from 'react-icons/fa';
+import { Campaign } from '../interfaces/campaign';
+import { Chapter } from '../interfaces/chapter';
+import { getCampaign } from './campaignApi';
+import { createChapter, deleteChapter, getChaptersByCampaign, updateChapter } from './chapterApi';
+import ChapterModal from '../components/ChapterModal';
+import ConfirmModal from '../components/ConfirmModal';
+
+interface Props {
+  campaignId: number;
+  onBack: () => void;
+}
+
+function buildChapterOrderFormData(order: number): FormData {
+  const formData = new FormData();
+  formData.append('order', String(order));
+  return formData;
+}
+
+interface SortableChapterRowProps {
+  chapter: Chapter;
+  enabled: boolean;
+  children: React.ReactNode;
+}
+
+const SortableChapterRow: React.FC<SortableChapterRowProps> = ({ chapter, enabled, children }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: `chapter:${chapter.id}`, disabled: !enabled });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition: transition || undefined,
+    boxShadow: isDragging ? '0 0 10px #FFD700' : undefined,
+    opacity: isDragging ? 0.85 : 1,
+    cursor: enabled ? 'grab' : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...(enabled ? { ...attributes, ...listeners } : {})}
+    >
+      {children}
+    </div>
+  );
+};
+
+const getImageUrl = (img?: string) => {
+  if (!img) return undefined;
+  if (img.startsWith('http') || img.startsWith('data:')) return img;
+  return encodeURI(`http://localhost:4000/${img.replace(/^\/+/, '')}`);
+};
+
+const getFileUrl = (file?: string) => {
+  if (!file) return undefined;
+  if (file.startsWith('http')) return file;
+  return encodeURI(`http://localhost:4000/${file.replace(/^\/+/, '')}`);
+};
+
+function buildChapterUpdateFormData(chapter: Chapter, patch: Partial<Chapter> = {}, file?: File): FormData {
+  const formData = new FormData();
+  formData.append('campaignId', String(patch.campaignId ?? chapter.campaignId));
+  formData.append('name', String(patch.name ?? chapter.name ?? ''));
+  formData.append('description', String(patch.description ?? chapter.description ?? ''));
+  if (patch.file !== undefined) {
+    formData.append('file', String(patch.file ?? ''));
+  }
+  return formData;
+}
+
+const CampaignDetail: React.FC<Props> = ({ campaignId, onBack }) => {
+  const [campaign, setCampaign] = useState<Campaign | null>(null);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [chaptersDndEnabled, setChaptersDndEnabled] = useState(false);
+  const [chapterModalOpen, setChapterModalOpen] = useState(false);
+  const [chapterInitial, setChapterInitial] = useState<Partial<Chapter> | undefined>(undefined);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<Chapter | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+  );
+
+  useEffect(() => {
+    (async () => {
+      const c = await getCampaign(campaignId);
+      setCampaign(c);
+    })().catch((e) => console.error('Error cargando campaña', e));
+  }, [campaignId]);
+
+  const refreshChapters = useCallback(async () => {
+    const list = await getChaptersByCampaign(campaignId);
+    setChapters(list || []);
+  }, [campaignId]);
+
+  useEffect(() => {
+    refreshChapters().catch((e) => console.error('Error cargando capítulos', e));
+  }, [refreshChapters]);
+
+  const bg = useMemo(() => {
+    const url = getImageUrl(campaign?.image);
+    return url ? `url("${url}")` : undefined;
+  }, [campaign?.image]);
+
+  if (!campaign) {
+    return (
+      <div className="panel panel-corners-soft block-border block-panel-border">
+        <div className="panel-header">
+          <button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
+            <FaArrowLeft size={22} color="#FFD700" />
+          </button>
+          <h1 style={{ margin: 0 }}>Campaña</h1>
+          <div style={{ width: 34 }} />
+        </div>
+        <div style={{ padding: 12 }}>Cargando...</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="panel panel-corners-soft block-border block-panel-border">
+      <div className="panel-header">
+        <button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
+          <FaArrowLeft size={22} color="#FFD700" />
+        </button>
+        <h1 style={{ margin: 0 }}>Campaña</h1>
+        <div style={{ width: 34 }} />
+      </div>
+
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          minHeight: 420,
+          borderRadius: 10,
+          overflow: 'hidden',
+          backgroundImage: bg,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'linear-gradient(90deg, rgba(0,0,0,0.80) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.80) 100%)',
+          }}
+        />
+        <div
+          style={{
+            position: 'relative',
+            width: '100%',
+            padding: 14,
+            boxSizing: 'border-box',
+            display: 'flex',
+            gap: 14,
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
+          {/* Left division: campaign info */}
+          <div
+            style={{
+              flex: '1 1 420px',
+              minWidth: 280,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 12,
+              boxSizing: 'border-box',
+            }}
+          >
+            <div style={{ width: '100%', maxWidth: 640 }}>
+              <div style={{ fontSize: 28, fontWeight: 800, color: '#e2c044', textAlign: 'center' }}>{campaign.name}</div>
+              <div style={{ marginTop: 8, color: '#e2d9b7', opacity: 0.98, textAlign: 'center' }}>
+                {campaign.description}
+              </div>
+            </div>
+          </div>
+
+          {/* Right division: chapters */}
+          <div
+            style={{
+              flex: '0 0 380px',
+              maxWidth: '100%',
+              minWidth: 280,
+              padding: 12,
+              boxSizing: 'border-box',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+              <div />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button
+                  className="icon"
+                  aria-label="Nuevo Capítulo"
+                  title="Nuevo Capítulo"
+                  onClick={() => {
+                    setChapterInitial(undefined);
+                    setChapterModalOpen(true);
+                  }}
+                  style={{ background: 'none', border: 'none' }}
+                >
+                  <FaBookmark size={20} color="#FFD700" />
+                </button>
+                <button
+                  className="icon"
+                  aria-label={chaptersDndEnabled ? 'Deshabilitar reordenamiento' : 'Habilitar reordenamiento'}
+                  title={chaptersDndEnabled ? 'Deshabilitar reordenamiento' : 'Habilitar reordenamiento'}
+                  onClick={() => setChaptersDndEnabled((v) => !v)}
+                  style={{ background: 'none', border: 'none' }}
+                >
+                  {chaptersDndEnabled ? <FaLockOpen size={18} color="#FFD700" /> : <FaLock size={18} color="#FFD700" />}
+                </button>
+              </div>
+            </div>
+
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={async (event) => {
+                if (!chaptersDndEnabled) return;
+                const { active, over } = event;
+                if (!over) return;
+                if (active.id === over.id) return;
+
+                const activeId = String(active.id);
+                const overId = String(over.id);
+                if (!activeId.startsWith('chapter:') || !overId.startsWith('chapter:')) return;
+
+                const activeChapterId = Number(activeId.replace('chapter:', ''));
+                const overChapterId = Number(overId.replace('chapter:', ''));
+                const oldIndex = chapters.findIndex((c) => c.id === activeChapterId);
+                const newIndex = chapters.findIndex((c) => c.id === overChapterId);
+                if (oldIndex < 0 || newIndex < 0) return;
+
+                const next = arrayMove(chapters, oldIndex, newIndex).map((c, idx) => ({ ...c, order: idx }));
+                setChapters(next);
+
+                try {
+                  for (let idx = 0; idx < next.length; idx++) {
+                    const c = next[idx];
+                    await updateChapter(c.id, buildChapterOrderFormData(idx));
+                  }
+                } catch (err) {
+                  console.error('Error persistiendo orden de capítulos', err);
+                  await refreshChapters();
+                }
+              }}
+            >
+              <SortableContext
+                items={chapters.map((c) => `chapter:${c.id}`)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="chapters-scroll" style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {chapters.map((ch, idx) => (
+                    <SortableChapterRow key={ch.id} chapter={ch} enabled={chaptersDndEnabled}>
+                      <div className="chapter-row" style={{ padding: 0, position: 'relative' }}>
+                        <button
+                          type="button"
+                          className="chapter-play"
+                          title={ch.file ? 'Abrir link' : 'Poner link'}
+                          aria-label={ch.file ? 'Abrir link' : 'Poner link'}
+                          data-has-file={Boolean(ch.file)}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (ch.file) {
+                              const url = getFileUrl(ch.file);
+                              if (!url) return;
+                              window.open(url, '_blank', 'noopener,noreferrer');
+                              return;
+                            }
+
+                            const nextLink = window.prompt('Pega el link del archivo del capítulo (URL):', ch.file ?? '');
+                            if (nextLink === null) return;
+                            const trimmed = nextLink.trim();
+                            try {
+                              await updateChapter(ch.id, buildChapterUpdateFormData(ch, { file: trimmed }));
+                              await refreshChapters();
+                            } catch (err) {
+                              console.error('Error guardando link de capítulo', err);
+                            }
+                          }}
+                        >
+                          {ch.file ? <FaDownload size={12} color="#FFD700" /> : <FaUpload size={12} color="#FFD700" />}
+                        </button>
+
+                        <div className="chapter-content" style={{ minWidth: 0 }}>
+                          <div className="chapter-label">Capítulo {idx + 1}</div>
+                          <div style={{ fontWeight: 800, marginTop: 2 }}>{ch.name}</div>
+                          {ch.description ? <div style={{ opacity: 0.95, marginTop: 4 }}>{ch.description}</div> : null}
+                        </div>
+                        <div
+                          className="chapter-actions"
+                          style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            className="icon option"
+                            title="Editar"
+                            onClick={() => {
+                              setChapterInitial(ch);
+                              setChapterModalOpen(true);
+                            }}
+                          >
+                            <FaEdit size={16} />
+                          </button>
+                          <button
+                            className="icon option"
+                            title="Eliminar"
+                            onClick={() => {
+                              setPendingDelete(ch);
+                              setConfirmOpen(true);
+                            }}
+                          >
+                            <FaTrash size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </SortableChapterRow>
+                  ))}
+                  {chapters.length === 0 ? (
+                    <div style={{ opacity: 0.8, color: '#e2d9b7' }}>No hay capítulos todavía.</div>
+                  ) : null}
+                </div>
+              </SortableContext>
+            </DndContext>
+          </div>
+        </div>
+      </div>
+
+      {chapterModalOpen ? (
+        <ChapterModal
+          open={chapterModalOpen}
+          campaignId={campaignId}
+          initial={chapterInitial}
+          onClose={() => {
+            setChapterModalOpen(false);
+            setChapterInitial(undefined);
+          }}
+          onSubmit={async (formData) => {
+            if (chapterInitial?.id) {
+              await updateChapter(chapterInitial.id, formData);
+            } else {
+              await createChapter(formData);
+            }
+            await refreshChapters();
+            setChapterModalOpen(false);
+            setChapterInitial(undefined);
+          }}
+        />
+      ) : null}
+
+      <ConfirmModal
+        open={confirmOpen}
+        message={'¿Estás seguro de que deseas eliminar este capítulo?'}
+        onConfirm={async () => {
+          const target = pendingDelete;
+          setConfirmOpen(false);
+          setPendingDelete(null);
+          if (!target) return;
+          await deleteChapter(target.id);
+          await refreshChapters();
+        }}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setPendingDelete(null);
+        }}
+      />
+    </div>
+  );
+};
+
+export default CampaignDetail;

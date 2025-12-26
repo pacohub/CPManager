@@ -1,9 +1,66 @@
 
 import React from 'react';
+import { BrowserRouter, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import SagaPanel from './SagaPanel';
+import CampaignDetail from './CampaignDetail';
+import MapsView from './MapsView';
+import RegionsView from './RegionsView';
+
+function SagaPanelRoute() {
+	const navigate = useNavigate();
+	return (
+		<SagaPanel
+			onOpenCampaign={(id) => navigate(`/campaigns/${id}`)}
+			onOpenMaps={() => navigate('/maps')}
+		/>
+	);
+}
+
+function MapsRoute() {
+	const navigate = useNavigate();
+	return <MapsView onBack={() => navigate('/')} onOpenRegions={() => navigate('/regions')} />;
+}
+
+function RegionsRoute() {
+	const navigate = useNavigate();
+	return <RegionsView onBack={() => navigate('/maps')} />;
+}
+
+function CampaignDetailRoute() {
+	const navigate = useNavigate();
+	const params = useParams();
+	const campaignId = Number(params.id);
+
+	if (!Number.isFinite(campaignId)) {
+		return (
+			<div className="panel panel-corners-soft block-border block-panel-border">
+				<div className="panel-header">
+					<h1 style={{ margin: 0 }}>Campaña</h1>
+				</div>
+				<div style={{ padding: 12 }}>
+					Id de campaña inválido.
+					<div style={{ marginTop: 12 }}>
+						<button onClick={() => navigate('/')}>Volver</button>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	return <CampaignDetail campaignId={campaignId} onBack={() => navigate('/')} />;
+}
 
 function App() {
-	return <SagaPanel />;
+	return (
+		<BrowserRouter>
+			<Routes>
+				<Route path="/" element={<SagaPanelRoute />} />
+				<Route path="/campaigns/:id" element={<CampaignDetailRoute />} />
+				<Route path="/maps" element={<MapsRoute />} />
+				<Route path="/regions" element={<RegionsRoute />} />
+			</Routes>
+		</BrowserRouter>
+	);
 }
 
 export default App;

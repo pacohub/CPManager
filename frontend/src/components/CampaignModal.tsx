@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Campaign } from '../interfaces/campaign';
 import { FaTimes } from 'react-icons/fa';
 
@@ -15,8 +15,17 @@ const CampaignModal: React.FC<Props> = ({ open, initial, onSubmit, onClose, camp
   const [name, setName] = useState(initial?.name || '');
   const [description, setDescription] = useState(initial?.description || '');
   const [image, setImage] = useState<File | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [fileLink, setFileLink] = useState(initial?.file || '');
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(initial?.name || '');
+    setDescription(initial?.description || '');
+    setImage(null);
+    setFileLink(initial?.file || '');
+    setError(null);
+  }, [open, initial?.id, initial?.name, initial?.description, initial?.file]);
 
 
 
@@ -35,7 +44,7 @@ const CampaignModal: React.FC<Props> = ({ open, initial, onSubmit, onClose, camp
     formData.append('name', name);
     formData.append('description', description);
     if (image) formData.append('image', image);
-    if (file) formData.append('file', file);
+    formData.append('file', fileLink.trim());
     if (initial?.sagaId) formData.append('sagaId', String(initial.sagaId));
     if (initial?.order !== undefined) formData.append('order', String(initial.order));
     onSubmit(formData);
@@ -94,18 +103,14 @@ const CampaignModal: React.FC<Props> = ({ open, initial, onSubmit, onClose, camp
             </div>
           )}
           <label style={{ marginBottom: 8, display: 'block' }}>
-            {/* Mostrar el campo de archivo solo si se está editando y hay un archivo subido */}
-            {initial?.id && initial?.file && (
-              <>
-                Archivo:
-                <input type="file" onChange={e => setFile(e.target.files?.[0] || null)} style={{ display: 'block', marginTop: 4 }} />
-                {!file && (
-                  <div style={{ fontSize: 12, color: '#555', marginTop: 4 }}>
-                    Ruta actual: <span style={{ wordBreak: 'break-all' }}>{initial.file}</span>
-                  </div>
-                )}
-              </>
-            )}
+            Archivo (link):
+            <input
+              type="url"
+              placeholder="https://..."
+              value={fileLink}
+              onChange={(e) => setFileLink(e.target.value)}
+              style={{ display: 'block', marginTop: 4 }}
+            />
           </label>
           <div className="actions">
             <button type="submit" className="confirm" disabled={isDuplicateName}>{initial?.id ? 'Actualizar' : 'Crear'}</button>

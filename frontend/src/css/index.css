@@ -56,16 +56,64 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    box-shadow: 0 2px 12px #0007;
+    box-shadow: 0 2px 12px #0007, inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.65);
     overflow: hidden;
-    border: 1px solid #b0b3b8;
+    border: 2px solid #b0b3b8;
     border-radius: 8px;
     background-clip: padding-box;
+}
+
+.metallic-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 0 0 3px rgba(0,0,0,0.55);
+    z-index: 5;
 }
 
 .campaign-card {
     background-size: cover;
     background-position: center;
+}
+
+/* Maps gallery cards: 800x600 (4:3) landscape ratio */
+.map-card.metallic-border {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: auto !important;
+    aspect-ratio: 4 / 3;
+}
+
+.map-region-tags {
+    margin-top: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    align-items: center;
+}
+
+.map-region-tag {
+    display: inline-flex;
+    align-items: center;
+    max-width: 160px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #e2d9b7;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid #e2c044;
+    text-shadow: 0 1px 4px #000a;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.map-region-tag-more {
+    max-width: none;
 }
 
 .campaign-title {
@@ -82,6 +130,13 @@
     font-size: 18px;
     z-index: 20;
     pointer-events: none;
+}
+
+.campaign-subtitle {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #e2c044;
+    opacity: 0.95;
 }
 .campaign-actions {
     position: absolute;
@@ -128,7 +183,7 @@
 }
 body {
     margin: 0px;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Cinzel', 'Segoe UI', serif;
     background: black;
     color: #e2d9b7;
 }
@@ -258,6 +313,73 @@ body {
     gap: 10px;
 }
 
+/* CampaignDetail chapters */
+.chapters-scroll {
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge Legacy */
+}
+
+.chapters-scroll::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none; /* Chrome/Safari */
+}
+
+.chapter-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.chapter-label {
+    font-size: 12px;
+    opacity: 1;
+    color: #e2c044;
+}
+
+.chapter-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.chapter-play {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid #b0b3b8;
+    background: linear-gradient(180deg, #2e63b4 0%, #17335f 55%, #0e203f 100%);
+    box-shadow: inset 0 1px 0 #4a7fd2, inset 0 -1px 0 #081a34, 0 2px 6px #000;
+    cursor: pointer;
+}
+
+.chapter-play[data-has-file="false"] {
+    background: linear-gradient(180deg, #6b6f76 0%, #3f434a 55%, #1f2226 100%);
+    border-color: #b0b3b8;
+    box-shadow: inset 0 1px 0 #8a8f97, inset 0 -1px 0 #0b0c0e, 0 1px 4px #000;
+}
+
+.chapter-play > svg {
+    filter: drop-shadow(0 1px 1px #000);
+}
+
+.chapter-actions {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.chapter-row:hover .chapter-actions,
+.chapter-row:focus-within .chapter-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 .saga-card {
     position: relative;
     ;
@@ -304,7 +426,7 @@ button {
     border: 1.5px solid #e2c044;
     border-radius: 6px;
     cursor: pointer;
-    box-shadow: 0 1px 4px #0004;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.65), 0 1px 4px #0004;
     font-weight: bold;
 }
 
@@ -350,6 +472,32 @@ button.icon:hover {
     z-index: 1000;
 }
 
+.region-pick-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.region-pick-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(0,0,0,0.35);
+    cursor: pointer;
+    user-select: none;
+}
+
+.region-pick-checkbox {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    flex: 0 0 auto;
+}
+
 .modal-content {
     background: linear-gradient(135deg, #23272b 0%, #18191a 100%);
     border-radius: 10px;
@@ -357,6 +505,12 @@ button.icon:hover {
     box-shadow: 0 2px 12px #0007;
     border: 1.5px solid #e2c044;
     position: relative;
+}
+
+.modal-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
 .modal-content .icon.option[title="Cerrar"] {
@@ -372,6 +526,7 @@ button.icon:hover {
     align-items: center;
     gap: 16px;
     margin-top: 24px;
+    width: 100%;
 }
 
 .actions button {
@@ -385,9 +540,6 @@ button.icon:hover {
     justify-content: center;
 }
 
-.actions button:not(:last-child) {
-    margin-right: 8px;
-}
 
 .campaign-card {
     min-width: 220px;

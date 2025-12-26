@@ -2,7 +2,7 @@ import { Controller, Get, Post, Put, Delete, Query, Param, Body, UploadedFiles, 
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { CampaignService } from '../Services/campaign.service';
 import { Campaign } from '../Entities/campaign.entity';
-import { diskStorage, FileFilterCallback } from 'multer';
+import { diskStorage } from 'multer';
 import { Request } from 'express';
 import * as path from 'path';
 
@@ -29,12 +29,10 @@ export class CampaignController {
   @Post()
   @UseInterceptors(FileFieldsInterceptor([
     { name: 'image', maxCount: 1 },
-    { name: 'file', maxCount: 1 },
   ], {
     storage: diskStorage({
       destination: (req: Request, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
-        if (file.fieldname === 'image') cb(null, './uploads/images');
-        else cb(null, './uploads/files');
+        cb(null, './uploads/images');
       },
       filename: fileName,
     }),
@@ -42,24 +40,21 @@ export class CampaignController {
   }))
   async create(
     @Body() data: any,
-    @UploadedFiles() files: { image?: Express.Multer.File[]; file?: Express.Multer.File[] }
+    @UploadedFiles() files: { image?: Express.Multer.File[] }
   ): Promise<Campaign> {
     if (data?.sagaId !== undefined) data.sagaId = Number(data.sagaId);
     if (data?.order !== undefined) data.order = Number(data.order);
     if (files?.image?.[0]) data.image = `/uploads/images/${files.image[0].filename}`;
-    if (files?.file?.[0]) data.file = `/uploads/files/${files.file[0].filename}`;
     return this.campaignService.create(data);
   }
 
   @Put(':id')
   @UseInterceptors(FileFieldsInterceptor([
     { name: 'image', maxCount: 1 },
-    { name: 'file', maxCount: 1 },
   ], {
     storage: diskStorage({
       destination: (req: Request, file: Express.Multer.File, cb: (error: Error | null, destination: string) => void) => {
-        if (file.fieldname === 'image') cb(null, './uploads/images');
-        else cb(null, './uploads/files');
+        cb(null, './uploads/images');
       },
       filename: fileName,
     }),
@@ -68,12 +63,11 @@ export class CampaignController {
   async update(
     @Param('id') id: string,
     @Body() data: any,
-    @UploadedFiles() files: { image?: Express.Multer.File[]; file?: Express.Multer.File[] }
+    @UploadedFiles() files: { image?: Express.Multer.File[] }
   ): Promise<Campaign | null> {
     if (data?.sagaId !== undefined) data.sagaId = Number(data.sagaId);
     if (data?.order !== undefined) data.order = Number(data.order);
     if (files?.image?.[0]) data.image = `/uploads/images/${files.image[0].filename}`;
-    if (files?.file?.[0]) data.file = `/uploads/files/${files.file[0].filename}`;
     return this.campaignService.update(Number(id), data);
   }
 
