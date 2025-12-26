@@ -15,6 +15,7 @@ let Chapter = class Chapter {
     id;
     campaignId;
     name;
+    order;
     description;
     image;
     file;
@@ -32,6 +33,10 @@ __decorate([
     (0, typeorm_1.Column)({ length: 100 }),
     __metadata("design:type", String)
 ], Chapter.prototype, "name", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'int', default: 0 }),
+    __metadata("design:type", Number)
+], Chapter.prototype, "order", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     __metadata("design:type", String)

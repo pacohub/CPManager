@@ -11,6 +11,9 @@ export class Chapter {
   @Column({ length: 100 })
   name: string;
 
+  @Column({ type: 'int', default: 0 })
+  order: number;
+
   @Column({ type: 'text', nullable: true })
   description: string;
 

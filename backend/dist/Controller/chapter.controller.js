@@ -62,6 +62,9 @@ let ChapterController = class ChapterController {
         this.chapterService = chapterService;
     }
     async findAllByCampaign(campaignId) {
+        if (campaignId === undefined || campaignId === null || campaignId === '') {
+            return this.chapterService.findAll();
+        }
         return this.chapterService.findAllByCampaign(Number(campaignId));
     }
     async findOne(id) {
@@ -70,6 +73,8 @@ let ChapterController = class ChapterController {
     async create(data, files) {
         if (data?.campaignId !== undefined)
             data.campaignId = Number(data.campaignId);
+        if (data?.order !== undefined)
+            data.order = Number(data.order);
         if (files?.image?.[0])
             data.image = `/uploads/images/${files.image[0].filename}`;
         if (files?.file?.[0])
@@ -79,6 +84,8 @@ let ChapterController = class ChapterController {
     async update(id, data, files) {
         if (data?.campaignId !== undefined)
             data.campaignId = Number(data.campaignId);
+        if (data?.order !== undefined)
+            data.order = Number(data.order);
         if (files?.image?.[0])
             data.image = `/uploads/images/${files.image[0].filename}`;
         if (files?.file?.[0])

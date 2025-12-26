@@ -1,9 +1,9 @@
-import { ChapterService } from '../Services/chapter.service';
 import { Chapter } from '../Entities/chapter.entity';
+import { ChapterService } from '../Services/chapter.service';
 export declare class ChapterController {
     private readonly chapterService;
     constructor(chapterService: ChapterService);
-    findAllByCampaign(campaignId: string): Promise<Chapter[]>;
+    findAllByCampaign(campaignId?: string): Promise<Chapter[]>;
     findOne(id: string): Promise<Chapter | null>;
     create(data: any, files: {
         image?: Express.Multer.File[];
