@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FaArrowLeft, FaMap } from 'react-icons/fa';
+import { FaArrowLeft, FaCompass } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import MapCard from '../components/MapCard';
 import MapModal from '../components/MapModal';
@@ -54,7 +54,7 @@ const MapsView: React.FC<Props> = ({ onBack }) => {
             setModalOpen(true);
           }}
         >
-          <FaMap size={22} color="#FFD700" />
+          <FaCompass size={22} color="#FFD700" />
         </button>
       </div>
 

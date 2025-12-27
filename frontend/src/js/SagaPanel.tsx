@@ -7,7 +7,8 @@ import CampaignCard from '../components/CampaignCard';
 import CampaignModal from '../components/CampaignModal';
 import { getCampaignsBySaga, createCampaign, updateCampaign, deleteCampaign } from './campaignApi';
 import { getAllChapters } from './chapterApi';
-import { FaBookOpen, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaMap, FaCogs } from 'react-icons/fa';
+import { FaBookOpen, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaCompass, FaCogs } from 'react-icons/fa';
+import { GiCrossedSwords } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
 
 interface SagaType {
@@ -125,9 +126,10 @@ interface SagaPanelProps {
   onOpenCampaign?: (campaignId: number) => void;
   onOpenMaps?: () => void;
   onOpenMechanics?: () => void;
+  onOpenFactions?: () => void;
 }
 
-const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics }) => {
+const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics, onOpenFactions }) => {
   // Campañas por saga
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -143,6 +145,11 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
   const [search, setSearch] = useState('');
   // Drag and drop state for sagas
   const [dndEnabled, setDndEnabled] = useState(false);
+  const suppressCampaignOpenUntilRef = React.useRef<number>(0);
+
+  function shouldSuppressCampaignOpen() {
+    return Date.now() < suppressCampaignOpenUntilRef.current;
+  }
     // DnD Kit sensors
     const sensors = useSensors(
       useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -159,6 +166,8 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
 
       // ---- Campaign drag/drop ----
       if (activeId.startsWith('campaign:')) {
+        // Avoid click-triggered open right after dropping.
+        suppressCampaignOpenUntilRef.current = Date.now() + 350;
         const campaignId = Number(activeId.split(':')[1]);
         if (Number.isNaN(campaignId)) return;
 
@@ -262,6 +271,13 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
         } catch (err) {
           console.error('Error reordenando sagas', err);
         }
+      }
+    };
+
+    const handleDragCancel = (event: any) => {
+      const activeId = String(event?.active?.id ?? '');
+      if (activeId.startsWith('campaign:')) {
+        suppressCampaignOpenUntilRef.current = Date.now() + 350;
       }
     };
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -402,6 +418,14 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <button
               className="icon"
+              aria-label="Facciones"
+              title="Facciones"
+              onClick={() => onOpenFactions?.()}
+            >
+              <GiCrossedSwords size={26} color="#FFD700" />
+            </button>
+            <button
+              className="icon"
               aria-label="Mecánicas"
               title="Mecánicas"
               onClick={() => onOpenMechanics?.()}
@@ -414,7 +438,7 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
               title="Mapas"
               onClick={() => onOpenMaps?.()}
             >
-              <FaMap size={26} color="#FFD700" />
+              <FaCompass size={26} color="#FFD700" />
             </button>
             <button
               className="icon"
@@ -459,6 +483,7 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
         sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={undefined}
+        onDragCancel={dndEnabled ? handleDragCancel : undefined}
         onDragEnd={dndEnabled ? handleDragEnd : undefined}
       >
         <SortableContext
@@ -591,7 +616,10 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
                                   <CampaignCard
                                     campaign={cellCampaign}
                                     chapterCount={chaptersByCampaignId[cellCampaign.id] ?? 0}
-                                    onOpen={() => onOpenCampaign?.(cellCampaign.id)}
+                                    onOpen={() => {
+                                      if (shouldSuppressCampaignOpen()) return;
+                                      onOpenCampaign?.(cellCampaign.id);
+                                    }}
                                     onEdit={() => {
                                       setCampaignInitial(cellCampaign);
                                       setCampaignSagaId(saga.id);

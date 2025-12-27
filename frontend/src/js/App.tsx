@@ -5,6 +5,7 @@ import SagaPanel from './SagaPanel';
 import CampaignDetail from './CampaignDetail';
 import MapsView from './MapsView';
 import MechanicsView from './MechanicsView';
+import FactionsView from './FactionsView';
 import ChapterEventsView from './ChapterEventsView';
 
 function SagaPanelRoute() {
@@ -14,6 +15,7 @@ function SagaPanelRoute() {
 			onOpenCampaign={(id) => navigate(`/campaigns/${id}`)}
 			onOpenMaps={() => navigate('/maps')}
 			onOpenMechanics={() => navigate('/mechanics')}
+			onOpenFactions={() => navigate('/factions')}
 		/>
 	);
 }
@@ -26,6 +28,11 @@ function MapsRoute() {
 function MechanicsRoute() {
 	const navigate = useNavigate();
 	return <MechanicsView onBack={() => navigate('/')} />;
+}
+
+function FactionsRoute() {
+	const navigate = useNavigate();
+	return <FactionsView onBack={() => navigate('/')} />;
 }
 
 function CampaignDetailRoute() {
@@ -92,6 +99,7 @@ function App() {
 				<Route path="/campaigns/:campaignId/chapters/:chapterId/events" element={<ChapterEventsRoute />} />
 				<Route path="/maps" element={<MapsRoute />} />
 				<Route path="/mechanics" element={<MechanicsRoute />} />
+				<Route path="/factions" element={<FactionsRoute />} />
 			</Routes>
 		</BrowserRouter>
 	);

@@ -367,18 +367,18 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
                                 const count = stats?.count ?? 0;
                                 const warningCount = stats?.warningCount ?? 0;
                                 if (count <= 0) missing.push('eventos');
-										if (warningCount > 0) warnings.push(`Eventos sin descripción: ${warningCount}.`);
+                                if (warningCount > 0) warnings.push(`Eventos sin descripción: ${warningCount}.`);
                               }
                               if (missing.length === 0 && warnings.length === 0) return null;
                               const parts: string[] = [];
                               if (missing.length > 0) {
-										const missingText = missing.length === 1
-											? `Falta: ${missing[0]}.`
-											: `Falta: ${missing.join(', ')}.`;
-										parts.push(missingText);
-									}
-									if (warnings.length > 0) parts.push(warnings.join('\n'));
-									const warningText = parts.join('\n\n');
+                                const missingText = missing.length === 1
+                                  ? `Falta: ${missing[0]}.`
+                                  : `Falta: ${missing.join(', ')}.`;
+                                parts.push(missingText);
+                              }
+                              if (warnings.length > 0) parts.push(warnings.join('\n'));
+                              const warningText = parts.join('\n\n');
                               return (
                                 <span
                                   className="saga-warning"
@@ -393,6 +393,7 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
                             })()}
                           </div>
                         </div>
+
                         <div
                           className="chapter-actions"
                           style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}
@@ -501,6 +502,7 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
           setPendingDelete(null);
         }}
       />
+
     </div>
   );
 };
