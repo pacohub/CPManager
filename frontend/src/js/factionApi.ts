@@ -1,4 +1,5 @@
 import { FactionItem } from '../interfaces/faction';
+import { ProfessionItem } from '../interfaces/profession';
 
 const API_URL = 'http://localhost:4000/factions';
 
@@ -44,4 +45,18 @@ export async function updateFaction(id: number, data: FormData): Promise<Faction
 export async function deleteFaction(id: number): Promise<void> {
 	const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
 	await ensureOk<void>(res);
+}
+
+export async function getFactionProfessions(factionId: number): Promise<ProfessionItem[]> {
+	const res = await fetch(`${API_URL}/${factionId}/professions`);
+	return ensureOk<ProfessionItem[]>(res);
+}
+
+export async function setFactionProfessions(factionId: number, professionIds: number[]): Promise<FactionItem> {
+	const res = await fetch(`${API_URL}/${factionId}/professions`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ professionIds }),
+	});
+	return ensureOk<FactionItem>(res);
 }

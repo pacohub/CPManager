@@ -6,6 +6,7 @@ import CampaignDetail from './CampaignDetail';
 import MapsView from './MapsView';
 import MechanicsView from './MechanicsView';
 import FactionsView from './FactionsView';
+import ProfessionsView from './ProfessionsView';
 import ChapterEventsView from './ChapterEventsView';
 
 function SagaPanelRoute() {
@@ -16,6 +17,7 @@ function SagaPanelRoute() {
 			onOpenMaps={() => navigate('/maps')}
 			onOpenMechanics={() => navigate('/mechanics')}
 			onOpenFactions={() => navigate('/factions')}
+			onOpenProfessions={() => navigate('/professions')}
 		/>
 	);
 }
@@ -33,6 +35,11 @@ function MechanicsRoute() {
 function FactionsRoute() {
 	const navigate = useNavigate();
 	return <FactionsView onBack={() => navigate('/')} />;
+}
+
+function ProfessionsRoute() {
+	const navigate = useNavigate();
+	return <ProfessionsView onBack={() => navigate('/')} />;
 }
 
 function CampaignDetailRoute() {
@@ -100,6 +107,7 @@ function App() {
 				<Route path="/maps" element={<MapsRoute />} />
 				<Route path="/mechanics" element={<MechanicsRoute />} />
 				<Route path="/factions" element={<FactionsRoute />} />
+				<Route path="/professions" element={<ProfessionsRoute />} />
 			</Routes>
 		</BrowserRouter>
 	);

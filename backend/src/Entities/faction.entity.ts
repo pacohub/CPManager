@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Profession } from './profession.entity';
 
 @Entity()
 export class Faction {
@@ -28,4 +29,8 @@ export class Faction {
 
 	@Column({ nullable: true })
 	file: string;
+
+	@ManyToMany(() => Profession, (p) => p.factions, { cascade: false })
+	@JoinTable()
+	professions: Profession[];
 }

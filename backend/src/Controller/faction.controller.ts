@@ -31,6 +31,16 @@ export class FactionController {
 		return this.factionService.findAll();
 	}
 
+	@Get(':id/professions')
+	async getProfessions(@Param('id') id: string): Promise<any[]> {
+		return this.factionService.getProfessions(Number(id));
+	}
+
+	@Put(':id/professions')
+	async setProfessions(@Param('id') id: string, @Body() body: any): Promise<Faction> {
+		return this.factionService.setProfessionIds(Number(id), body?.professionIds ?? []);
+	}
+
 	@Get(':id')
 	async findOne(@Param('id') id: string): Promise<Faction | null> {
 		return this.factionService.findOne(Number(id));

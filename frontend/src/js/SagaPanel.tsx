@@ -8,7 +8,7 @@ import CampaignModal from '../components/CampaignModal';
 import { getCampaignsBySaga, createCampaign, updateCampaign, deleteCampaign } from './campaignApi';
 import { getAllChapters } from './chapterApi';
 import { FaBookOpen, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaCompass, FaCogs } from 'react-icons/fa';
-import { GiCrossedSwords } from 'react-icons/gi';
+import { GiCrossedSwords, GiWarPick } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
 
 interface SagaType {
@@ -127,9 +127,10 @@ interface SagaPanelProps {
   onOpenMaps?: () => void;
   onOpenMechanics?: () => void;
   onOpenFactions?: () => void;
+  onOpenProfessions?: () => void;
 }
 
-const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics, onOpenFactions }) => {
+const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics, onOpenFactions, onOpenProfessions }) => {
   // Campañas por saga
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -423,6 +424,14 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
               onClick={() => onOpenFactions?.()}
             >
               <GiCrossedSwords size={26} color="#FFD700" />
+            </button>
+            <button
+              className="icon"
+              aria-label="Profesiones"
+              title="Profesiones"
+              onClick={() => onOpenProfessions?.()}
+            >
+              <GiWarPick size={26} color="#FFD700" />
             </button>
             <button
               className="icon"

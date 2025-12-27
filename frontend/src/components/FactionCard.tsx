@@ -1,11 +1,15 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FaEdit, FaTrash, FaExclamationTriangle } from 'react-icons/fa';
+import { GiWarPick } from 'react-icons/gi';
 import { FactionItem } from '../interfaces/faction';
+import { ProfessionItem } from '../interfaces/profession';
 
 interface Props {
 	faction: FactionItem;
 	onEdit: () => void;
 	onDelete: () => void;
+	onManageProfessions?: () => void;
+	professions?: ProfessionItem[];
 }
 
 const toBackendUrl = (path?: string) => {
@@ -14,7 +18,7 @@ const toBackendUrl = (path?: string) => {
 	return encodeURI(`http://localhost:4000/${path.replace(/^\/+/, '')}`);
 };
 
-const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete }) => {
+const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onManageProfessions, professions }) => {
 	const [crestExists, setCrestExists] = useState(true);
 	const crestUrl = useMemo(() => toBackendUrl(faction.crestImage), [faction.crestImage]);
 	const [iconExists, setIconExists] = useState(true);
@@ -37,6 +41,22 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete }) => {
 	const bg = crestUrl && crestExists ? `url("${crestUrl}")` : undefined;
 
 	const swatches = [faction.primaryColor, faction.secondaryColor, faction.tertiaryColor].filter(Boolean) as string[];
+
+	const professionNames = useMemo(() => {
+		return (professions || [])
+			.map((p) => (p.name || '').trim())
+			.filter(Boolean)
+			.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+	}, [professions]);
+
+	const professionSummary = useMemo(() => {
+		if (!professionNames.length) return '';
+		const visible = professionNames.slice(0, 3);
+		const extra = professionNames.length - visible.length;
+		const parts = visible.map((n) => `[${n}]`);
+		if (extra > 0) parts.push(`[+${extra}]`);
+		return parts.join(' ');
+	}, [professionNames]);
 
 	const hasPrimaryColor = Boolean((faction.primaryColor ?? '').trim());
 	const hasIcon = Boolean((faction.iconImage ?? '').trim());
@@ -98,9 +118,28 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete }) => {
 						</div>
 					) : null}
 				</div>
+				{professionNames.length ? (
+					<div className="campaign-subtitle" title={professionNames.join(', ')}>
+						{professionSummary}
+					</div>
+				) : null}
 			</div>
 
 			<div className="campaign-actions">
+				{onManageProfessions ? (
+					<button
+						className="icon option"
+						title="Profesiones"
+						tabIndex={-1}
+						onClick={(e) => {
+							e.stopPropagation();
+							onManageProfessions();
+						}}
+						onPointerDown={(e) => e.stopPropagation()}
+					>
+						<GiWarPick size={16} />
+					</button>
+				) : null}
 				<button
 					className="icon option"
 					title="Editar"

@@ -29,16 +29,19 @@ import { FactionController } from './Controller/faction.controller';
 import { ChapterFaction } from './Entities/chapterFaction.entity';
 import { ChapterFactionService } from './Services/chapterFaction.service';
 import { ChapterFactionController } from './Controller/chapterFaction.controller';
+import { Profession } from './Entities/profession.entity';
+import { ProfessionService } from './Services/profession.service';
+import { ProfessionController } from './Controller/profession.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'database.sqlite',
-      entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction],
+      entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession],
       synchronize: true, // Solo para desarrollo
     }),
-    TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction]),
+    TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession]),
   ],
   controllers: [
 		AppController,
@@ -51,7 +54,8 @@ import { ChapterFactionController } from './Controller/chapterFaction.controller
 		ObjectiveController,
 		FactionController,
     ChapterFactionController,
+		ProfessionController,
 	],
-  providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService],
+  providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService, ProfessionService],
 })
 export class AppModule {}
