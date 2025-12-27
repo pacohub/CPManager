@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { FaDownload, FaEdit, FaGlobe, FaTrash, FaUpload, FaExclamationTriangle } from 'react-icons/fa';
+import { FaDownload, FaEdit, FaTrash, FaUpload, FaExclamationTriangle } from 'react-icons/fa';
 import { MapItem } from '../interfaces/map';
 import { updateMap } from '../js/mapApi';
-import MapRegionsModal from './MapRegionsModal';
 
 interface Props {
   map: MapItem;
@@ -19,14 +18,6 @@ const getImageUrl = (img?: string) => {
 
 const MapCard: React.FC<Props> = ({ map, onEdit, onDelete, onChanged }) => {
   const bg = map.image ? `url("${getImageUrl(map.image)}")` : undefined;
-
-  const regions = (map.regions ?? []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-  const regionNames = regions.map((r) => r.name).filter(Boolean);
-  const visibleRegions = regions.slice(0, 3);
-  const remainingCount = Math.max(0, regions.length - visibleRegions.length);
-  const regionsTitle = regionNames.length ? `Regiones: ${regionNames.join(', ')}` : undefined;
-
-  const [regionsModalOpen, setRegionsModalOpen] = useState(false);
 
   const [imageExists, setImageExists] = useState(true);
   useEffect(() => {
@@ -47,29 +38,12 @@ const MapCard: React.FC<Props> = ({ map, onEdit, onDelete, onChanged }) => {
   const hasDescription = Boolean((map.description ?? '').trim());
   const hasImage = Boolean(map.image) && imageExists;
   const hasFile = Boolean(map.file);
-
-  const regionIssues = regions
-    .map((r) => {
-      const missingFields: string[] = [];
-      if (!String(r.description ?? '').trim()) missingFields.push('descripción');
-      if (!String(r.link ?? '').trim()) missingFields.push('link');
-      return missingFields.length ? { name: r.name, missingFields } : null;
-    })
-    .filter(Boolean) as Array<{ name: string; missingFields: string[] }>;
-
   const missing: string[] = [];
   if (!hasDescription) missing.push('descripción');
   if (!hasImage) missing.push('imagen');
   if (!hasFile) missing.push('archivo');
-
-  const showWarning = missing.length > 0 || regionIssues.length > 0;
-  const parts: string[] = [];
-  if (missing.length > 0) parts.push(`Falta: ${missing.join(', ')}.`);
-  if (regionIssues.length > 0) {
-    const details = regionIssues.map((x) => `${x.name} (${x.missingFields.join(', ')})`).join('; ');
-    parts.push(`Regiones incompletas: ${details}.`);
-  }
-  const warningText = parts.join(' ');
+  const showWarning = missing.length > 0;
+  const warningText = `Falta: ${missing.join(', ')}.`;
 
   return (
     <div
@@ -132,20 +106,6 @@ const MapCard: React.FC<Props> = ({ map, onEdit, onDelete, onChanged }) => {
             <FaUpload size={14} />
           </button>
         )}
-
-        <button
-          className="icon option"
-          title="Asociar regiones"
-          tabIndex={-1}
-          onClick={(e) => {
-            e.stopPropagation();
-            setRegionsModalOpen(true);
-          }}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <FaGlobe size={14} />
-        </button>
-
         <button
           className="icon option"
           title="Editar"
@@ -172,32 +132,7 @@ const MapCard: React.FC<Props> = ({ map, onEdit, onDelete, onChanged }) => {
         </button>
       </div>
 
-      <div className="campaign-desc">
-        <div>{map.description}</div>
-        {regions.length ? (
-          <div className="map-region-tags" title={regionsTitle} aria-label={regionsTitle}>
-            {visibleRegions.map((r) => (
-              <span key={r.id} className="map-region-tag" title={r.name}>
-                {r.name}
-              </span>
-            ))}
-            {remainingCount ? (
-              <span className="map-region-tag map-region-tag-more" title={regionsTitle}>
-                +{remainingCount}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-
-      {regionsModalOpen ? (
-        <MapRegionsModal
-          open={regionsModalOpen}
-          map={map}
-          onClose={() => setRegionsModalOpen(false)}
-          onSaved={() => onChanged?.()}
-        />
-      ) : null}
+      <div className="campaign-desc">{map.description}</div>
     </div>
   );
 };

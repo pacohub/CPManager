@@ -4,7 +4,7 @@ import { BrowserRouter, Route, Routes, useNavigate, useParams } from 'react-rout
 import SagaPanel from './SagaPanel';
 import CampaignDetail from './CampaignDetail';
 import MapsView from './MapsView';
-import RegionsView from './RegionsView';
+import ChapterEventsView from './ChapterEventsView';
 
 function SagaPanelRoute() {
 	const navigate = useNavigate();
@@ -18,12 +18,7 @@ function SagaPanelRoute() {
 
 function MapsRoute() {
 	const navigate = useNavigate();
-	return <MapsView onBack={() => navigate('/')} onOpenRegions={() => navigate('/regions')} />;
-}
-
-function RegionsRoute() {
-	const navigate = useNavigate();
-	return <RegionsView onBack={() => navigate('/maps')} />;
+	return <MapsView onBack={() => navigate('/')} />;
 }
 
 function CampaignDetailRoute() {
@@ -47,7 +42,38 @@ function CampaignDetailRoute() {
 		);
 	}
 
-	return <CampaignDetail campaignId={campaignId} onBack={() => navigate('/')} />;
+	return (
+		<CampaignDetail
+			campaignId={campaignId}
+			onBack={() => navigate('/')}
+			onOpenChapterEvents={(chapterId) => navigate(`/campaigns/${campaignId}/chapters/${chapterId}/events`)}
+		/>
+	);
+}
+
+function ChapterEventsRoute() {
+	const navigate = useNavigate();
+	const params = useParams();
+	const campaignId = Number(params.campaignId);
+	const chapterId = Number(params.chapterId);
+
+	if (!Number.isFinite(campaignId) || !Number.isFinite(chapterId)) {
+		return (
+			<div className="panel panel-corners-soft block-border block-panel-border">
+				<div className="panel-header">
+					<h1 style={{ margin: 0 }}>Eventos</h1>
+				</div>
+				<div style={{ padding: 12 }}>
+					Parámetros inválidos.
+					<div style={{ marginTop: 12 }}>
+						<button onClick={() => navigate(`/campaigns/${campaignId}`)}>Volver</button>
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	return <ChapterEventsView chapterId={chapterId} onBack={() => navigate(`/campaigns/${campaignId}`)} />;
 }
 
 function App() {
@@ -56,8 +82,8 @@ function App() {
 			<Routes>
 				<Route path="/" element={<SagaPanelRoute />} />
 				<Route path="/campaigns/:id" element={<CampaignDetailRoute />} />
+				<Route path="/campaigns/:campaignId/chapters/:chapterId/events" element={<ChapterEventsRoute />} />
 				<Route path="/maps" element={<MapsRoute />} />
-				<Route path="/regions" element={<RegionsRoute />} />
 			</Routes>
 		</BrowserRouter>
 	);

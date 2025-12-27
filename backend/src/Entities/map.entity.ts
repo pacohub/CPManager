@@ -1,5 +1,4 @@
-import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
-import { Region } from './region.entity';
+import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity()
 export class Map {
@@ -17,8 +16,4 @@ export class Map {
 
   @Column({ nullable: true })
   file: string;
-
-  @ManyToMany(() => Region, (region) => region.maps, { cascade: false })
-  @JoinTable()
-  regions: Region[];
 }

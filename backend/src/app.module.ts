@@ -14,21 +14,21 @@ import { ChapterController } from './Controller/chapter.controller';
 import { Map } from './Entities/map.entity';
 import { MapService } from './Services/map.service';
 import { MapController } from './Controller/map.controller';
-import { Region } from './Entities/region.entity';
-import { RegionService } from './Services/region.service';
-import { RegionController } from './Controller/region.controller';
+import { Event } from './Entities/event.entity';
+import { EventService } from './Services/event.service';
+import { EventController } from './Controller/event.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'database.sqlite',
-      entities: [Saga, Campaign, Chapter, Map, Region],
+      entities: [Saga, Campaign, Chapter, Map, Event],
       synchronize: true, // Solo para desarrollo
     }),
-    TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Region]),
+    TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event]),
   ],
-  controllers: [AppController, SagaController, CampaignController, ChapterController, MapController, RegionController],
-  providers: [AppService, SagaService, CampaignService, ChapterService, MapService, RegionService],
+  controllers: [AppController, SagaController, CampaignController, ChapterController, MapController, EventController],
+  providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService],
 })
 export class AppModule {}

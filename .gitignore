@@ -3,17 +3,15 @@ node_modules/
 frontend/node_modules/
 backend/node_modules/
 
-# Logs
-*.log
-backend/*.log
-frontend/*.log
-
 # Builds / outputs
 backend/dist/
 frontend/build/
 
-# Local DB / artifacts
+# Runtime artifacts / data
+backend/uploads/
 backend/database.sqlite
 
-# Uploads (contenido generado en runtime)
-backend/uploads/
+# Logs
+*.log
+backend/*.out.log
+backend/*.err.log

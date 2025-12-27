@@ -86,36 +86,6 @@
     aspect-ratio: 4 / 3;
 }
 
-.map-region-tags {
-    margin-top: 6px;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    justify-content: center;
-    align-items: center;
-}
-
-.map-region-tag {
-    display: inline-flex;
-    align-items: center;
-    max-width: 160px;
-    padding: 2px 8px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #e2d9b7;
-    background: rgba(0,0,0,0.55);
-    border: 1px solid #e2c044;
-    text-shadow: 0 1px 4px #000a;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-.map-region-tag-more {
-    max-width: none;
-}
-
 .campaign-title {
     position: absolute;
     top: 0;
@@ -404,7 +374,8 @@ body {
 }
 
 input,
-textarea {
+textarea,
+select {
     border: 1px solid #1f1f1f;
     background: linear-gradient(0deg, #151515, #0b0b0b);
     border-top: 1px solid #101010;
@@ -416,6 +387,10 @@ textarea {
     box-sizing: border-box;
     color: #e2d9b7;
     width: 100%;
+}
+
+select {
+    cursor: pointer;
 }
 
 button {
@@ -470,32 +445,6 @@ button.icon:hover {
     align-items: center;
     justify-content: center;
     z-index: 1000;
-}
-
-.region-pick-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: flex-start;
-}
-
-.region-pick-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 6px 10px;
-    border-radius: 10px;
-    border: 1px solid rgba(255,255,255,0.15);
-    background: rgba(0,0,0,0.35);
-    cursor: pointer;
-    user-select: none;
-}
-
-.region-pick-checkbox {
-    width: 16px;
-    height: 16px;
-    margin: 0;
-    flex: 0 0 auto;
 }
 
 .modal-content {
@@ -583,4 +532,13 @@ button.icon:hover {
     background: rgba(0, 0, 0, 0.55);
     border-radius: 6px;
     padding: 4px 6px;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    width: auto;
+    padding: 0;
+    box-shadow: none;
+    background: none;
+    border: none;
 }

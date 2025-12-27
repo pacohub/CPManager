@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FaArrowLeft, FaGlobe, FaMap } from 'react-icons/fa';
+import { FaArrowLeft, FaMap } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import MapCard from '../components/MapCard';
 import MapModal from '../components/MapModal';
@@ -8,10 +8,9 @@ import { createMap, deleteMap, getMaps, updateMap } from './mapApi';
 
 interface Props {
   onBack: () => void;
-  onOpenRegions?: () => void;
 }
 
-const MapsView: React.FC<Props> = ({ onBack, onOpenRegions }) => {
+const MapsView: React.FC<Props> = ({ onBack }) => {
   const [maps, setMaps] = useState<MapItem[]>([]);
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -33,8 +32,7 @@ const MapsView: React.FC<Props> = ({ onBack, onOpenRegions }) => {
         const q = search.trim().toLowerCase();
         return (
           (m.name || '').toLowerCase().includes(q) ||
-          (m.description || '').toLowerCase().includes(q) ||
-          (m.regions || []).some((r) => (r.name || '').toLowerCase().includes(q))
+          (m.description || '').toLowerCase().includes(q)
         );
       })
     : maps
@@ -47,27 +45,17 @@ const MapsView: React.FC<Props> = ({ onBack, onOpenRegions }) => {
           <FaArrowLeft size={22} color="#FFD700" />
         </button>
         <h1 style={{ margin: 0 }}>Mapas</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button
-            className="icon"
-            aria-label="Regiones"
-            title="Regiones"
-            onClick={() => onOpenRegions?.()}
-          >
-            <FaGlobe size={22} color="#FFD700" />
-          </button>
-          <button
-            className="icon"
-            aria-label="Nuevo Mapa"
-            title="Nuevo Mapa"
-            onClick={() => {
-              setInitial(undefined);
-              setModalOpen(true);
-            }}
-          >
-            <FaMap size={22} color="#FFD700" />
-          </button>
-        </div>
+        <button
+          className="icon"
+          aria-label="Nuevo Mapa"
+          title="Nuevo Mapa"
+          onClick={() => {
+            setInitial(undefined);
+            setModalOpen(true);
+          }}
+        >
+          <FaMap size={22} color="#FFD700" />
+        </button>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px 12px 12px' }}>

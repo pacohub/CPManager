@@ -31,6 +31,11 @@ export async function getAllChapters(): Promise<Chapter[]> {
   return ensureOk<Chapter[]>(res);
 }
 
+export async function getChapter(id: number): Promise<Chapter> {
+  const res = await fetch(`${API_URL}/${id}`);
+  return ensureOk<Chapter>(res);
+}
+
 export async function createChapter(data: FormData): Promise<Chapter> {
   const res = await fetch(API_URL, { method: 'POST', body: data });
   return ensureOk<Chapter>(res);

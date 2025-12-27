@@ -2,17 +2,20 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { FaArrowLeft, FaEdit, FaTrash, FaBookmark, FaDownload, FaUpload, FaLock, FaLockOpen } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaTrash, FaBookmark, FaDownload, FaUpload, FaLock, FaLockOpen, FaExclamationTriangle } from 'react-icons/fa';
 import { Campaign } from '../interfaces/campaign';
 import { Chapter } from '../interfaces/chapter';
-import { getCampaign } from './campaignApi';
+import { deleteCampaign, getCampaign, updateCampaign } from './campaignApi';
 import { createChapter, deleteChapter, getChaptersByCampaign, updateChapter } from './chapterApi';
+import { getEventCountsByChapter } from './eventApi';
 import ChapterModal from '../components/ChapterModal';
+import CampaignModal from '../components/CampaignModal';
 import ConfirmModal from '../components/ConfirmModal';
 
 interface Props {
   campaignId: number;
   onBack: () => void;
+  onOpenChapterEvents?: (chapterId: number) => void;
 }
 
 function buildChapterOrderFormData(order: number): FormData {
@@ -79,14 +82,19 @@ function buildChapterUpdateFormData(chapter: Chapter, patch: Partial<Chapter> = 
   return formData;
 }
 
-const CampaignDetail: React.FC<Props> = ({ campaignId, onBack }) => {
+const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEvents }) => {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [eventCountsByChapterId, setEventCountsByChapterId] = useState<Record<number, { count: number; warningCount: number }>>({});
+  const [eventCountsLoaded, setEventCountsLoaded] = useState(false);
   const [chaptersDndEnabled, setChaptersDndEnabled] = useState(false);
   const [chapterModalOpen, setChapterModalOpen] = useState(false);
   const [chapterInitial, setChapterInitial] = useState<Partial<Chapter> | undefined>(undefined);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Chapter | null>(null);
+
+  const [campaignModalOpen, setCampaignModalOpen] = useState(false);
+  const [confirmCampaignOpen, setConfirmCampaignOpen] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -104,9 +112,23 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack }) => {
     setChapters(list || []);
   }, [campaignId]);
 
+  const refreshEventCounts = useCallback(async () => {
+    setEventCountsLoaded(false);
+    const counts = await getEventCountsByChapter(campaignId);
+    setEventCountsByChapterId(counts || {});
+    setEventCountsLoaded(true);
+  }, [campaignId]);
+
   useEffect(() => {
     refreshChapters().catch((e) => console.error('Error cargando capítulos', e));
   }, [refreshChapters]);
+
+  useEffect(() => {
+    refreshEventCounts().catch((e) => {
+      console.error('Error cargando conteo de eventos', e);
+      setEventCountsLoaded(false);
+    });
+  }, [refreshEventCounts]);
 
   const bg = useMemo(() => {
     const url = getImageUrl(campaign?.image);
@@ -134,8 +156,23 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack }) => {
         <button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
           <FaArrowLeft size={22} color="#FFD700" />
         </button>
-        <h1 style={{ margin: 0 }}>Campaña</h1>
-        <div style={{ width: 34 }} />
+        <h1 style={{ margin: 0, minWidth: 0, wordBreak: 'break-word' }}>{campaign.name}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            className="icon option"
+            title="Editar"
+            onClick={() => setCampaignModalOpen(true)}
+          >
+            <FaEdit size={18} />
+          </button>
+          <button
+            className="icon option"
+            title="Eliminar"
+            onClick={() => setConfirmCampaignOpen(true)}
+          >
+            <FaTrash size={18} />
+          </button>
+        </div>
       </div>
 
       <div
@@ -272,7 +309,21 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack }) => {
                 <div className="chapters-scroll" style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {chapters.map((ch, idx) => (
                     <SortableChapterRow key={ch.id} chapter={ch} enabled={chaptersDndEnabled}>
-                      <div className="chapter-row" style={{ padding: 0, position: 'relative' }}>
+                      <div
+                        className="chapter-row"
+                        style={{ padding: 0, position: 'relative', cursor: chaptersDndEnabled ? undefined : 'pointer' }}
+                        title={
+                          chaptersDndEnabled
+                            ? undefined
+                            : String(ch.description ?? '').trim()
+                              ? `${String(ch.description ?? '').trim()}\n\nClick: ver eventos del capítulo`
+                              : 'Click: ver eventos del capítulo'
+                        }
+                        onClick={() => {
+                          if (chaptersDndEnabled) return;
+                          onOpenChapterEvents?.(ch.id);
+                        }}
+                      >
                         <button
                           type="button"
                           className="chapter-play"
@@ -305,8 +356,42 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack }) => {
 
                         <div className="chapter-content" style={{ minWidth: 0 }}>
                           <div className="chapter-label">Capítulo {idx + 1}</div>
-                          <div style={{ fontWeight: 800, marginTop: 2 }}>{ch.name}</div>
-                          {ch.description ? <div style={{ opacity: 0.95, marginTop: 4 }}>{ch.description}</div> : null}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, marginTop: 2 }}>
+                            <span style={{ minWidth: 0, wordBreak: 'break-word' }}>{ch.name}</span>
+                            {(() => {
+                              const missing: string[] = [];
+                              const warnings: string[] = [];
+                              if (!String(ch.description ?? '').trim()) missing.push('descripción');
+                              if (eventCountsLoaded) {
+                                const stats = eventCountsByChapterId[ch.id];
+                                const count = stats?.count ?? 0;
+                                const warningCount = stats?.warningCount ?? 0;
+                                if (count <= 0) missing.push('eventos');
+										if (warningCount > 0) warnings.push(`Eventos sin descripción: ${warningCount}.`);
+                              }
+                              if (missing.length === 0 && warnings.length === 0) return null;
+                              const parts: string[] = [];
+                              if (missing.length > 0) {
+										const missingText = missing.length === 1
+											? `Falta: ${missing[0]}.`
+											: `Falta: ${missing.join(', ')}.`;
+										parts.push(missingText);
+									}
+									if (warnings.length > 0) parts.push(warnings.join('\n'));
+									const warningText = parts.join('\n\n');
+                              return (
+                                <span
+                                  className="saga-warning"
+                                  title={warningText}
+                                  aria-label={warningText}
+                                  onPointerDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <FaExclamationTriangle size={16} />
+                                </span>
+                              );
+                            })()}
+                          </div>
                         </div>
                         <div
                           className="chapter-actions"
@@ -369,6 +454,36 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack }) => {
           }}
         />
       ) : null}
+
+    {campaignModalOpen ? (
+      <CampaignModal
+        open={campaignModalOpen}
+        initial={campaign}
+        campaigns={[campaign]}
+        onClose={() => setCampaignModalOpen(false)}
+        onSubmit={async (formData) => {
+          await updateCampaign(campaign.id, formData);
+          const c = await getCampaign(campaignId);
+          setCampaign(c);
+          setCampaignModalOpen(false);
+        }}
+      />
+    ) : null}
+
+    <ConfirmModal
+      open={confirmCampaignOpen}
+      message={
+        <span>
+          ¿Estás seguro de que deseas eliminar la campaña <strong>{campaign.name}</strong>?
+        </span>
+      }
+      onConfirm={async () => {
+        setConfirmCampaignOpen(false);
+        await deleteCampaign(campaign.id);
+        onBack();
+      }}
+      onCancel={() => setConfirmCampaignOpen(false)}
+    />
 
       <ConfirmModal
         open={confirmOpen}

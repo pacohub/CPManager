@@ -1,8 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { MapItem } from '../interfaces/map';
-import { RegionItem } from '../interfaces/region';
-import { getRegions } from '../js/regionApi';
 
 interface Props {
   open: boolean;
@@ -18,8 +16,6 @@ const MapModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onClose 
   const [image, setImage] = useState<File | null>(null);
   const [fileLink, setFileLink] = useState(initial?.file || '');
   const [error, setError] = useState<string | null>(null);
-  const [regions, setRegions] = useState<RegionItem[]>([]);
-  const [selectedRegionIds, setSelectedRegionIds] = useState<number[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -29,32 +25,6 @@ const MapModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onClose 
     setFileLink(initial?.file || '');
     setError(null);
   }, [open, initial?.id, initial?.name, initial?.description, initial?.file]);
-
-  useEffect(() => {
-    if (!open) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const list = await getRegions();
-        if (cancelled) return;
-        const sorted = (list ?? []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-        setRegions(sorted);
-      } catch (e) {
-        if (cancelled) return;
-        console.error('Error cargando regiones', e);
-        setRegions([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    const ids = (initial?.regions ?? []).map((r) => Number(r.id)).filter((n) => Number.isFinite(n));
-    setSelectedRegionIds(ids);
-  }, [open, initial?.regions]);
 
   const isDuplicateName = useMemo(() => {
     const normalized = name.trim().toLowerCase();
@@ -77,7 +47,6 @@ const MapModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onClose 
     formData.append('description', description);
     if (image) formData.append('image', image);
     formData.append('file', fileLink.trim());
-    formData.append('regionIds', JSON.stringify(selectedRegionIds));
     onSubmit(formData);
   };
 
@@ -154,35 +123,6 @@ const MapModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onClose 
               </div>
             ) : null}
           </label>
-
-          <div style={{ marginBottom: 8 }}>
-            <div style={{ marginBottom: 6 }}>Regiones:</div>
-            <div style={{ maxHeight: 160, overflow: 'auto', border: '1px solid rgba(255,255,255,0.15)', borderRadius: 8, padding: 8 }}>
-              {regions.length === 0 ? (
-                <div style={{ opacity: 0.8, fontSize: 13 }}>No hay regiones creadas.</div>
-              ) : (
-                regions.map((r) => {
-                  const checked = selectedRegionIds.includes(r.id);
-                  return (
-                    <label key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(e) => {
-                          const next = e.target.checked;
-                          setSelectedRegionIds((prev) => {
-                            if (next) return prev.includes(r.id) ? prev : prev.concat(r.id);
-                            return prev.filter((x) => x !== r.id);
-                          });
-                        }}
-                      />
-                      <span>{r.name}</span>
-                    </label>
-                  );
-                })
-              )}
-            </div>
-          </div>
 
           <div className="actions">
             <button type="submit" className="confirm" disabled={isDuplicateName}>{initial?.id ? 'Actualizar' : 'Crear'}</button>
