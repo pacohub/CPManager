@@ -17,18 +17,33 @@ import { MapController } from './Controller/map.controller';
 import { Event } from './Entities/event.entity';
 import { EventService } from './Services/event.service';
 import { EventController } from './Controller/event.controller';
+import { Mechanic } from './Entities/mechanic.entity';
+import { Objective } from './Entities/objective.entity';
+import { MechanicService } from './Services/mechanic.service';
+import { ObjectiveService } from './Services/objective.service';
+import { MechanicController } from './Controller/mechanic.controller';
+import { ObjectiveController } from './Controller/objective.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'database.sqlite',
-      entities: [Saga, Campaign, Chapter, Map, Event],
+      entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective],
       synchronize: true, // Solo para desarrollo
     }),
-    TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event]),
+    TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective]),
   ],
-  controllers: [AppController, SagaController, CampaignController, ChapterController, MapController, EventController],
-  providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService],
+  controllers: [
+		AppController,
+		SagaController,
+		CampaignController,
+		ChapterController,
+		MapController,
+		EventController,
+		MechanicController,
+		ObjectiveController,
+	],
+  providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService],
 })
 export class AppModule {}

@@ -350,6 +350,79 @@ body {
     pointer-events: auto;
 }
 
+/* Events/Objectives: show CRUD buttons only on hover */
+.event-actions,
+.objective-actions {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.event-card:hover .event-actions,
+.event-card:focus-within .event-actions,
+.objective-row:hover .objective-actions,
+.objective-row:focus-within .objective-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Objectives: borderless row with left stripe */
+.objective-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.objective-row:hover {
+    /* no background per spec */
+}
+
+.objective-stripe {
+    width: 6px;
+    border-radius: 6px;
+    background: #e2c044;
+    flex: 0 0 6px;
+}
+
+.objective-toggle {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #e2c044;
+    opacity: 0.95;
+    user-select: none;
+}
+
+.objective-row:hover .objective-stripe {
+    filter: brightness(1.05);
+}
+
+/* Mechanics: show CRUD buttons only on hover */
+.mechanic-actions {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.mechanic-card:hover .mechanic-actions,
+.mechanic-card:focus-within .mechanic-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* DnD: prevent text selection while dragging */
+.dnd-noselect {
+    user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+
 .saga-card {
     position: relative;
     ;

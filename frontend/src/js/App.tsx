@@ -4,6 +4,7 @@ import { BrowserRouter, Route, Routes, useNavigate, useParams } from 'react-rout
 import SagaPanel from './SagaPanel';
 import CampaignDetail from './CampaignDetail';
 import MapsView from './MapsView';
+import MechanicsView from './MechanicsView';
 import ChapterEventsView from './ChapterEventsView';
 
 function SagaPanelRoute() {
@@ -12,6 +13,7 @@ function SagaPanelRoute() {
 		<SagaPanel
 			onOpenCampaign={(id) => navigate(`/campaigns/${id}`)}
 			onOpenMaps={() => navigate('/maps')}
+			onOpenMechanics={() => navigate('/mechanics')}
 		/>
 	);
 }
@@ -19,6 +21,11 @@ function SagaPanelRoute() {
 function MapsRoute() {
 	const navigate = useNavigate();
 	return <MapsView onBack={() => navigate('/')} />;
+}
+
+function MechanicsRoute() {
+	const navigate = useNavigate();
+	return <MechanicsView onBack={() => navigate('/')} />;
 }
 
 function CampaignDetailRoute() {
@@ -84,6 +91,7 @@ function App() {
 				<Route path="/campaigns/:id" element={<CampaignDetailRoute />} />
 				<Route path="/campaigns/:campaignId/chapters/:chapterId/events" element={<ChapterEventsRoute />} />
 				<Route path="/maps" element={<MapsRoute />} />
+				<Route path="/mechanics" element={<MechanicsRoute />} />
 			</Routes>
 		</BrowserRouter>
 	);

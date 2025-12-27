@@ -7,7 +7,7 @@ import CampaignCard from '../components/CampaignCard';
 import CampaignModal from '../components/CampaignModal';
 import { getCampaignsBySaga, createCampaign, updateCampaign, deleteCampaign } from './campaignApi';
 import { getAllChapters } from './chapterApi';
-import { FaBookOpen, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaMap } from 'react-icons/fa';
+import { FaBookOpen, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaMap, FaCogs } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 
 interface SagaType {
@@ -124,9 +124,10 @@ const DraggableCampaign: React.FC<DraggableCampaignProps> = ({ campaign, enabled
 interface SagaPanelProps {
   onOpenCampaign?: (campaignId: number) => void;
   onOpenMaps?: () => void;
+  onOpenMechanics?: () => void;
 }
 
-const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps }) => {
+const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics }) => {
   // Campañas por saga
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -399,6 +400,14 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps }) => 
         <div className="panel-header">
           <h1>CPManager</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              className="icon"
+              aria-label="Mecánicas"
+              title="Mecánicas"
+              onClick={() => onOpenMechanics?.()}
+            >
+              <FaCogs size={26} color="#FFD700" />
+            </button>
             <button
               className="icon"
               aria-label="Mapas"

@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FaTimes } from 'react-icons/fa';
+import { FaPlus, FaTimes } from 'react-icons/fa';
 import { EventDifficulty, EventItem, EventType } from '../interfaces/event';
 import { MapItem } from '../interfaces/map';
+import MapModal from './MapModal';
+import { createMap } from '../js/mapApi';
 
 interface Props {
 	open: boolean;
@@ -30,6 +32,9 @@ const EventModal: React.FC<Props> = ({ open, initial, maps, onClose, onSubmit })
 	const [difficulty, setDifficulty] = useState<EventDifficulty>((initial?.difficulty as EventDifficulty) || 'NORMAL');
 	const [file, setFile] = useState(initial?.file || '');
 	const [mapId, setMapId] = useState<number>(Number(initialMapId) || 0);
+	const [localMaps, setLocalMaps] = useState<MapItem[]>(maps || []);
+	const [mapModalOpen, setMapModalOpen] = useState(false);
+	const [mapInitial, setMapInitial] = useState<Partial<MapItem> | undefined>(undefined);
 
 	const [error, setError] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
@@ -44,6 +49,7 @@ const EventModal: React.FC<Props> = ({ open, initial, maps, onClose, onSubmit })
 
 	useEffect(() => {
 		if (!open) return;
+		setLocalMaps(maps || []);
 		setName(initial?.name || '');
 		setDescription(initial?.description || '');
 		setType((initial?.type as EventType) || 'MISSION');
@@ -61,11 +67,12 @@ const EventModal: React.FC<Props> = ({ open, initial, maps, onClose, onSubmit })
 		initial?.difficulty,
 		initial?.file,
 		initialMapId,
+		maps,
 	]);
 
 	const sortedMaps = useMemo(() => {
-		return (maps ?? []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-	}, [maps]);
+		return (localMaps ?? []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+	}, [localMaps]);
 
 	if (!open) return null;
 
@@ -102,16 +109,17 @@ const EventModal: React.FC<Props> = ({ open, initial, maps, onClose, onSubmit })
 	};
 
 	return (
-		<div className="modal-overlay">
-			<div className="modal-content" style={{ maxWidth: 560, minWidth: 340 }}>
-				<button className="icon option" onClick={onClose} title="Cerrar" style={{ position: 'absolute', top: 12, right: 12 }}>
-					<FaTimes size={18} />
-				</button>
-				<h2 className="modal-title" style={{ marginTop: 0 }}>
-					{initial?.id ? 'Editar Evento' : 'Nuevo Evento'}
-				</h2>
+		<>
+			<div className="modal-overlay">
+				<div className="modal-content" style={{ maxWidth: 560, minWidth: 340 }}>
+					<button className="icon option" onClick={onClose} title="Cerrar" style={{ position: 'absolute', top: 12, right: 12 }}>
+						<FaTimes size={18} />
+					</button>
+					<h2 className="modal-title" style={{ marginTop: 0 }}>
+						{initial?.id ? 'Editar Evento' : 'Nuevo Evento'}
+					</h2>
 
-				<form onSubmit={handleSubmit} autoComplete="off">
+					<form onSubmit={handleSubmit} autoComplete="off">
 					<input
 						name="name"
 						placeholder="Nombre"
@@ -150,12 +158,26 @@ const EventModal: React.FC<Props> = ({ open, initial, maps, onClose, onSubmit })
 
 					<label style={{ marginBottom: 8, display: 'block' }}>
 						Mapa:
-						<select value={mapId} onChange={(e) => setMapId(Number(e.target.value))} style={{ display: 'block', marginTop: 4 }}>
-							<option value={0}>Seleccionar...</option>
-							{sortedMaps.map((m) => (
-								<option key={m.id} value={m.id}>{m.name}</option>
-							))}
-						</select>
+						<div style={{ display: 'flex', alignItems: 'stretch', gap: 8, marginTop: 4 }}>
+							<select value={mapId} onChange={(e) => setMapId(Number(e.target.value))} style={{ display: 'block', width: '100%' }}>
+								<option value={0}>Seleccionar...</option>
+								{sortedMaps.map((m) => (
+									<option key={m.id} value={m.id}>{m.name}</option>
+								))}
+							</select>
+							<button
+								type="button"
+								className="icon option"
+								title="Nuevo Mapa"
+								onClick={() => {
+									setMapInitial(undefined);
+									setMapModalOpen(true);
+								}}
+								style={{ flex: '0 0 auto', minWidth: 34 }}
+							>
+								<FaPlus size={14} />
+							</button>
+						</div>
 					</label>
 
 					<label style={{ marginBottom: 8, display: 'block' }}>
@@ -174,9 +196,29 @@ const EventModal: React.FC<Props> = ({ open, initial, maps, onClose, onSubmit })
 						<button type="button" className="cancel" onClick={onClose} disabled={submitting}>Cancelar</button>
 					</div>
 					{error ? <div style={{ color: 'red', marginTop: 8 }}>{error}</div> : null}
-				</form>
+					</form>
+				</div>
 			</div>
-		</div>
+
+			{mapModalOpen ? (
+			<MapModal
+				open={mapModalOpen}
+				initial={mapInitial}
+				existing={localMaps}
+				onClose={() => {
+					setMapModalOpen(false);
+					setMapInitial(undefined);
+				}}
+				onSubmit={async (formData) => {
+					const created = await createMap(formData);
+					setLocalMaps((prev) => [...(prev || []), created]);
+					setMapId(created.id);
+					setMapModalOpen(false);
+					setMapInitial(undefined);
+				}}
+			/>
+		) : null}
+		</>
 	);
 };
 
