@@ -15,9 +15,10 @@ function normalizeLink(raw: string): string {
 
 interface Props {
 	onBack: () => void;
+	onOpenProfession?: (id: number) => void;
 }
 
-const ProfessionsView: React.FC<Props> = ({ onBack }) => {
+const ProfessionsView: React.FC<Props> = ({ onBack, onOpenProfession }) => {
 	const [professions, setProfessions] = useState<ProfessionItem[]>([]);
 	const [search, setSearch] = useState('');
 	const [modalOpen, setModalOpen] = useState(false);
@@ -82,7 +83,12 @@ const ProfessionsView: React.FC<Props> = ({ onBack }) => {
 			<div style={{ padding: 12 }}>
 				<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
 					{filtered.map((p) => (
-						<div key={p.id} className="block-border block-border-soft mechanic-card" style={{ padding: 12 }}>
+						<div
+							key={p.id}
+							className="block-border block-border-soft mechanic-card"
+							style={{ padding: 12, cursor: onOpenProfession ? 'pointer' : 'default' }}
+							onClick={() => onOpenProfession?.(p.id)}
+						>
 							{(!(p.description || '').trim() || !(p.link || '').trim()) ? (
 								<span
 									className="campaign-warning"
@@ -123,7 +129,8 @@ const ProfessionsView: React.FC<Props> = ({ onBack }) => {
 									<button
 										className="icon option"
 										title="Editar"
-										onClick={() => {
+										onClick={(e) => {
+										e.stopPropagation();
 											setInitial(p);
 											setModalOpen(true);
 										}}
@@ -133,7 +140,8 @@ const ProfessionsView: React.FC<Props> = ({ onBack }) => {
 									<button
 										className="icon option"
 										title="Eliminar"
-										onClick={() => {
+										onClick={(e) => {
+										e.stopPropagation();
 											setPendingDelete(p);
 											setConfirmOpen(true);
 										}}

@@ -7,11 +7,14 @@ import MapDetail from './MapDetail';
 import MapsView from './MapsView';
 import MechanicsView from './MechanicsView';
 import FactionsView from './FactionsView';
+import FactionDetail from './FactionDetail';
 import ProfessionsView from './ProfessionsView';
+import ProfessionDetail from './ProfessionDetail';
 import ObjectsView from './ObjectsView';
 import ComponentsView from './ComponentsView';
 import ResourcesView from './ResourcesView';
 import ChapterEventsView from './ChapterEventsView';
+import ClassesView from './ClassesView';
 
 function SagaPanelRoute() {
 	const navigate = useNavigate();
@@ -21,6 +24,7 @@ function SagaPanelRoute() {
 			onOpenMaps={() => navigate('/maps')}
 			onOpenMechanics={() => navigate('/mechanics')}
 			onOpenFactions={() => navigate('/factions')}
+			onOpenClasses={() => navigate('/classes')}
 			onOpenProfessions={() => navigate('/professions')}
 			onOpenObjects={() => navigate('/objects')}
 			onOpenComponents={() => navigate('/components')}
@@ -50,17 +54,40 @@ function MechanicsRoute() {
 
 function FactionsRoute() {
 	const navigate = useNavigate();
-	return <FactionsView onBack={() => navigate('/')} />;
+	return <FactionsView onBack={() => navigate('/')} onOpenFaction={(id) => navigate(`/factions/${id}`)} />;
+}
+
+function FactionDetailRoute() {
+	const navigate = useNavigate();
+	const params = useParams();
+	const factionId = Number(params.id);
+
+	if (!Number.isFinite(factionId) || factionId <= 0) return <Navigate to="/factions" />;
+	return <FactionDetail factionId={factionId} onBack={() => navigate('/factions')} />;
 }
 
 function ProfessionsRoute() {
 	const navigate = useNavigate();
-	return <ProfessionsView onBack={() => navigate('/')} />;
+	return <ProfessionsView onBack={() => navigate('/')} onOpenProfession={(id) => navigate(`/professions/${id}`)} />;
+}
+
+function ProfessionDetailRoute() {
+	const navigate = useNavigate();
+	const params = useParams();
+	const professionId = Number(params.id);
+
+	if (!Number.isFinite(professionId) || professionId <= 0) return <Navigate to="/professions" />;
+	return <ProfessionDetail professionId={professionId} onBack={() => navigate('/professions')} />;
 }
 
 function ObjectsRoute() {
 	const navigate = useNavigate();
 	return <ObjectsView onBack={() => navigate('/')} />;
+}
+
+function ClassesRoute() {
+	const navigate = useNavigate();
+	return <ClassesView onBack={() => navigate('/')} />;
 }
 
 function ComponentsRoute() {
@@ -138,8 +165,11 @@ function App() {
 				<Route path="/maps" element={<MapsRoute />} />
 				<Route path="/mechanics" element={<MechanicsRoute />} />
 				<Route path="/factions" element={<FactionsRoute />} />
+				<Route path="/factions/:id" element={<FactionDetailRoute />} />
 				<Route path="/professions" element={<ProfessionsRoute />} />
+				<Route path="/professions/:id" element={<ProfessionDetailRoute />} />
 				<Route path="/objects" element={<ObjectsRoute />} />
+				<Route path="/classes" element={<ClassesRoute />} />
 				<Route path="/components" element={<ComponentsRoute />} />
 				<Route path="/resources" element={<ResourcesRoute />} />
 				<Route path="/maps/:id" element={<MapDetailRoute />} />

@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Faction = void 0;
 const typeorm_1 = require("typeorm");
 const profession_entity_1 = require("./profession.entity");
+const class_entity_1 = require("./class.entity");
 let Faction = class Faction {
     id;
     name;
@@ -23,6 +24,7 @@ let Faction = class Faction {
     tertiaryColor;
     file;
     professions;
+    classes;
 };
 exports.Faction = Faction;
 __decorate([
@@ -66,6 +68,11 @@ __decorate([
     (0, typeorm_1.JoinTable)(),
     __metadata("design:type", Array)
 ], Faction.prototype, "professions", void 0);
+__decorate([
+    (0, typeorm_1.ManyToMany)(() => class_entity_1.Class, (c) => c.factions, { cascade: false }),
+    (0, typeorm_1.JoinTable)(),
+    __metadata("design:type", Array)
+], Faction.prototype, "classes", void 0);
 exports.Faction = Faction = __decorate([
     (0, typeorm_1.Entity)()
 ], Faction);

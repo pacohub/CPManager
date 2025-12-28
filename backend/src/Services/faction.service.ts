@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Faction } from '../Entities/faction.entity';
 import { Profession } from '../Entities/profession.entity';
+import { Class } from '../Entities/class.entity';
 
 @Injectable()
 export class FactionService {
@@ -11,6 +12,8 @@ export class FactionService {
 		private factionRepository: Repository<Faction>,
 		@InjectRepository(Profession)
 		private professionRepository: Repository<Profession>,
+		@InjectRepository(Class)
+		private classRepository: Repository<Class>,
 	) {}
 
 	async findAll(): Promise<Faction[]> {
@@ -50,6 +53,31 @@ export class FactionService {
 			: [];
 
 		faction.professions = professions;
+		return this.factionRepository.save(faction);
+	}
+
+	async getClasses(id: number): Promise<Class[]> {
+		const faction = await this.factionRepository.findOne({
+			where: { id },
+			relations: { classes: true },
+		});
+		if (!faction) throw new NotFoundException('Faction no encontrada');
+		return faction.classes ?? [];
+	}
+
+	async setClassIds(id: number, classIds: number[]): Promise<Faction> {
+		const faction = await this.factionRepository.findOne({
+			where: { id },
+			relations: { classes: true },
+		});
+		if (!faction) throw new NotFoundException('Faction no encontrada');
+
+		const uniqueIds = Array.from(
+			new Set((classIds ?? []).map((x) => Number(x)).filter((x) => Number.isFinite(x))),
+		);
+
+		const classes = uniqueIds.length ? await this.classRepository.findBy({ id: In(uniqueIds) }) : [];
+		faction.classes = classes;
 		return this.factionRepository.save(faction);
 	}
 

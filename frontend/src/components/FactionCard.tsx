@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FaEdit, FaTrash, FaExclamationTriangle } from 'react-icons/fa';
-import { GiWarPick } from 'react-icons/gi';
+import { ClassItem } from '../interfaces/class';
 import { FactionItem } from '../interfaces/faction';
 import { ProfessionItem } from '../interfaces/profession';
 
@@ -8,8 +8,9 @@ interface Props {
 	faction: FactionItem;
 	onEdit: () => void;
 	onDelete: () => void;
-	onManageProfessions?: () => void;
+	onOpen?: () => void;
 	professions?: ProfessionItem[];
+	classes?: ClassItem[];
 }
 
 const toBackendUrl = (path?: string) => {
@@ -18,7 +19,7 @@ const toBackendUrl = (path?: string) => {
 	return encodeURI(`http://localhost:4000/${path.replace(/^\/+/, '')}`);
 };
 
-const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onManageProfessions, professions }) => {
+const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, professions, classes }) => {
 	const [crestExists, setCrestExists] = useState(true);
 	const crestUrl = useMemo(() => toBackendUrl(faction.crestImage), [faction.crestImage]);
 	const [iconExists, setIconExists] = useState(true);
@@ -62,11 +63,24 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onManageProfe
 	const hasIcon = Boolean((faction.iconImage ?? '').trim());
 	const hasCrest = Boolean((faction.crestImage ?? '').trim());
 	const hasDescription = Boolean((faction.description ?? '').trim());
+	const hasProfessionWarnings = useMemo(() => {
+		return (professions || []).some((p) => !String(p.description ?? '').trim() || !String((p as any).link ?? '').trim());
+	}, [professions]);
+	const hasClassWarnings = useMemo(() => {
+		return (classes || []).some((c) => {
+			const icon = String((c as any).icon ?? '').trim();
+			const description = String((c as any).description ?? '').trim();
+			const level = Number((c as any).level);
+			return !icon || !description || !Number.isFinite(level) || level <= 0;
+		});
+	}, [classes]);
 	const missing: string[] = [];
 	if (!hasPrimaryColor) missing.push('color primario');
 	if (!hasIcon) missing.push('icono');
 	if (!hasCrest) missing.push('imagen');
 	if (!hasDescription) missing.push('descripción');
+	if (hasProfessionWarnings) missing.push('profesiones incompletas');
+	if (hasClassWarnings) missing.push('clases incompletas');
 	const showWarning = missing.length > 0;
 	const warningText = `Falta: ${missing.join(', ')}.`;
 
@@ -76,6 +90,15 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onManageProfe
 			style={{ backgroundImage: bg, width: '100%', height: 'auto', aspectRatio: '4 / 3' }}
 			tabIndex={0}
 			aria-label={faction.name}
+			role={onOpen ? 'button' : undefined}
+			onClick={() => onOpen?.()}
+			onKeyDown={(e) => {
+				if (!onOpen) return;
+				if (e.key === 'Enter' || e.key === ' ') {
+					e.preventDefault();
+					onOpen();
+				}
+			}}
 		>
 			{showWarning ? (
 				<span
@@ -126,20 +149,6 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onManageProfe
 			</div>
 
 			<div className="campaign-actions">
-				{onManageProfessions ? (
-					<button
-						className="icon option"
-						title="Profesiones"
-						tabIndex={-1}
-						onClick={(e) => {
-							e.stopPropagation();
-							onManageProfessions();
-						}}
-						onPointerDown={(e) => e.stopPropagation()}
-					>
-						<GiWarPick size={16} />
-					</button>
-				) : null}
 				<button
 					className="icon option"
 					title="Editar"

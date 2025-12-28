@@ -1,5 +1,6 @@
 import { FactionItem } from '../interfaces/faction';
 import { ProfessionItem } from '../interfaces/profession';
+import { ClassItem } from '../interfaces/class';
 
 const API_URL = 'http://localhost:4000/factions';
 
@@ -57,6 +58,20 @@ export async function setFactionProfessions(factionId: number, professionIds: nu
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },
 		body: JSON.stringify({ professionIds }),
+	});
+	return ensureOk<FactionItem>(res);
+}
+
+export async function getFactionClasses(factionId: number): Promise<ClassItem[]> {
+	const res = await fetch(`${API_URL}/${factionId}/classes`);
+	return ensureOk<ClassItem[]>(res);
+}
+
+export async function setFactionClasses(factionId: number, classIds: number[]): Promise<FactionItem> {
+	const res = await fetch(`${API_URL}/${factionId}/classes`, {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ classIds }),
 	});
 	return ensureOk<FactionItem>(res);
 }

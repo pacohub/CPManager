@@ -32,6 +32,12 @@ import { ChapterFactionController } from './Controller/chapterFaction.controller
 import { Profession } from './Entities/profession.entity';
 import { ProfessionService } from './Services/profession.service';
 import { ProfessionController } from './Controller/profession.controller';
+import { ProfessionObject } from './Entities/professionObject.entity';
+import { ProfessionObjectService } from './Services/professionObject.service';
+import { ProfessionObjectController } from './Controller/professionObject.controller';
+import { ProfessionObjectResource } from './Entities/professionObjectResource.entity';
+import { ProfessionObjectResourceService } from './Services/professionObjectResource.service';
+import { ProfessionObjectResourceController } from './Controller/professionObjectResource.controller';
 import { GameObject } from './Entities/gameObject.entity';
 import { GameObjectService } from './Services/gameObject.service';
 import { GameObjectController } from './Controller/gameObject.controller';
@@ -44,16 +50,19 @@ import { ResourceService } from './Services/resource.service';
 import { ResourceTypeService } from './Services/resourceType.service';
 import { ResourceController } from './Controller/resource.controller';
 import { ResourceTypeController } from './Controller/resourceType.controller';
+import { Class } from './Entities/class.entity';
+import { ClassService } from './Services/class.service';
+import { ClassController } from './Controller/class.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'database.sqlite',
-      entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, GameObject, Component, Resource, ResourceType],
+			entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType],
       synchronize: true, // Solo para desarrollo
     }),
-    TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, GameObject, Component, Resource, ResourceType]),
+		TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType]),
   ],
   controllers: [
 		AppController,
@@ -67,11 +76,14 @@ import { ResourceTypeController } from './Controller/resourceType.controller';
 		FactionController,
     ChapterFactionController,
 		ProfessionController,
+		ProfessionObjectController,
+		ProfessionObjectResourceController,
     GameObjectController,
 		ComponentController,
 		ResourceController,
 		ResourceTypeController,
+		ClassController,
 	],
-  providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService, ProfessionService, GameObjectService, ComponentService, ResourceService, ResourceTypeService],
+	providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService, ProfessionService, ClassService, ProfessionObjectService, ProfessionObjectResourceService, GameObjectService, ComponentService, ResourceService, ResourceTypeService],
 })
 export class AppModule {}

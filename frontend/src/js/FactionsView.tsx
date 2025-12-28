@@ -1,32 +1,27 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaArrowLeft } from 'react-icons/fa';
-import { GiCrossedSwords } from 'react-icons/gi';
+import { FaArrowLeft, FaFlag } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import FactionCard from '../components/FactionCard';
 import FactionModal from '../components/FactionModal';
+import { ClassItem } from '../interfaces/class';
 import { FactionItem } from '../interfaces/faction';
 import { ProfessionItem } from '../interfaces/profession';
-import { createFaction, deleteFaction, getFactionProfessions, getFactions, setFactionProfessions, updateFaction } from './factionApi';
-import { getProfessions } from './professionApi';
+import { createFaction, deleteFaction, getFactionClasses, getFactionProfessions, getFactions, updateFaction } from './factionApi';
 
 interface Props {
 	onBack: () => void;
+	onOpenFaction?: (id: number) => void;
 }
 
-const FactionsView: React.FC<Props> = ({ onBack }) => {
+const FactionsView: React.FC<Props> = ({ onBack, onOpenFaction }) => {
 	const [factions, setFactions] = useState<FactionItem[]>([]);
 	const [search, setSearch] = useState('');
 	const [modalOpen, setModalOpen] = useState(false);
 	const [initial, setInitial] = useState<Partial<FactionItem> | undefined>(undefined);
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [pendingDelete, setPendingDelete] = useState<FactionItem | null>(null);
-	const [professionModalOpen, setProfessionModalOpen] = useState(false);
-	const [professionSearch, setProfessionSearch] = useState('');
-	const [professions, setProfessions] = useState<ProfessionItem[]>([]);
-	const [professionFaction, setProfessionFaction] = useState<FactionItem | null>(null);
-	const [selectedProfessionIds, setSelectedProfessionIds] = useState<number[]>([]);
-	const [savingProfessions, setSavingProfessions] = useState(false);
 	const [factionProfessions, setFactionProfessionsState] = useState<Record<number, ProfessionItem[]>>({});
+	const [factionClasses, setFactionClassesState] = useState<Record<number, ClassItem[]>>({});
 
 	const refresh = useCallback(async () => {
 		const list = await getFactions();
@@ -38,16 +33,11 @@ const FactionsView: React.FC<Props> = ({ onBack }) => {
 	}, [refresh]);
 
 	useEffect(() => {
-		getProfessions()
-			.then((list) => setProfessions(list || []))
-			.catch((e) => console.error('Error cargando profesiones', e));
-	}, []);
-
-	useEffect(() => {
 		let cancelled = false;
 		const list = factions || [];
 		if (!list.length) {
 			setFactionProfessionsState({});
+			setFactionClassesState({});
 			return;
 		}
 
@@ -63,29 +53,22 @@ const FactionsView: React.FC<Props> = ({ onBack }) => {
 			setFactionProfessionsState(next);
 		});
 
+		Promise.allSettled(list.map((f) => getFactionClasses(f.id))).then((results) => {
+			if (cancelled) return;
+			const next: Record<number, ClassItem[]> = {};
+			results.forEach((r, idx) => {
+				const factionId = list[idx]?.id;
+				if (!factionId) return;
+				if (r.status === 'fulfilled') next[factionId] = r.value || [];
+				else next[factionId] = [];
+			});
+			setFactionClassesState(next);
+		});
+
 		return () => {
 			cancelled = true;
 		};
 	}, [factions]);
-
-	const openProfessionsModal = useCallback(async (faction: FactionItem) => {
-		setProfessionFaction(faction);
-		setProfessionSearch('');
-		setProfessionModalOpen(true);
-
-		const cached = factionProfessions[faction.id];
-		if (cached) {
-			setSelectedProfessionIds((cached || []).map((p) => p.id));
-			return;
-		}
-		try {
-			const assigned = await getFactionProfessions(faction.id);
-			setSelectedProfessionIds((assigned || []).map((p) => p.id));
-		} catch (e) {
-			console.error('Error cargando profesiones de facción', e);
-			setSelectedProfessionIds([]);
-		}
-	}, [factionProfessions]);
 
 	const filtered = useMemo(() => {
 		const q = search.trim().toLowerCase();
@@ -111,7 +94,7 @@ const FactionsView: React.FC<Props> = ({ onBack }) => {
 						setModalOpen(true);
 					}}
 				>
-					<GiCrossedSwords size={22} color="#FFD700" />
+					<FaFlag size={22} color="#FFD700" />
 				</button>
 			</div>
 
@@ -137,7 +120,8 @@ const FactionsView: React.FC<Props> = ({ onBack }) => {
 							key={f.id}
 							faction={f}
 							professions={factionProfessions[f.id] || []}
-							onManageProfessions={() => openProfessionsModal(f)}
+							classes={factionClasses[f.id] || []}
+							onOpen={() => onOpenFaction?.(f.id)}
 							onEdit={() => {
 								setInitial(f);
 								setModalOpen(true);
@@ -172,97 +156,6 @@ const FactionsView: React.FC<Props> = ({ onBack }) => {
 						setInitial(undefined);
 					}}
 				/>
-			) : null}
-
-			{professionModalOpen && professionFaction ? (
-				<div className="modal-overlay">
-					<div className="modal-content" style={{ maxWidth: 640, minWidth: 360 }}>
-						<h2 className="modal-title" style={{ marginTop: 0 }}>
-							Profesiones de {professionFaction.name}
-						</h2>
-
-						<div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-							<input
-								type="text"
-								placeholder="Buscar profesión..."
-								value={professionSearch}
-								onChange={(e) => setProfessionSearch(e.target.value)}
-								style={{ flex: 1, padding: 8 }}
-							/>
-						</div>
-
-						<div style={{ maxHeight: 340, overflow: 'auto', paddingRight: 6 }}>
-							{(professions || [])
-								.slice()
-								.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }))
-								.filter((p) => {
-									const q = professionSearch.trim().toLowerCase();
-									if (!q) return true;
-									return (p.name || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
-								})
-								.map((p) => {
-									const checked = selectedProfessionIds.includes(p.id);
-									return (
-										<label key={p.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '6px 0' }}>
-											<input
-												type="checkbox"
-												checked={checked}
-												onChange={() => {
-													setSelectedProfessionIds((prev) =>
-														checked ? prev.filter((id) => id !== p.id) : prev.concat(p.id),
-													);
-											}}
-											/>
-											<div style={{ minWidth: 0 }}>
-												<div style={{ fontWeight: 700, wordBreak: 'break-word' }}>{p.name}</div>
-												{p.description ? (
-													<div style={{ opacity: 0.9, fontSize: 13, whiteSpace: 'pre-wrap' }}>{p.description}</div>
-												) : null}
-											</div>
-										</label>
-									);
-								})}
-
-							{(professions || []).length === 0 ? (
-								<div style={{ opacity: 0.85, color: '#e2d9b7' }}>No hay profesiones todavía.</div>
-							) : null}
-						</div>
-
-						<div className="actions" style={{ marginTop: 12 }}>
-							<button
-								className="confirm"
-								disabled={savingProfessions}
-								onClick={async () => {
-									setSavingProfessions(true);
-									try {
-										await setFactionProfessions(professionFaction.id, selectedProfessionIds);
-										setFactionProfessionsState((prev) => {
-											const next = { ...(prev || {}) };
-											next[professionFaction.id] = (professions || []).filter((p) => selectedProfessionIds.includes(p.id));
-											return next;
-										});
-										setProfessionModalOpen(false);
-										setProfessionFaction(null);
-									} finally {
-										setSavingProfessions(false);
-									}
-								}}
-							>
-								Guardar
-							</button>
-							<button
-								className="cancel"
-								onClick={() => {
-									setProfessionModalOpen(false);
-									setProfessionFaction(null);
-									setSelectedProfessionIds([]);
-								}}
-							>
-								Cancelar
-							</button>
-						</div>
-					</div>
-				</div>
 			) : null}
 
 			<ConfirmModal

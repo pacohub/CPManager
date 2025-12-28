@@ -7,7 +7,7 @@ import CampaignCard from '../components/CampaignCard';
 import CampaignModal from '../components/CampaignModal';
 import { getCampaignsBySaga, createCampaign, updateCampaign, deleteCampaign } from './campaignApi';
 import { getAllChapters } from './chapterApi';
-import { FaBookOpen, FaCubes, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaCompass, FaCogs, FaMountain } from 'react-icons/fa';
+import { FaBookOpen, FaCubes, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaCompass, FaCogs, FaMountain, FaFlag } from 'react-icons/fa';
 import { GiChest, GiCrossedSwords, GiWarPick } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
 
@@ -127,13 +127,14 @@ interface SagaPanelProps {
   onOpenMaps?: () => void;
   onOpenMechanics?: () => void;
   onOpenFactions?: () => void;
+	onOpenClasses?: () => void;
   onOpenProfessions?: () => void;
   onOpenObjects?: () => void;
 	onOpenComponents?: () => void;
 	onOpenResources?: () => void;
 }
 
-const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics, onOpenFactions, onOpenProfessions, onOpenObjects, onOpenComponents, onOpenResources }) => {
+const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics, onOpenFactions, onOpenClasses, onOpenProfessions, onOpenObjects, onOpenComponents, onOpenResources }) => {
   // Campañas por saga
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -438,6 +439,14 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
               aria-label="Facciones"
               title="Facciones"
               onClick={() => onOpenFactions?.()}
+            >
+              <FaFlag size={26} color="#FFD700" />
+            </button>
+            <button
+              className="icon"
+              aria-label="Clases"
+              title="Clases"
+              onClick={() => onOpenClasses?.()}
             >
               <GiCrossedSwords size={26} color="#FFD700" />
             </button>

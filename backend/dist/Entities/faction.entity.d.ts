@@ -1,4 +1,5 @@
 import { Profession } from './profession.entity';
+import { Class } from './class.entity';
 export declare class Faction {
     id: number;
     name: string;
@@ -10,4 +11,5 @@ export declare class Faction {
     tertiaryColor: string;
     file: string;
     professions: Profession[];
+    classes: Class[];
 }

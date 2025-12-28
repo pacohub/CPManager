@@ -18,12 +18,15 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const faction_entity_1 = require("../Entities/faction.entity");
 const profession_entity_1 = require("../Entities/profession.entity");
+const class_entity_1 = require("../Entities/class.entity");
 let FactionService = class FactionService {
     factionRepository;
     professionRepository;
-    constructor(factionRepository, professionRepository) {
+    classRepository;
+    constructor(factionRepository, professionRepository, classRepository) {
         this.factionRepository = factionRepository;
         this.professionRepository = professionRepository;
+        this.classRepository = classRepository;
     }
     async findAll() {
         return this.factionRepository
@@ -58,6 +61,27 @@ let FactionService = class FactionService {
         faction.professions = professions;
         return this.factionRepository.save(faction);
     }
+    async getClasses(id) {
+        const faction = await this.factionRepository.findOne({
+            where: { id },
+            relations: { classes: true },
+        });
+        if (!faction)
+            throw new common_1.NotFoundException('Faction no encontrada');
+        return faction.classes ?? [];
+    }
+    async setClassIds(id, classIds) {
+        const faction = await this.factionRepository.findOne({
+            where: { id },
+            relations: { classes: true },
+        });
+        if (!faction)
+            throw new common_1.NotFoundException('Faction no encontrada');
+        const uniqueIds = Array.from(new Set((classIds ?? []).map((x) => Number(x)).filter((x) => Number.isFinite(x))));
+        const classes = uniqueIds.length ? await this.classRepository.findBy({ id: (0, typeorm_2.In)(uniqueIds) }) : [];
+        faction.classes = classes;
+        return this.factionRepository.save(faction);
+    }
     async create(data) {
         if (typeof data.name === 'string')
             data.name = data.name.trim();
@@ -87,7 +111,9 @@ exports.FactionService = FactionService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(faction_entity_1.Faction)),
     __param(1, (0, typeorm_1.InjectRepository)(profession_entity_1.Profession)),
+    __param(2, (0, typeorm_1.InjectRepository)(class_entity_1.Class)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository])
 ], FactionService);
 //# sourceMappingURL=faction.service.js.map

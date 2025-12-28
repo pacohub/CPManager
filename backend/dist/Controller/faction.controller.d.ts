@@ -6,6 +6,8 @@ export declare class FactionController {
     findAll(): Promise<Faction[]>;
     getProfessions(id: string): Promise<any[]>;
     setProfessions(id: string, body: any): Promise<Faction>;
+    getClasses(id: string): Promise<any[]>;
+    setClasses(id: string, body: any): Promise<Faction>;
     findOne(id: string): Promise<Faction | null>;
     create(data: any, files: {
         crestImage?: Express.Multer.File[];

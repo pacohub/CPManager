@@ -41,6 +41,16 @@ export class FactionController {
 		return this.factionService.setProfessionIds(Number(id), body?.professionIds ?? []);
 	}
 
+	@Get(':id/classes')
+	async getClasses(@Param('id') id: string): Promise<any[]> {
+		return this.factionService.getClasses(Number(id));
+	}
+
+	@Put(':id/classes')
+	async setClasses(@Param('id') id: string, @Body() body: any): Promise<Faction> {
+		return this.factionService.setClassIds(Number(id), body?.classIds ?? []);
+	}
+
 	@Get(':id')
 	async findOne(@Param('id') id: string): Promise<Faction | null> {
 		return this.factionService.findOne(Number(id));

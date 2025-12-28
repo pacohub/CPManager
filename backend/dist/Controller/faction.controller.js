@@ -70,6 +70,12 @@ let FactionController = class FactionController {
     async setProfessions(id, body) {
         return this.factionService.setProfessionIds(Number(id), body?.professionIds ?? []);
     }
+    async getClasses(id) {
+        return this.factionService.getClasses(Number(id));
+    }
+    async setClasses(id, body) {
+        return this.factionService.setClassIds(Number(id), body?.classIds ?? []);
+    }
     async findOne(id) {
         return this.factionService.findOne(Number(id));
     }
@@ -113,6 +119,21 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], FactionController.prototype, "setProfessions", null);
+__decorate([
+    (0, common_1.Get)(':id/classes'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], FactionController.prototype, "getClasses", null);
+__decorate([
+    (0, common_1.Put)(':id/classes'),
+    __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, Object]),
+    __metadata("design:returntype", Promise)
+], FactionController.prototype, "setClasses", null);
 __decorate([
     (0, common_1.Get)(':id'),
     __param(0, (0, common_1.Param)('id')),
