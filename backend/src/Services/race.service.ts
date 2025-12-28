@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
+import { Animation } from '../Entities/animation.entity';
 import { Race, RACE_ARMOR_TYPES, RACE_DEATH_TYPES, RACE_MOVEMENT_TYPES } from '../Entities/race.entity';
 import { Sound } from '../Entities/sound.entity';
 
@@ -11,20 +12,57 @@ export class RaceService {
 		private raceRepository: Repository<Race>,
 		@InjectRepository(Sound)
 		private soundRepository: Repository<Sound>,
+		@InjectRepository(Animation)
+		private animationRepository: Repository<Animation>,
 	) {}
+
+	private async ensureAnimationsExistByName(names: string[]): Promise<Animation[]> {
+		const unique = Array.from(new Set((names || []).map((x) => String(x || '').trim()).filter(Boolean)));
+		if (unique.length === 0) return [];
+		const existing = await this.animationRepository.find({ where: { name: In(unique) } });
+		const existingNames = new Set((existing || []).map((a) => a.name));
+		const missing = unique.filter((n) => !existingNames.has(n));
+		if (missing.length === 0) return existing;
+		const created = await this.animationRepository.save(missing.map((name) => this.animationRepository.create({ name })));
+		return [...existing, ...(created || [])];
+	}
+
+	private async resolveDefaultAnimationsForRace(data: Partial<Race>): Promise<Animation[]> {
+		const names: string[] = ['Stand', 'Die'];
+		const deathType = String((data as any)?.deathType ?? '').trim();
+		const movementType = String((data as any)?.movementType ?? '').trim();
+		if (deathType === 'revive, se pudre' || deathType === 'no revive, se pudre') names.push('Decay');
+		if (movementType && movementType !== 'ninguno') names.push('Walk');
+		return this.ensureAnimationsExistByName(names);
+	}
 
 	async findAll(): Promise<Race[]> {
 		return this.raceRepository
 			.createQueryBuilder('r')
 			.leftJoinAndSelect('r.movementSound', 'ms')
 			.leftJoinAndSelect('ms.types', 'mst')
+			.leftJoinAndSelect('r.animations', 'a')
 			.orderBy('LOWER(r.name)', 'ASC')
 			.addOrderBy('r.id', 'ASC')
 			.getMany();
 	}
 
 	async findOne(id: number): Promise<Race | null> {
-		return this.raceRepository.findOne({ where: { id }, relations: { movementSound: { types: true } } });
+		return this.raceRepository.findOne({ where: { id }, relations: { movementSound: { types: true }, animations: true } });
+	}
+
+	private coerceIdArray(value: any): number[] {
+		if (!Array.isArray(value)) return [];
+		const out: number[] = [];
+		const seen = new Set<number>();
+		for (const raw of value) {
+			const n = Number.parseInt(String(raw), 10);
+			if (!Number.isFinite(n) || n <= 0) continue;
+			if (seen.has(n)) continue;
+			seen.add(n);
+			out.push(n);
+		}
+		return out;
 	}
 
 	private normalize(data: Partial<Race>) {
@@ -81,6 +119,7 @@ export class RaceService {
 		if (!data.name) throw new BadRequestException('name es requerido');
 		await this.ensureSoundExists(data.movementSoundId ?? null);
 		const entity = this.raceRepository.create(data);
+		entity.animations = await this.resolveDefaultAnimationsForRace(entity);
 		return this.raceRepository.save(entity);
 	}
 
@@ -89,10 +128,34 @@ export class RaceService {
 		this.normalize(data);
 		this.validateEnums(data);
 		await this.ensureSoundExists(data.movementSoundId ?? undefined);
-		const existing = await this.findOne(id);
+		const animationIdsRaw = (data as any)?.animationIds;
+		const shouldUpdateAnimations = animationIdsRaw !== undefined;
+		delete (data as any).animationIds;
+
+		const existing = await this.raceRepository.findOne({ where: { id }, relations: { movementSound: { types: true }, animations: true } });
 		if (!existing) throw new NotFoundException('Raza no encontrada');
-		await this.raceRepository.update(id, data);
-		return this.findOne(id);
+
+		Object.assign(existing, data);
+
+		if (data.movementSoundId !== undefined) {
+			const nextId = (data.movementSoundId as any) === '' ? null : (data.movementSoundId ?? null);
+			if (!nextId) {
+				existing.movementSoundId = null;
+				existing.movementSound = null;
+			} else {
+				const s = await this.soundRepository.findOne({ where: { id: Number(nextId) }, relations: { types: true } });
+				if (!s) throw new BadRequestException('movementSoundId inválido');
+				existing.movementSoundId = s.id;
+				existing.movementSound = s;
+			}
+		}
+
+		if (shouldUpdateAnimations) {
+			const ids = this.coerceIdArray(animationIdsRaw);
+			existing.animations = ids.length ? await this.animationRepository.find({ where: { id: In(ids) } }) : [];
+		}
+
+		return this.raceRepository.save(existing);
 	}
 
 	async remove(id: number): Promise<void> {

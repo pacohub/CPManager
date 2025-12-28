@@ -42,7 +42,7 @@ export async function createClass(data: { name: string; icon?: string; descripti
 
 export async function updateClass(
 	id: number,
-	data: Partial<{ name: string; icon: string; description: string; level: number }>,
+	data: Partial<{ name: string; icon: string; description: string; level: number; animationIds: number[] }>,
 ): Promise<ClassItem> {
 	const res = await fetch(`${API_URL}/${id}`, {
 		method: 'PUT',

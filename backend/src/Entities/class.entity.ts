@@ -1,4 +1,5 @@
-import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Animation } from './animation.entity';
 import { Faction } from './faction.entity';
 
 @Entity()
@@ -20,4 +21,8 @@ export class Class {
 
 	@ManyToMany(() => Faction, (f) => f.classes)
 	factions: Faction[];
+
+	@ManyToMany(() => Animation, (animation) => animation.classes)
+	@JoinTable({ name: 'class_animations' })
+	animations: Animation[];
 }

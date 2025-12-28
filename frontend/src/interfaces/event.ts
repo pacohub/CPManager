@@ -1,8 +1,10 @@
 import { Chapter } from './chapter';
 import { MapItem } from './map';
 
-export type EventType = 'MISSION' | 'CINEMATIC';
+export type EventType = 'MISSION' | 'CINEMATIC' | 'MOBA';
 export type EventDifficulty = 'EASY' | 'NORMAL' | 'HARD';
+
+export type MobaTeams = { teamAIds: number[]; teamBIds: number[] };
 
 export interface EventItem {
 	id: number;
@@ -12,6 +14,7 @@ export interface EventItem {
 	type: EventType;
 	difficulty: EventDifficulty;
 	file?: string;
+	moba?: MobaTeams | null;
 
 	// Backend devuelve relaciones eager
 	chapter?: Chapter;

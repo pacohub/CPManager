@@ -42,7 +42,7 @@ export async function createCharacter(data: { name: string; classId: number; rac
 
 export async function updateCharacter(
 	id: number,
-	data: Partial<{ name: string; classId: number; raceId: number | null; icon: string; image: string; model: string }>,
+	data: Partial<{ name: string; classId: number; raceId: number | null; icon: string; image: string; model: string; animationIds: number[] }>,
 ): Promise<CharacterItem> {
 	const res = await fetch(`${API_URL}/${id}`, {
 		method: 'PUT',
@@ -105,7 +105,7 @@ export async function createCharacterInstance(
 export async function updateCharacterInstance(
 	characterId: number,
 	instanceId: number,
-	data: Partial<{ name: string; classId: number; raceId: number | null; icon: string; image: string; model: string }>,
+	data: Partial<{ name: string; classId: number; raceId: number | null; icon: string; image: string; model: string; animationIds: number[] }>,
 ): Promise<CharacterItem> {
 	const res = await fetch(`${API_URL}/${characterId}/instances/${instanceId}`, {
 		method: 'PUT',

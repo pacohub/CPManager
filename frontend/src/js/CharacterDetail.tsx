@@ -2,12 +2,15 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FaArrowLeft, FaEdit, FaExclamationTriangle, FaPlus, FaTrash } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import CharacterModal from '../components/CharacterModal';
+import AnimationModal from '../components/AnimationModal';
+import { AnimationItem } from '../interfaces/animation';
 import { CharacterItem } from '../interfaces/character';
 import { ClassItem } from '../interfaces/class';
 import { RaceItem } from '../interfaces/race';
 import { SoundItem } from '../interfaces/sound';
+import { createAnimation, getAnimations } from './animationApi';
 import { getClasses } from './classApi';
-import { createCharacterInstance, deleteCharacterInstance, getCharacter, getCharacterInstances, updateCharacterInstance, uploadCharacterIcon, uploadCharacterImage } from './characterApi';
+import { createCharacterInstance, deleteCharacterInstance, getCharacter, getCharacterInstances, updateCharacter, updateCharacterInstance, uploadCharacterIcon, uploadCharacterImage } from './characterApi';
 import { getRaces } from './raceApi';
 import { getSounds } from './soundApi';
 
@@ -38,6 +41,12 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 	const [classes, setClasses] = useState<ClassItem[]>([]);
 	const [races, setRaces] = useState<RaceItem[]>([]);
 	const [sounds, setSounds] = useState<SoundItem[]>([]);
+	const [animations, setAnimations] = useState<AnimationItem[]>([]);
+	const [ownAnimationIds, setOwnAnimationIds] = useState<number[]>([]);
+	const [savingAnimations, setSavingAnimations] = useState(false);
+	const [addAnimOpen, setAddAnimOpen] = useState(false);
+	const [selectedExistingAnimId, setSelectedExistingAnimId] = useState<number | string>(0);
+	const [createAnimModalOpen, setCreateAnimModalOpen] = useState(false);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -51,18 +60,20 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 		setLoading(true);
 		setError(null);
 		try {
-			const [c, inst, klasses, r, s] = await Promise.all([
+			const [c, inst, klasses, r, s, a] = await Promise.all([
 				getCharacter(characterId),
 				getCharacterInstances(characterId),
 				getClasses(),
 				getRaces(),
 				getSounds(),
+				getAnimations(),
 			]);
 			setCharacter(c);
 			setInstances(inst || []);
 			setClasses(klasses || []);
 			setRaces(r || []);
 			setSounds(s || []);
+			setAnimations(a || []);
 		} catch (e: any) {
 			setError(e?.message || 'Error cargando el personaje');
 		} finally {
@@ -78,6 +89,107 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 	const imageUrl = useMemo(() => asImageUrl((character as any)?.image), [character]);
 	const classById = useMemo(() => new Map((classes || []).map((c) => [c.id, c])), [classes]);
 	const raceById = useMemo(() => new Map((races || []).map((r) => [r.id, r])), [races]);
+
+	useEffect(() => {
+		if (!character) return;
+		const ids = (character.animations || []).map((x) => x.id).filter((x) => Number.isFinite(x as any)) as number[];
+		setOwnAnimationIds(Array.from(new Set(ids)));
+	}, [character]);
+
+	const orderedAnimations = useMemo(() => {
+		return (animations || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+	}, [animations]);
+
+	const raceAnimations = useMemo(() => {
+		return (character?.race?.animations || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+	}, [character]);
+
+	const classAnimations = useMemo(() => {
+		return (character?.class?.animations || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+	}, [character]);
+
+	const effectiveAnimations = useMemo(() => {
+		const byId = new Map<number, AnimationItem>();
+		for (const a of raceAnimations) byId.set(a.id, a);
+		for (const a of classAnimations) byId.set(a.id, a);
+		for (const id of ownAnimationIds) {
+			const found = (orderedAnimations || []).find((x) => x.id === id);
+			if (found) byId.set(found.id, found);
+		}
+		return Array.from(byId.values()).sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+	}, [raceAnimations, classAnimations, ownAnimationIds, orderedAnimations]);
+
+	const raceAnimIdSet = useMemo(() => new Set((raceAnimations || []).map((a) => a.id)), [raceAnimations]);
+	const classAnimIdSet = useMemo(() => new Set((classAnimations || []).map((a) => a.id)), [classAnimations]);
+	const ownAnimIdSet = useMemo(() => new Set((ownAnimationIds || []).map((id) => Number(id))), [ownAnimationIds]);
+	const associatedAnimIdSet = useMemo(() => {
+		const out = new Set<number>();
+		for (const id of raceAnimIdSet) out.add(id);
+		for (const id of classAnimIdSet) out.add(id);
+		for (const id of ownAnimIdSet) out.add(id);
+		return out;
+	}, [raceAnimIdSet, classAnimIdSet, ownAnimIdSet]);
+
+	const availableExistingAnimations = useMemo(() => {
+		return (orderedAnimations || []).filter((a) => !associatedAnimIdSet.has(a.id));
+	}, [orderedAnimations, associatedAnimIdSet]);
+
+	useEffect(() => {
+		if (!addAnimOpen) return;
+		if (availableExistingAnimations.length === 0) {
+			setSelectedExistingAnimId('__NEW__');
+			return;
+		}
+		const numericSelected = typeof selectedExistingAnimId === 'number' ? selectedExistingAnimId : Number(selectedExistingAnimId);
+		const ok = Number.isFinite(numericSelected) && availableExistingAnimations.some((a) => a.id === numericSelected);
+		if (!ok) setSelectedExistingAnimId(availableExistingAnimations[0].id);
+	}, [addAnimOpen, availableExistingAnimations, selectedExistingAnimId]);
+
+	const persistOwnAnimationIds = useCallback(
+		async (nextIds: number[]) => {
+			if (!character) return;
+			setSavingAnimations(true);
+			setError(null);
+			try {
+				const unique = Array.from(new Set((nextIds || []).map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0)));
+				const updated = await updateCharacter(character.id, { animationIds: unique });
+				setCharacter(updated);
+				const ids = (updated.animations || []).map((x) => x.id).filter((x) => Number.isFinite(x as any)) as number[];
+				setOwnAnimationIds(Array.from(new Set(ids)));
+			} catch (e: any) {
+				setError(e?.message || 'Error guardando animaciones');
+			} finally {
+				setSavingAnimations(false);
+			}
+		},
+		[character],
+	);
+
+	const handleCreateAndAssociate = useCallback(
+		async (data: { name: string }) => {
+			const name = String(data?.name || '').trim();
+			if (!name) return;
+			setSavingAnimations(true);
+			setError(null);
+			try {
+				const created = await createAnimation({ name });
+				setAnimations((prev) => {
+					const cur = (prev || []).slice();
+					if (!cur.some((x) => x.id === created.id)) cur.push(created);
+					return cur;
+				});
+				const next = Array.from(new Set([...(ownAnimationIds || []), created.id]));
+				await persistOwnAnimationIds(next);
+				setCreateAnimModalOpen(false);
+				setAddAnimOpen(false);
+			} catch (e: any) {
+				setError(e?.message || 'Error creando animación');
+			} finally {
+				setSavingAnimations(false);
+			}
+		},
+		[ownAnimationIds, persistOwnAnimationIds],
+	);
 
 	if (loading) {
 		return (
@@ -120,35 +232,151 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 			</div>
 
 			<div style={{ padding: 12 }}>
-				<div className="block-border block-border-soft" style={{ padding: 12, marginBottom: 12 }}>
-					<div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-						{iconUrl ? (
-							<div className="metallic-border metallic-border-square" style={{ width: 64, height: 64, minWidth: 64, backgroundImage: 'none' }}>
-								<img src={iconUrl} alt="" aria-hidden="true" style={{ width: 64, height: 64, objectFit: 'cover', display: 'block' }} />
+				<div
+					style={{
+						display: 'flex',
+						gap: 12,
+						alignItems: 'stretch',
+						flexWrap: 'wrap',
+						marginBottom: 12,
+						minHeight: imageUrl ? 520 : undefined,
+					}}
+				>
+					<div style={{ flex: '1 1 360px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 12 }}>
+						<div className="block-border block-border-soft" style={{ padding: 12 }}>
+							<div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+								{iconUrl ? (
+									<div className="metallic-border metallic-border-square" style={{ width: 64, height: 64, minWidth: 64, backgroundImage: 'none' }}>
+										<img src={iconUrl} alt="" aria-hidden="true" style={{ width: 64, height: 64, objectFit: 'cover', display: 'block' }} />
+									</div>
+								) : null}
+								<div style={{ minWidth: 0 }}>
+									<div style={{ fontWeight: 900, fontSize: 18, wordBreak: 'break-word' }}>{character.name}</div>
+									<div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>
+										Clase: {character.class?.name || `#${character.classId}`}
+									</div>
+									<div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>
+										Raza: {character.race?.name || raceById.get(Number((character as any)?.raceId) || 0)?.name || (Number((character as any)?.raceId) ? `#${(character as any)?.raceId}` : '-')}
+									</div>
+									{(character.model || '').trim() ? (
+										<div style={{ marginTop: 6, fontSize: 13, opacity: 0.9, wordBreak: 'break-all' }}>
+											Modelo:{' '}
+											<a href={normalizeLink(character.model || '')} target="_blank" rel="noreferrer" style={{ color: '#e2c044', textDecoration: 'underline' }}>
+												{(character.model || '').trim()}
+											</a>
+										</div>
+									) : null}
+								</div>
 							</div>
-						) : null}
-						<div style={{ minWidth: 0 }}>
-							<div style={{ fontWeight: 900, fontSize: 18, wordBreak: 'break-word' }}>{character.name}</div>
-							<div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>
-								Clase: {character.class?.name || `#${character.classId}`}
+						</div>
+
+						<div className="block-border block-border-soft" style={{ padding: 12 }}>
+							<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+								<div style={{ fontWeight: 900 }}>Animaciones</div>
+								<button
+									className="icon option"
+									title="Añadir animación"
+									aria-label="Añadir animación"
+									disabled={savingAnimations}
+									onClick={() => setAddAnimOpen((v) => !v)}
+								>
+									<FaPlus size={16} />
+								</button>
 							</div>
-							<div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>
-								Raza: {character.race?.name || raceById.get(Number((character as any)?.raceId) || 0)?.name || (Number((character as any)?.raceId) ? `#${(character as any)?.raceId}` : '-')}
-							</div>
-							{(character.model || '').trim() ? (
-								<div style={{ marginTop: 6, fontSize: 13, opacity: 0.9, wordBreak: 'break-all' }}>
-									Modelo: <a href={normalizeLink(character.model || '')} target="_blank" rel="noreferrer" style={{ color: '#e2c044', textDecoration: 'underline' }}>{(character.model || '').trim()}</a>
+
+							{addAnimOpen ? (
+								<div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
+									<div>
+										<div className="chapter-label">Añadir animación</div>
+										<div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+											<select
+												value={selectedExistingAnimId as any}
+												onChange={(e) => setSelectedExistingAnimId(e.target.value)}
+												style={{ flex: '1 1 240px', minWidth: 200 }}
+											>
+												{availableExistingAnimations.map((a) => (
+													<option key={a.id} value={String(a.id)}>
+														{a.name}
+													</option>
+												))}
+												<option value="__NEW__">Crear nueva animación...</option>
+											</select>
+											<button
+												className="icon option"
+												title="Añadir"
+												aria-label="Añadir"
+												disabled={savingAnimations}
+												onClick={async () => {
+													if (selectedExistingAnimId === '__NEW__') {
+														setCreateAnimModalOpen(true);
+														return;
+													}
+													const id = Number(selectedExistingAnimId);
+													if (!Number.isFinite(id) || id <= 0) return;
+													const next = Array.from(new Set([...(ownAnimationIds || []), id]));
+													await persistOwnAnimationIds(next);
+													setAddAnimOpen(false);
+												}}
+											>
+												<FaPlus size={14} />
+											</button>
+										</div>
+										{availableExistingAnimations.length === 0 ? (
+											<div style={{ marginTop: 6, opacity: 0.85, fontSize: 13 }}>No hay animaciones existentes disponibles para añadir.</div>
+										) : null}
+									</div>
 								</div>
 							) : null}
-						</div>
-					</div>
-					{imageUrl ? (
-						<div style={{ marginTop: 12 }}>
-							<div className="block-border block-border-soft" style={{ padding: 8 }}>
-								<img src={imageUrl} alt="" aria-hidden="true" style={{ width: '100%', maxHeight: 260, objectFit: 'cover', display: 'block' }} />
+
+							<div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+								{effectiveAnimations.length === 0 ? (
+									<div style={{ opacity: 0.85, fontSize: 13 }}>-</div>
+								) : (
+									effectiveAnimations.map((a) => {
+										const inRace = raceAnimIdSet.has(a.id);
+										const inClass = classAnimIdSet.has(a.id);
+										const inOwn = ownAnimIdSet.has(a.id);
+										const origin = inOwn ? 'Propia' : inRace && inClass ? 'Raza+Clase' : inRace ? 'Raza' : inClass ? 'Clase' : '';
+										return (
+											<div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+												<div style={{ minWidth: 0, wordBreak: 'break-word' }}>{a.name}</div>
+												<div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' }}>
+													{origin ? <span style={{ opacity: 0.85, fontSize: 12, whiteSpace: 'nowrap' }}>{origin}</span> : null}
+													{inOwn ? (
+														<button
+															className="icon option"
+															title="Quitar animación propia"
+															aria-label="Quitar animación propia"
+															disabled={savingAnimations}
+															onClick={async () => {
+																const next = (ownAnimationIds || []).filter((id) => id !== a.id);
+																await persistOwnAnimationIds(next);
+															}}
+														>
+															<FaTrash size={14} />
+														</button>
+													) : null}
+												</div>
+											</div>
+										);
+									})
+								)}
 							</div>
 						</div>
-					) : null}
+					</div>
+
+					<div style={{ flex: '2 1 420px', minWidth: 320, alignSelf: 'stretch' }}>
+						{imageUrl ? (
+							<div className="block-border block-border-soft" style={{ padding: 8, height: '100%' }}>
+								<img
+									src={imageUrl}
+									alt=""
+									aria-hidden="true"
+									style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+								/>
+							</div>
+						) : null}
+					</div>
 				</div>
 
 				<div style={{ padding: 12 }}>
@@ -276,6 +504,14 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 					setConfirmOpen(false);
 					setPendingDelete(null);
 				}}
+			/>
+
+			<AnimationModal
+				open={createAnimModalOpen}
+				initial={undefined}
+				existing={animations}
+				onClose={() => setCreateAnimModalOpen(false)}
+				onSubmit={handleCreateAndAssociate}
 			/>
 
 			{modalOpen ? (

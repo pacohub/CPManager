@@ -59,22 +59,25 @@ import { CharacterController } from './Controller/character.controller';
 import { SoundType } from './Entities/soundType.entity';
 import { Sound } from './Entities/sound.entity';
 import { Race } from './Entities/race.entity';
+import { Animation } from './Entities/animation.entity';
 import { SoundTypeService } from './Services/soundType.service';
 import { SoundService } from './Services/sound.service';
 import { RaceService } from './Services/race.service';
+import { AnimationService } from './Services/animation.service';
 import { SoundTypeController } from './Controller/soundType.controller';
 import { SoundController } from './Controller/sound.controller';
 import { RaceController } from './Controller/race.controller';
+import { AnimationController } from './Controller/animation.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'database.sqlite',
-			entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, Character, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType, SoundType, Sound, Race],
+			entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, Character, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType, SoundType, Sound, Race, Animation],
       synchronize: true, // Solo para desarrollo
     }),
-		TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, Character, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType, SoundType, Sound, Race]),
+		TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, Character, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType, SoundType, Sound, Race, Animation]),
   ],
   controllers: [
 		AppController,
@@ -99,7 +102,8 @@ import { RaceController } from './Controller/race.controller';
 		SoundTypeController,
 		SoundController,
 		RaceController,
+		AnimationController,
 	],
-	providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService, ProfessionService, ClassService, CharacterService, ProfessionObjectService, ProfessionObjectResourceService, GameObjectService, ComponentService, ResourceService, ResourceTypeService, SoundTypeService, SoundService, RaceService],
+	providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService, ProfessionService, ClassService, CharacterService, ProfessionObjectService, ProfessionObjectResourceService, GameObjectService, ComponentService, ResourceService, ResourceTypeService, SoundTypeService, SoundService, RaceService, AnimationService],
 })
 export class AppModule {}

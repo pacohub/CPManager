@@ -41,6 +41,26 @@ export class EventService {
 			.replace(/[\u0300-\u036f]/g, '');
 	}
 
+	private coerceIdArray(value: any): number[] {
+		if (!Array.isArray(value)) return [];
+		const out: number[] = [];
+		const seen = new Set<number>();
+		for (const raw of value) {
+			const n = Number.parseInt(String(raw), 10);
+			if (!Number.isFinite(n) || n <= 0) continue;
+			if (seen.has(n)) continue;
+			seen.add(n);
+			out.push(n);
+		}
+		return out;
+	}
+
+	private normalizeMoba(value: any): { teamAIds: number[]; teamBIds: number[] } {
+		const teamAIds = this.coerceIdArray(value?.teamAIds ?? value?.teamA ?? value?.a ?? []);
+		const teamBIds = this.coerceIdArray(value?.teamBIds ?? value?.teamB ?? value?.b ?? []);
+		return { teamAIds, teamBIds };
+	}
+
 	private isCreditsChapter(chapter: Chapter): boolean {
 		if ((chapter as any)?.specialType === ChapterSpecialType.CREDITS) return true;
 		const name = this.normalizeNameForCompare((chapter as any)?.name);
@@ -122,6 +142,7 @@ export class EventService {
 			type: resolvedType,
 			difficulty: (difficulty as EventDifficulty) ?? EventDifficulty.NORMAL,
 			file: this.normalizeText(data?.file) ?? '',
+			moba: resolvedType === EventType.MOBA ? this.normalizeMoba(data?.moba) : null,
 			chapter,
 			map,
 		});
@@ -176,6 +197,12 @@ export class EventService {
 		existing.type = nextType;
 		existing.chapter = nextChapter;
 
+		if (data?.moba !== undefined) {
+			existing.moba = nextType === EventType.MOBA ? this.normalizeMoba(data.moba) : null;
+		} else if (nextType !== EventType.MOBA) {
+			existing.moba = null;
+		}
+
 		if (data?.mapId !== undefined) {
 			const mapId = Number(data.mapId);
 			if (!Number.isFinite(mapId)) throw new BadRequestException('mapId inválido');
@@ -199,7 +226,7 @@ export class EventService {
 			.leftJoin('event.chapter', 'chapter')
 			.select('chapter.id', 'chapterId')
 			.addSelect('COUNT(event.id)', 'count')
-			.addSelect("SUM(CASE WHEN event.type = 'MISSION' THEN 1 ELSE 0 END)", 'missionCount')
+			.addSelect("SUM(CASE WHEN event.type IN ('MISSION','MOBA') THEN 1 ELSE 0 END)", 'missionCount')
 			.addSelect("SUM(CASE WHEN event.type = 'CINEMATIC' THEN 1 ELSE 0 END)", 'cinematicCount')
 			.addSelect(
 				"SUM(CASE WHEN event.description IS NULL OR TRIM(event.description) = '' THEN 1 ELSE 0 END)",

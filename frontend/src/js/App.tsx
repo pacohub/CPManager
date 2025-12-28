@@ -12,6 +12,7 @@ import ProfessionsView from './ProfessionsView';
 import ProfessionDetail from './ProfessionDetail';
 import ObjectsView from './ObjectsView';
 import ComponentsView from './ComponentsView';
+import AnimationsView from './AnimationsView';
 import ResourcesView from './ResourcesView';
 import ChapterEventsView from './ChapterEventsView';
 import ClassesView from './ClassesView';
@@ -35,6 +36,7 @@ function SagaPanelRoute() {
 			onOpenProfessions={() => navigate('/professions')}
 			onOpenObjects={() => navigate('/objects')}
 			onOpenComponents={() => navigate('/components')}
+			onOpenAnimations={() => navigate('/animations')}
 			onOpenResources={() => navigate('/resources')}
 		/>
 	);
@@ -114,6 +116,11 @@ function CharacterDetailRoute() {
 function ComponentsRoute() {
 	const navigate = useNavigate();
 	return <ComponentsView onBack={() => navigate('/')} />;
+}
+
+function AnimationsRoute() {
+	const navigate = useNavigate();
+	return <AnimationsView onBack={() => navigate('/')} />;
 }
 
 function ResourcesRoute() {
@@ -231,13 +238,36 @@ function App() {
 			if (!tooltipEl || !currentTarget) return;
 			const rect = currentTarget.getBoundingClientRect();
 			const x = rect.left + rect.width / 2;
-			const y = rect.top - 10;
-			tooltipEl.style.left = `${x}px`;
-			tooltipEl.style.top = `${y}px`;
-			const tipRect = tooltipEl.getBoundingClientRect();
 			const margin = 8;
+
+			tooltipEl.classList.remove('cp-tooltip--below');
+			tooltipEl.style.left = `${x}px`;
+			tooltipEl.style.top = `${rect.top - 10}px`;
+
+			let tipRect = tooltipEl.getBoundingClientRect();
+			if (tipRect.top < margin) {
+				tooltipEl.classList.add('cp-tooltip--below');
+				tooltipEl.style.top = `${rect.bottom + 10}px`;
+				tipRect = tooltipEl.getBoundingClientRect();
+			}
+
+			// Clamp horizontally
 			if (tipRect.left < margin) tooltipEl.style.left = `${x + (margin - tipRect.left)}px`;
 			if (tipRect.right > window.innerWidth - margin) tooltipEl.style.left = `${x - (tipRect.right - (window.innerWidth - margin))}px`;
+
+			// Clamp vertically (keep inside viewport)
+			tipRect = tooltipEl.getBoundingClientRect();
+			if (tipRect.bottom > window.innerHeight - margin) {
+				const overflow = tipRect.bottom - (window.innerHeight - margin);
+				const topPx = Number.parseFloat(tooltipEl.style.top || '0');
+				tooltipEl.style.top = `${topPx - overflow}px`;
+			}
+			tipRect = tooltipEl.getBoundingClientRect();
+			if (tipRect.top < margin) {
+				const underflow = margin - tipRect.top;
+				const topPx = Number.parseFloat(tooltipEl.style.top || '0');
+				tooltipEl.style.top = `${topPx + underflow}px`;
+			}
 		}
 
 		function showTooltip(target: HTMLElement) {
@@ -364,6 +394,7 @@ function App() {
 				<Route path="/characters" element={<CharactersRoute />} />
 				<Route path="/characters/:id" element={<CharacterDetailRoute />} />
 				<Route path="/components" element={<ComponentsRoute />} />
+				<Route path="/animations" element={<AnimationsRoute />} />
 				<Route path="/resources" element={<ResourcesRoute />} />
 				<Route path="/sounds" element={<SoundsRoute />} />
 				<Route path="/races" element={<RacesRoute />} />

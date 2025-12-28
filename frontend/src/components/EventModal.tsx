@@ -22,6 +22,7 @@ interface Props {
 }
 
 const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, onSubmit }) => {
+	const isEditing = Boolean((initial as any)?.id);
 	const initialMapId =
 		(initial as any)?.mapId ??
 		(initial as any)?.map?.id ??
@@ -30,7 +31,7 @@ const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, 
 	const [name, setName] = useState(initial?.name || '');
 	const [description, setDescription] = useState(initial?.description || '');
 	const [type, setType] = useState<EventType>(fixedType ?? ((initial?.type as EventType) || 'MISSION'));
-	const [difficulty, setDifficulty] = useState<EventDifficulty>((initial?.difficulty as EventDifficulty) || 'NORMAL');
+	const [difficulty, setDifficulty] = useState<EventDifficulty>((initial?.difficulty as EventDifficulty) || (isEditing ? 'NORMAL' : 'EASY'));
 	const [file, setFile] = useState(initial?.file || '');
 	const [mapId, setMapId] = useState<number>(Number(initialMapId) || 0);
 	const [localMaps, setLocalMaps] = useState<MapItem[]>(maps || []);
@@ -40,7 +41,7 @@ const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, 
 	const [error, setError] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 
-	const showDifficulty = type === 'MISSION';
+	const showDifficulty = type === 'MISSION' || type === 'MOBA';
 
 	useEffect(() => {
 		if (type === 'CINEMATIC') {
@@ -50,11 +51,13 @@ const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, 
 
 	useEffect(() => {
 		if (!open) return;
+		const nextIsEditing = Boolean((initial as any)?.id);
+		const nextType = fixedType ?? ((initial?.type as EventType) || 'MISSION');
 		setLocalMaps(maps || []);
 		setName(initial?.name || '');
 		setDescription(initial?.description || '');
-		setType(fixedType ?? ((initial?.type as EventType) || 'MISSION'));
-		setDifficulty((initial?.difficulty as EventDifficulty) || 'NORMAL');
+		setType(nextType);
+		setDifficulty((initial?.difficulty as EventDifficulty) || ((nextType === 'MISSION' || nextType === 'MOBA') && !nextIsEditing ? 'EASY' : 'NORMAL'));
 		setFile(initial?.file || '');
 		setMapId(Number(initialMapId) || 0);
 		setError(null);
@@ -154,10 +157,11 @@ const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, 
 							style={{ display: 'block', marginTop: 4 }}
 						>
 							{fixedType ? (
-								<option value={fixedType}>{fixedType === 'MISSION' ? 'Misión' : 'Cinemática'}</option>
+								<option value={fixedType}>{fixedType === 'MISSION' ? 'Misión' : fixedType === 'MOBA' ? 'MOBA' : 'Cinemática'}</option>
 							) : (
 								<>
 									<option value="MISSION">Misión</option>
+									<option value="MOBA">MOBA</option>
 									<option value="CINEMATIC">Cinemática</option>
 								</>
 							)}

@@ -1,4 +1,5 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Animation } from './animation.entity';
 import { Sound } from './sound.entity';
 
 export const RACE_DEATH_TYPES = [
@@ -84,4 +85,8 @@ export class Race {
 
 	@Column({ type: 'text', nullable: true })
 	armorType: string;
+
+	@ManyToMany(() => Animation, (animation) => animation.races)
+	@JoinTable({ name: 'race_animations' })
+	animations: Animation[];
 }

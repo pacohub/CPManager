@@ -455,6 +455,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 	const [filterEasy, setFilterEasy] = useState(true);
 	const [filterNormal, setFilterNormal] = useState(true);
 	const [filterHard, setFilterHard] = useState(true);
+	const [mobaFactionToAddByKey, setMobaFactionToAddByKey] = useState<Record<string, number | ''>>({});
 
 	const [modalOpen, setModalOpen] = useState(false);
 	const [initial, setInitial] = useState<Partial<EventItem> | undefined>(undefined);
@@ -700,6 +701,35 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 		return map;
 	}, [factions]);
 
+	const mobaGroupOrder = useMemo(() => {
+		const links = chapterFactions || [];
+		const playable = links.find((l) => Boolean(l.isPlayable));
+		const playableGroupName = playable ? normalizeGroupName(playable.groupName) : null;
+		return computeGroupOrder(links, chapterFactionGroups, playableGroupName);
+	}, [chapterFactions, chapterFactionGroups]);
+
+	const chapterFactionGroupByFactionId = useMemo(() => {
+		const out = new Map<number, string>();
+		for (const l of chapterFactions || []) {
+			out.set(l.factionId, normalizeGroupName(l.groupName));
+		}
+		return out;
+	}, [chapterFactions]);
+
+	const chapterFactionLinksByGroup = useMemo(() => {
+		const out: Record<string, ChapterFactionLink[]> = {};
+		for (const l of orderLinksByGroupOrder(chapterFactions || [], mobaGroupOrder)) {
+			const g = normalizeGroupName(l.groupName);
+			if (!out[g]) out[g] = [];
+			out[g].push({ ...l, groupName: g });
+		}
+		return out;
+	}, [chapterFactions, mobaGroupOrder]);
+
+	const mobaKey = useCallback((eventId: number, team: 'A' | 'B', groupName: string) => {
+		return `${eventId}:${team}:${normalizeGroupName(groupName)}`;
+	}, []);
+
 	const persistChapterFactions = useCallback(
 		async (nextLinks: ChapterFactionLink[]) => {
 			const normalized = nextLinks.map((l, idx) => ({
@@ -752,6 +782,15 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 			.slice()
 			.sort((a, b) => (Number(a.position ?? 0) - Number(b.position ?? 0)) || (a.id - b.id));
 	}, [events]);
+
+	const lastUsedMapId = useMemo(() => {
+		for (let i = (ordered || []).length - 1; i >= 0; i--) {
+			const ev: any = (ordered as any)[i];
+			const id = Number(ev?.mapId ?? ev?.map?.id);
+			if (Number.isFinite(id) && id > 0) return id;
+		}
+		return 0;
+	}, [ordered]);
 
 	const isCinematicOnlyChapter = useMemo(() => {
 		const list = events || [];
@@ -1401,7 +1440,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 						aria-label="Nuevo Evento"
 						title="Nuevo Evento"
 						onClick={() => {
-							setInitial(undefined);
+							setInitial(lastUsedMapId ? ({ mapId: lastUsedMapId } as any) : undefined);
 							setModalOpen(true);
 						}}
 					>
@@ -1576,9 +1615,17 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 											const showMapWarning = !String(mapName || '').trim();
 											const mapWarningText = 'Este evento no tiene mapa asociado.';
 
-											const isMission = ev.type === 'MISSION';
-											const icon = isMission ? <FaExclamation size={16} color="#FFD700" /> : <FaFilm size={16} color="#FFD700" />;
-											const showDifficultyText = isMission && (ev.difficulty === 'NORMAL' || ev.difficulty === 'HARD');
+												const isMission = ev.type === 'MISSION';
+												const isMoba = ev.type === 'MOBA';
+												const isMissionLike = isMission || isMoba;
+												const icon = isMission ? (
+													<FaExclamation size={16} color="#FFD700" />
+												) : isMoba ? (
+													<FaUsers size={16} color="#FFD700" />
+												) : (
+													<FaFilm size={16} color="#FFD700" />
+												);
+												const showDifficultyText = isMissionLike && (ev.difficulty === 'NORMAL' || ev.difficulty === 'HARD');
 											const difficultyText = showDifficultyText ? toLabelDifficulty(String(ev.difficulty)) : '';
 											const showDescriptionWarning = !String(ev.description ?? '').trim();
 											const descriptionWarningText = 'Este evento no tiene descripción.';
@@ -1621,6 +1668,124 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 																		<a href={url} target="_blank" rel="noopener noreferrer">{ev.file}</a>
 																	</div>
 																) : null}
+
+																{isMoba ? (
+																	<div
+																		style={{ marginTop: 10 }}
+																		onPointerDown={(e) => {
+																			e.stopPropagation();
+																		}}
+																	>
+																		<div style={{ fontWeight: 800, opacity: 0.95 }}>MOBA</div>
+																		{!chapterFactionsLoaded ? (
+																			<div style={{ marginTop: 6, opacity: 0.85, fontSize: 13 }}>Cargando facciones del capítulo...</div>
+																		) : (chapterFactions || []).length === 0 ? (
+																			<div style={{ marginTop: 6, opacity: 0.85, fontSize: 13 }}>Este capítulo no tiene facciones añadidas.</div>
+																		) : (
+																			(() => {
+																				const teamAIds = Array.isArray((ev as any)?.moba?.teamAIds) ? (ev as any).moba.teamAIds : [];
+																				const teamBIds = Array.isArray((ev as any)?.moba?.teamBIds) ? (ev as any).moba.teamBIds : [];
+																				const uniq = (arr: any[]) => Array.from(new Set((arr || []).map((x) => Number(x)).filter((n) => Number.isFinite(n) && n > 0)));
+																				const aIds = uniq(teamAIds);
+																				const bIds = uniq(teamBIds);
+																				const patchMoba = async (nextA: number[], nextB: number[]) => {
+																					const updated = await updateEvent(ev.id, { moba: { teamAIds: nextA, teamBIds: nextB } });
+																					setEvents((prev) => (prev || []).map((x) => (x.id === updated.id ? updated : x)));
+																				};
+
+																				const renderTeam = (team: 'A' | 'B', title: string, ids: number[]) => {
+																					return (
+																						<div className="block-border block-border-soft" style={{ padding: 10 }}>
+																							<div style={{ fontWeight: 800, marginBottom: 8 }}>{title}</div>
+																							{(mobaGroupOrder || []).map((groupName) => {
+																								const g = normalizeGroupName(groupName);
+																								const availableLinks = chapterFactionLinksByGroup[g] || [];
+																								const selectedInGroup = ids
+																									.filter((fid) => chapterFactionGroupByFactionId.get(fid) === g)
+																									.map((fid) => ({
+																										id: fid,
+																											name: factionsById[fid]?.name || `#${fid}`,
+																										}));
+																								const key = mobaKey(ev.id, team, g);
+																								const selectedToAdd = mobaFactionToAddByKey[key] ?? '';
+																								const availableOptions = availableLinks
+																									.map((l) => l.factionId)
+																									.filter((fid) => !ids.includes(fid));
+
+																								return (
+																								<div key={g} style={{ marginTop: 10 }}>
+																										<div style={{ fontWeight: 800, opacity: 0.95 }}>{g}</div>
+																										{selectedInGroup.length === 0 ? (
+																											<div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>-</div>
+																										) : (
+																											<div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+																												{selectedInGroup.map((sf) => (
+																													<div key={sf.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+																														<span style={{ wordBreak: 'break-word' }}>{sf.name}</span>
+																														<button
+																														className="icon option"
+																															title="Quitar"
+																															onClick={() => {
+																																	const nextIds = ids.filter((x) => x !== sf.id);
+																																	if (team === 'A') patchMoba(nextIds, bIds);
+																																	else patchMoba(aIds, nextIds);
+																																}}
+																														>
+																															<FaTrash size={12} />
+																														</button>
+																													</div>
+																												))}
+																											</div>
+																										) }
+
+																										<div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+																											<select
+																												value={selectedToAdd}
+																												onChange={(e) => {
+																													const v = e.target.value ? Number(e.target.value) : '';
+																													setMobaFactionToAddByKey((prev) => ({ ...prev, [key]: v }));
+																												}}
+																												style={{ flex: 1 }}
+																											>
+																												<option value="">Seleccionar...</option>
+																												{availableOptions.map((fid) => (
+																													<option key={fid} value={fid}>{factionsById[fid]?.name || `#${fid}`}</option>
+																												))}
+																											</select>
+																											<button
+																												className="icon option"
+																												title="Añadir"
+																												disabled={!selectedToAdd}
+																												onClick={() => {
+																													const fid = Number(selectedToAdd);
+																													if (!Number.isFinite(fid) || fid <= 0) return;
+																													const nextIds = Array.from(new Set([...ids, fid]));
+																													setMobaFactionToAddByKey((prev) => ({ ...prev, [key]: '' }));
+																													if (team === 'A') patchMoba(nextIds, bIds);
+																													else patchMoba(aIds, nextIds);
+																												}}
+																											>
+																												<FaPlus size={12} />
+																											</button>
+																										</div>
+																									</div>
+																								);
+																							})}
+																						</div>
+																					);
+																				};
+
+																				return (
+																					<div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 10, alignItems: 'start' }}>
+																						{renderTeam('A', 'Equipo A', aIds)}
+																						<div style={{ fontWeight: 900, opacity: 0.95, paddingTop: 8, textAlign: 'center' }}>V.S</div>
+																						{renderTeam('B', 'Equipo B', bIds)}
+																					</div>
+																				);
+																			})()
+																	) }
+																</div>
+															) : null}
 
 																{isMission ? (
 																	<div style={{ marginTop: 10 }}>
@@ -1891,6 +2056,14 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 					open={objectiveModalOpen}
 					eventId={objectiveEventId}
 					mechanics={mechanics}
+					onMechanicCreated={(created) => {
+						setMechanics((prev) => {
+							const next = [...(prev || []), created];
+							const byId = new Map<number, any>();
+							for (const m of next) byId.set(m.id, m);
+							return Array.from(byId.values()).sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+						});
+					}}
 					initial={objectiveInitial}
 					onClose={() => {
 						setObjectiveModalOpen(false);

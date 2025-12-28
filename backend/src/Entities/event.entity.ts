@@ -5,6 +5,7 @@ import { Map } from './map.entity';
 export enum EventType {
 	MISSION = 'MISSION',
 	CINEMATIC = 'CINEMATIC',
+	MOBA = 'MOBA',
 }
 
 export enum EventDifficulty {
@@ -35,6 +36,9 @@ export class Event {
 
 	@Column({ nullable: true })
 	file: string;
+
+	@Column({ type: 'simple-json', nullable: true })
+	moba: { teamAIds: number[]; teamBIds: number[] } | null;
 
 	@ManyToOne(() => Chapter, { eager: true, onDelete: 'CASCADE' })
 	chapter: Chapter;

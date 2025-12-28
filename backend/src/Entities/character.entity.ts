@@ -1,4 +1,5 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Animation } from './animation.entity';
 import { Class } from './class.entity';
 import { Race } from './race.entity';
 
@@ -42,4 +43,8 @@ export class Character {
 
 	@OneToMany(() => Character, (c) => c.parent)
 	children: Character[];
+
+	@ManyToMany(() => Animation, (animation) => animation.characters)
+	@JoinTable({ name: 'character_animations' })
+	animations: Animation[];
 }

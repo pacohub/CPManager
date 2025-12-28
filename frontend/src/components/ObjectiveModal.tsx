@@ -10,6 +10,7 @@ interface Props {
 	open: boolean;
 	eventId: number;
 	mechanics: MechanicItem[];
+	onMechanicCreated?: (created: MechanicItem) => void;
 	initial?: Partial<ObjectiveItem>;
 	onSubmit: (data: {
 		name: string;
@@ -23,16 +24,20 @@ interface Props {
 	onClose: () => void;
 }
 
-const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, initial, onSubmit, onClose }) => {
+const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, onMechanicCreated, initial, onSubmit, onClose }) => {
 	const [localMechanics, setLocalMechanics] = useState<MechanicItem[]>(mechanics || []);
 	const [mechanicModalOpen, setMechanicModalOpen] = useState(false);
 	const [mechanicInitial, setMechanicInitial] = useState<Partial<MechanicItem> | undefined>(undefined);
 
+	const isEditing = Boolean((initial as any)?.id);
+
 	const [name, setName] = useState(initial?.name || '');
 	const [description, setDescription] = useState(initial?.description || '');
 	const [detailedDescription, setDetailedDescription] = useState(initial?.detailedDescription || '');
-	const [difficulty, setDifficulty] = useState<EventDifficulty>((initial?.difficulty as EventDifficulty) || 'NORMAL');
-	const [initialValue, setInitialValue] = useState<number>(Number.isFinite(initial?.initialValue as any) ? Number(initial?.initialValue) : 0);
+	const [difficulty, setDifficulty] = useState<EventDifficulty>((initial?.difficulty as EventDifficulty) || (isEditing ? 'NORMAL' : 'EASY'));
+	const [initialValue, setInitialValue] = useState<number>(
+		Number.isFinite(initial?.initialValue as any) ? Number(initial?.initialValue) : (isEditing ? 0 : 1),
+	);
 	const [difficultyIncrement, setDifficultyIncrement] = useState<number>(
 		Number.isFinite(initial?.difficultyIncrement as any) ? Number(initial?.difficultyIncrement) : 0,
 	);
@@ -44,11 +49,12 @@ const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, initial, on
 	useEffect(() => {
 		if (!open) return;
 		setLocalMechanics(mechanics || []);
+		const nextIsEditing = Boolean((initial as any)?.id);
 		setName(initial?.name || '');
 		setDescription(initial?.description || '');
 		setDetailedDescription(initial?.detailedDescription || '');
-		setDifficulty(((initial?.difficulty as EventDifficulty) || 'NORMAL'));
-		setInitialValue(Number.isFinite(initial?.initialValue as any) ? Number(initial?.initialValue) : 0);
+		setDifficulty(((initial?.difficulty as EventDifficulty) || (nextIsEditing ? 'NORMAL' : 'EASY')));
+		setInitialValue(Number.isFinite(initial?.initialValue as any) ? Number(initial?.initialValue) : (nextIsEditing ? 0 : 1));
 		setDifficultyIncrement(Number.isFinite(initial?.difficultyIncrement as any) ? Number(initial?.difficultyIncrement) : 0);
 		const fromInitial = Number((initial as any)?.mechanicId) || Number((initial as any)?.mechanic?.id) || 0;
 		setMechanicId(fromInitial);
@@ -57,8 +63,8 @@ const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, initial, on
 	useEffect(() => {
 		if (!open) return;
 		// Si no hay mecánica seleccionada, elige la primera disponible.
-		if (!mechanicId && mechanics.length > 0) setMechanicId(mechanics[0].id);
-	}, [open, mechanicId, mechanics]);
+		if (!mechanicId && localMechanics.length > 0) setMechanicId(localMechanics[0].id);
+	}, [open, mechanicId, localMechanics]);
 
 	const mechanicOptions = useMemo(
 		() => (localMechanics || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })),
@@ -206,7 +212,13 @@ const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, initial, on
 				}}
 				onSubmit={async (data) => {
 					const created = await createMechanic(data);
-					setLocalMechanics((prev) => [...(prev || []), created]);
+					onMechanicCreated?.(created);
+					setLocalMechanics((prev) => {
+						const next = [...(prev || []), created];
+						const byId = new Map<number, MechanicItem>();
+						for (const m of next) byId.set(m.id, m);
+						return Array.from(byId.values());
+					});
 					setMechanicId(created.id);
 					setMechanicModalOpen(false);
 					setMechanicInitial(undefined);

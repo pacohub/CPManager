@@ -1,4 +1,5 @@
 import { SoundItem } from './sound';
+import { AnimationItem } from './animation';
 
 export interface RaceItem {
 	id: number;
@@ -17,4 +18,5 @@ export interface RaceItem {
 	initialMana: number;
 	transportSize: number;
 	armorType?: string;
+	animations?: AnimationItem[];
 }

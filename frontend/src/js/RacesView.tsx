@@ -2,8 +2,10 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FaArrowLeft, FaEdit, FaExclamationTriangle, FaPaw, FaTrash } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import RaceModal from '../components/RaceModal';
+import { AnimationItem } from '../interfaces/animation';
 import { RaceItem } from '../interfaces/race';
 import { SoundItem } from '../interfaces/sound';
+import { getAnimations } from './animationApi';
 import { createRace, deleteRace, getRaces, updateRace, uploadRaceIcon } from './raceApi';
 import { getSounds } from './soundApi';
 
@@ -28,9 +30,12 @@ function capitalizeFirst(raw?: string): string {
 const RacesView: React.FC<Props> = ({ onBack }) => {
 	const [races, setRaces] = useState<RaceItem[]>([]);
 	const [sounds, setSounds] = useState<SoundItem[]>([]);
+	const [animations, setAnimations] = useState<AnimationItem[]>([]);
 	const [search, setSearch] = useState('');
 	const [error, setError] = useState<string | null>(null);
 	const [selectedRace, setSelectedRace] = useState<RaceItem | null>(null);
+	const [selectedAnimationIds, setSelectedAnimationIds] = useState<number[]>([]);
+	const [savingAnimations, setSavingAnimations] = useState(false);
 
 	const [modalOpen, setModalOpen] = useState(false);
 	const [initial, setInitial] = useState<Partial<RaceItem> | undefined>(undefined);
@@ -40,7 +45,7 @@ const RacesView: React.FC<Props> = ({ onBack }) => {
 
 	const refresh = useCallback(async () => {
 		setError(null);
-		const [r, s] = await Promise.all([
+		const [r, s, a] = await Promise.all([
 			getRaces().catch((e: any) => {
 				setError((prev) => prev || (e?.message || 'No se pudieron cargar las razas.'));
 				return [] as RaceItem[];
@@ -49,9 +54,14 @@ const RacesView: React.FC<Props> = ({ onBack }) => {
 				setError((prev) => prev || (e?.message || 'No se pudieron cargar los sonidos.'));
 				return [] as SoundItem[];
 			}),
+			getAnimations().catch((e: any) => {
+				setError((prev) => prev || (e?.message || 'No se pudieron cargar las animaciones.'));
+				return [] as AnimationItem[];
+			}),
 		]);
 		setRaces(r || []);
 		setSounds(s || []);
+		setAnimations(a || []);
 	}, []);
 
 	useEffect(() => {
@@ -68,11 +78,23 @@ const RacesView: React.FC<Props> = ({ onBack }) => {
 		return list.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
 	}, [races, search]);
 
+	const orderedAnimations = useMemo(() => {
+		return (animations || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+	}, [animations]);
+
+	useEffect(() => {
+		if (!selectedRace) return;
+		const ids = (selectedRace.animations || []).map((x) => x.id).filter((x) => Number.isFinite(x as any)) as number[];
+		const unique = Array.from(new Set(ids));
+		setSelectedAnimationIds(unique);
+	}, [selectedRace]);
+
 	if (selectedRace) {
 		const r = selectedRace;
 		const iconUrl = asImageUrl(r.icon);
 		const sound = sounds.find((s) => s.id === (r.movementSoundId || undefined));
 		const soundFile = asImageUrl(sound?.file);
+		const selectedSet = new Set(selectedAnimationIds);
 		return (
 			<div className="panel panel-corners-soft block-border block-panel-border">
 				<div className="panel-header">
@@ -159,6 +181,54 @@ const RacesView: React.FC<Props> = ({ onBack }) => {
 								</div>
 							</div>
 						</div>
+					</div>
+
+					<div className="block-border block-border-soft" style={{ padding: 12, marginTop: 12 }}>
+						<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+							<div style={{ fontWeight: 900 }}>Animaciones</div>
+							<button
+								className="icon option"
+								title="Guardar animaciones"
+								disabled={savingAnimations}
+								onClick={async () => {
+									setSavingAnimations(true);
+									try {
+										const updated = await updateRace(r.id, { animationIds: selectedAnimationIds });
+										setSelectedRace(updated);
+										setRaces((prev) => (prev || []).map((it) => (it.id === updated.id ? updated : it)));
+									} finally {
+										setSavingAnimations(false);
+									}
+								}}
+							>
+								{savingAnimations ? '...' : 'Guardar'}
+							</button>
+						</div>
+
+						{orderedAnimations.length === 0 ? (
+							<div style={{ marginTop: 8, opacity: 0.85, fontSize: 13 }}>No hay animaciones creadas todavía.</div>
+						) : (
+							<div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8 }}>
+								{orderedAnimations.map((a) => (
+									<label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', opacity: 0.95 }}>
+										<input
+											type="checkbox"
+											checked={selectedSet.has(a.id)}
+											onChange={(e) => {
+												const checked = e.target.checked;
+												setSelectedAnimationIds((prev) => {
+													const cur = new Set(prev);
+													if (checked) cur.add(a.id);
+													else cur.delete(a.id);
+													return Array.from(cur.values());
+												});
+											}}
+										/>
+										<span style={{ wordBreak: 'break-word' }}>{a.name}</span>
+									</label>
+								))}
+							</div>
+						)}
 					</div>
 				</div>
 			</div>

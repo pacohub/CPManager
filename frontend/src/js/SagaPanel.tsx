@@ -7,9 +7,40 @@ import CampaignCard from '../components/CampaignCard';
 import CampaignModal from '../components/CampaignModal';
 import { getCampaignsBySaga, createCampaign, updateCampaign, deleteCampaign } from './campaignApi';
 import { getAllChapters } from './chapterApi';
-import { FaBookOpen, FaCubes, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaCompass, FaCogs, FaMountain, FaFlag, FaUser, FaPaw, FaVolumeUp } from 'react-icons/fa';
+import { FaBookOpen, FaCubes, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaCompass, FaCogs, FaMountain, FaFlag, FaUser, FaPaw, FaVolumeUp, FaRunning } from 'react-icons/fa';
 import { GiChest, GiCrossedSwords, GiWarPick } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
+
+const EXPANDED_SAGAS_STORAGE_KEY = 'cpmanager:sagas:expanded';
+
+function toRoman(num: number): string {
+  const n = Math.floor(Number(num));
+  if (!Number.isFinite(n) || n <= 0) return '';
+  const table: Array<[number, string]> = [
+    [1000, 'M'],
+    [900, 'CM'],
+    [500, 'D'],
+    [400, 'CD'],
+    [100, 'C'],
+    [90, 'XC'],
+    [50, 'L'],
+    [40, 'XL'],
+    [10, 'X'],
+    [9, 'IX'],
+    [5, 'V'],
+    [4, 'IV'],
+    [1, 'I'],
+  ];
+  let out = '';
+  let rest = n;
+  for (const [value, glyph] of table) {
+    while (rest >= value) {
+      out += glyph;
+      rest -= value;
+    }
+  }
+  return out;
+}
 
 interface SagaType {
   id: number;
@@ -134,10 +165,11 @@ interface SagaPanelProps {
   onOpenProfessions?: () => void;
   onOpenObjects?: () => void;
 	onOpenComponents?: () => void;
+  onOpenAnimations?: () => void;
 	onOpenResources?: () => void;
 }
 
-const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics, onOpenFactions, onOpenClasses, onOpenCharacters, onOpenRaces, onOpenSounds, onOpenProfessions, onOpenObjects, onOpenComponents, onOpenResources }) => {
+const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics, onOpenFactions, onOpenClasses, onOpenCharacters, onOpenRaces, onOpenSounds, onOpenProfessions, onOpenObjects, onOpenComponents, onOpenAnimations, onOpenResources }) => {
   // Campañas por saga
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -291,7 +323,18 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   // Collapsible saga state: by default, everything is collapsed
-  const [expandedSagaIds, setExpandedSagaIds] = useState<Set<number>>(() => new Set());
+  const [expandedSagaIds, setExpandedSagaIds] = useState<Set<number>>(() => {
+    try {
+      const raw = window.localStorage.getItem(EXPANDED_SAGAS_STORAGE_KEY);
+      if (!raw) return new Set();
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return new Set();
+      const ids = parsed.map((x) => Number(x)).filter((x) => Number.isFinite(x) && x > 0) as number[];
+      return new Set(ids);
+    } catch {
+      return new Set();
+    }
+  });
 
   async function fetchSagas() {
     try {
@@ -306,6 +349,26 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
   useEffect(() => {
     fetchSagas();
   }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(EXPANDED_SAGAS_STORAGE_KEY, JSON.stringify(Array.from(expandedSagaIds.values())));
+    } catch {
+      // ignore
+    }
+  }, [expandedSagaIds]);
+
+  useEffect(() => {
+    if (!sagas.length) return;
+    setExpandedSagaIds((prev) => {
+      const allowed = new Set((sagas || []).map((s) => s.id));
+      const next = new Set<number>();
+      for (const id of Array.from(prev.values())) {
+        if (allowed.has(id)) next.add(id);
+      }
+      return next;
+    });
+  }, [sagas]);
 
   // Cargar campañas de todas las sagas
   useEffect(() => {
@@ -529,6 +592,14 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
 			>
 			  <FaPaw size={26} color="#FFD700" />
 			</button>
+      <button
+        className="icon"
+        aria-label="Animaciones"
+        data-tooltip="Animaciones"
+        onClick={() => onOpenAnimations?.()}
+      >
+        <FaRunning size={26} color="#FFD700" />
+      </button>
 			<button
 			  className="icon"
 			  aria-label="Sonidos"
@@ -576,7 +647,7 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
           strategy={verticalListSortingStrategy}
         >
           <div className="saga-list">
-            {filteredSagas.map((saga) => {
+            {filteredSagas.map((saga, sagaIndex) => {
               const expanded = expandedSagaIds.has(saga.id);
               const hasDescription = Boolean((saga.description ?? '').trim());
               const sagaCampaignsAll = campaigns.filter(c => c.sagaId === saga.id);
@@ -632,6 +703,7 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
                     </button>
                     <h3 className="saga-name" style={{ textAlign: 'left', flex: 1, margin: 0, minWidth: 0 }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                        <span style={{ opacity: 0.95, whiteSpace: 'nowrap', flex: '0 0 auto' }}>{toRoman(sagaIndex + 1)}.</span>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{saga.name}</span>
                         {showWarning ? (
                           <span

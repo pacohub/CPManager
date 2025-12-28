@@ -1,3 +1,4 @@
+import { AnimationItem } from './animation';
 import { ClassItem } from './class';
 import { RaceItem } from './race';
 
@@ -12,4 +13,5 @@ export interface CharacterItem {
 	raceId?: number | null;
 	race?: RaceItem | null;
 	parentId?: number | null;
+	animations?: AnimationItem[];
 }

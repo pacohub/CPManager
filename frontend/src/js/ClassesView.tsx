@@ -3,7 +3,9 @@ import { FaArrowLeft, FaEdit, FaExclamationTriangle, FaTrash } from 'react-icons
 import { GiCrossedSwords } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
 import ClassModal from '../components/ClassModal';
+import { AnimationItem } from '../interfaces/animation';
 import { ClassItem } from '../interfaces/class';
+import { getAnimations } from './animationApi';
 import { createClass, deleteClass, getClasses, updateClass, uploadClassIcon } from './classApi';
 
 function asImageUrl(raw?: string): string | undefined {
@@ -20,7 +22,11 @@ interface Props {
 
 const ClassesView: React.FC<Props> = ({ onBack }) => {
 	const [classes, setClasses] = useState<ClassItem[]>([]);
+	const [animations, setAnimations] = useState<AnimationItem[]>([]);
 	const [search, setSearch] = useState('');
+	const [selectedClass, setSelectedClass] = useState<ClassItem | null>(null);
+	const [selectedAnimationIds, setSelectedAnimationIds] = useState<number[]>([]);
+	const [savingAnimations, setSavingAnimations] = useState(false);
 
 	const [modalOpen, setModalOpen] = useState(false);
 	const [initial, setInitial] = useState<Partial<ClassItem> | undefined>(undefined);
@@ -29,8 +35,9 @@ const ClassesView: React.FC<Props> = ({ onBack }) => {
 	const [pendingDelete, setPendingDelete] = useState<ClassItem | null>(null);
 
 	const refresh = useCallback(async () => {
-		const list = await getClasses();
+		const [list, anims] = await Promise.all([getClasses(), getAnimations().catch(() => [] as AnimationItem[])]);
 		setClasses(list || []);
+		setAnimations(anims || []);
 	}, []);
 
 	useEffect(() => {
@@ -44,6 +51,105 @@ const ClassesView: React.FC<Props> = ({ onBack }) => {
 			: (classes || []);
 		return list.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
 	}, [classes, search]);
+
+	const orderedAnimations = useMemo(() => {
+		return (animations || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+	}, [animations]);
+
+	useEffect(() => {
+		if (!selectedClass) return;
+		const ids = (selectedClass.animations || []).map((x) => x.id).filter((x) => Number.isFinite(x as any)) as number[];
+		setSelectedAnimationIds(Array.from(new Set(ids)));
+	}, [selectedClass]);
+
+	if (selectedClass) {
+		const c = selectedClass;
+		const iconUrl = asImageUrl(c.icon);
+		const selectedSet = new Set(selectedAnimationIds);
+		return (
+			<div className="panel panel-corners-soft block-border block-panel-border">
+				<div className="panel-header">
+					<button className="icon" onClick={() => setSelectedClass(null)} title="Volver" aria-label="Volver">
+						<FaArrowLeft size={22} color="#FFD700" />
+					</button>
+					<h1 style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</h1>
+					<div style={{ width: 40 }} />
+				</div>
+
+				<div style={{ padding: 12 }}>
+					<div className="block-border block-border-soft" style={{ padding: 12 }}>
+						<div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+							{iconUrl ? (
+								<div className="metallic-border metallic-border-square" style={{ width: 96, height: 96, minWidth: 96, backgroundImage: 'none' }}>
+									<img src={iconUrl} alt="" aria-hidden="true" style={{ width: 96, height: 96, objectFit: 'cover', display: 'block' }} />
+								</div>
+							) : null}
+							<div style={{ flex: '1 1 320px', minWidth: 260 }}>
+								<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
+									<div>
+										<div className="chapter-label">Nivel</div>
+										<div>{Number.isFinite(c.level as any) ? Number(c.level) : 1}</div>
+									</div>
+									<div>
+										<div className="chapter-label">Descripción</div>
+										<div style={{ whiteSpace: 'pre-wrap', opacity: 0.95 }}>{(c.description || '').trim() ? c.description : '-'}</div>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div className="block-border block-border-soft" style={{ padding: 12, marginTop: 12 }}>
+						<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+							<div style={{ fontWeight: 900 }}>Animaciones</div>
+							<button
+								className="icon option"
+								title="Guardar animaciones"
+								disabled={savingAnimations}
+								onClick={async () => {
+									setSavingAnimations(true);
+									try {
+										const updated = await updateClass(c.id, { animationIds: selectedAnimationIds });
+										setSelectedClass(updated);
+										setClasses((prev) => (prev || []).map((it) => (it.id === updated.id ? updated : it)));
+									} finally {
+										setSavingAnimations(false);
+									}
+								}}
+							>
+								{savingAnimations ? '...' : 'Guardar'}
+							</button>
+						</div>
+
+						{orderedAnimations.length === 0 ? (
+							<div style={{ marginTop: 8, opacity: 0.85, fontSize: 13 }}>No hay animaciones creadas todavía.</div>
+						) : (
+							<div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 8 }}>
+								{orderedAnimations.map((a) => (
+									<label key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', opacity: 0.95 }}>
+										<input
+											type="checkbox"
+											checked={selectedSet.has(a.id)}
+											onChange={(e) => {
+												const checked = e.target.checked;
+												setSelectedAnimationIds((prev) => {
+													const cur = new Set(prev);
+													if (checked) cur.add(a.id);
+													else cur.delete(a.id);
+													return Array.from(cur.values());
+												});
+											}}
+										/>
+										<span style={{ wordBreak: 'break-word' }}>{a.name}</span>
+									</label>
+								))}
+							</div>
+						)}
+					</div>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
@@ -93,7 +199,17 @@ const ClassesView: React.FC<Props> = ({ onBack }) => {
 						const showWarning = missing.length > 0;
 
 						return (
-							<div key={c.id} className="block-border block-border-soft mechanic-card" style={{ padding: 12, position: 'relative' }}>
+							<div
+								key={c.id}
+								className="block-border block-border-soft mechanic-card"
+								style={{ padding: 12, position: 'relative', cursor: 'pointer' }}
+								role="button"
+								tabIndex={0}
+								onClick={() => setSelectedClass(c)}
+								onKeyDown={(e) => {
+									if (e.key === 'Enter' || e.key === ' ') setSelectedClass(c);
+								}}
+							>
 								{showWarning ? (
 									<span
 										className="campaign-warning"
@@ -137,7 +253,8 @@ const ClassesView: React.FC<Props> = ({ onBack }) => {
 										<button
 											className="icon option"
 											title="Editar"
-											onClick={() => {
+											onClick={(e) => {
+											e.stopPropagation();
 												setInitial(c);
 												setModalOpen(true);
 											}}
@@ -147,7 +264,8 @@ const ClassesView: React.FC<Props> = ({ onBack }) => {
 										<button
 											className="icon option"
 											title="Eliminar"
-											onClick={() => {
+											onClick={(e) => {
+											e.stopPropagation();
 												setPendingDelete(c);
 												setConfirmOpen(true);
 											}}
