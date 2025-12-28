@@ -134,9 +134,8 @@ const MapsView: React.FC<Props> = ({ onBack, onOpenMap }) => {
             setInitial(undefined);
           }}
 			onSubmit={async (formData) => {
-				let saved: MapItem;
-            if (initial?.id) saved = await updateMap(initial.id, formData);
-            else saved = await createMap(formData);
+      if (initial?.id) await updateMap(initial.id, formData);
+      else await createMap(formData);
 
             await refresh();
             setModalOpen(false);

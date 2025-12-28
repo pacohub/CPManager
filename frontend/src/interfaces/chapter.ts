@@ -6,4 +6,5 @@ export interface Chapter {
   description?: string;
   image?: string;
   file?: string;
+	specialType?: string | null;
 }

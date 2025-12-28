@@ -1,8 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ChapterFaction } from '../Entities/chapterFaction.entity';
-import { Chapter } from '../Entities/chapter.entity';
+import { Chapter, ChapterSpecialType } from '../Entities/chapter.entity';
 
 export type ChapterFactionInput = {
 	factionId: number;
@@ -20,6 +20,25 @@ export class ChapterFactionService {
 		@InjectRepository(Chapter)
 		private chapterRepository: Repository<Chapter>,
 	) {}
+
+	private normalizeNameForCompare(value: any): string {
+		return String(value ?? '')
+			.trim()
+			.toLowerCase()
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '');
+	}
+
+	private isCreditsChapter(chapter: Chapter): boolean {
+		if ((chapter as any)?.specialType === ChapterSpecialType.CREDITS) return true;
+		const name = this.normalizeNameForCompare((chapter as any)?.name);
+		return name === 'creditos' || name === 'credits';
+	}
+
+	private assertNotCredits(chapter: Chapter) {
+		if (!this.isCreditsChapter(chapter)) return;
+		throw new BadRequestException('En el capítulo Créditos no se asocian facciones');
+	}
 
 	async findByChapter(chapterId: number): Promise<ChapterFaction[]> {
 		return this.chapterFactionRepository
@@ -68,7 +87,8 @@ export class ChapterFactionService {
 
 		// Ensure chapter exists (avoid orphan links)
 		const chapter = await this.chapterRepository.findOneBy({ id: chapterId });
-		if (!chapter) throw new Error('Capítulo no encontrado');
+		if (!chapter) throw new NotFoundException('Capítulo no encontrado');
+		this.assertNotCredits(chapter);
 
 		await this.chapterFactionRepository.delete({ chapterId });
 		if (cleaned.length === 0) return [];
@@ -87,6 +107,10 @@ export class ChapterFactionService {
 	}
 
 	async setColorOverride(chapterId: number, factionId: number, colorOverride: string | null): Promise<ChapterFaction | null> {
+		const chapter = await this.chapterRepository.findOneBy({ id: chapterId });
+		if (!chapter) throw new NotFoundException('Capítulo no encontrado');
+		this.assertNotCredits(chapter);
+
 		const existing = await this.chapterFactionRepository.findOneBy({ chapterId, factionId });
 		if (!existing) return null;
 		existing.colorOverride = (colorOverride ?? '').trim() || null;

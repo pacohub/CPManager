@@ -38,16 +38,22 @@ import { GameObjectController } from './Controller/gameObject.controller';
 import { Component } from './Entities/component.entity';
 import { ComponentService } from './Services/component.service';
 import { ComponentController } from './Controller/component.controller';
+import { Resource } from './Entities/resource.entity';
+import { ResourceType } from './Entities/resourceType.entity';
+import { ResourceService } from './Services/resource.service';
+import { ResourceTypeService } from './Services/resourceType.service';
+import { ResourceController } from './Controller/resource.controller';
+import { ResourceTypeController } from './Controller/resourceType.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'database.sqlite',
-      entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, GameObject, Component],
+      entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, GameObject, Component, Resource, ResourceType],
       synchronize: true, // Solo para desarrollo
     }),
-    TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, GameObject, Component]),
+    TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, GameObject, Component, Resource, ResourceType]),
   ],
   controllers: [
 		AppController,
@@ -63,7 +69,9 @@ import { ComponentController } from './Controller/component.controller';
 		ProfessionController,
     GameObjectController,
 		ComponentController,
+		ResourceController,
+		ResourceTypeController,
 	],
-  providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService, ProfessionService, GameObjectService, ComponentService],
+  providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService, ProfessionService, GameObjectService, ComponentService, ResourceService, ResourceTypeService],
 })
 export class AppModule {}

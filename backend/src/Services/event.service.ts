@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Chapter } from '../Entities/chapter.entity';
+import { Chapter, ChapterSpecialType } from '../Entities/chapter.entity';
 import { Event, EventDifficulty, EventType } from '../Entities/event.entity';
 import { Map } from '../Entities/map.entity';
 
@@ -30,6 +30,27 @@ export class EventService {
 		const allowed = new Set(Object.values(enumObj));
 		if (!allowed.has(v)) {
 			throw new BadRequestException(`Campo ${field} inválido: ${v}`);
+		}
+	}
+
+	private normalizeNameForCompare(value: any): string {
+		return String(value ?? '')
+			.trim()
+			.toLowerCase()
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '');
+	}
+
+	private isCreditsChapter(chapter: Chapter): boolean {
+		if ((chapter as any)?.specialType === ChapterSpecialType.CREDITS) return true;
+		const name = this.normalizeNameForCompare((chapter as any)?.name);
+		return name === 'creditos' || name === 'credits';
+	}
+
+	private assertCreditsAllowsType(chapter: Chapter, type: EventType) {
+		if (!this.isCreditsChapter(chapter)) return;
+		if (type !== EventType.CINEMATIC) {
+			throw new BadRequestException('En el capítulo Créditos solo se permiten eventos de tipo CINEMATIC');
 		}
 	}
 
@@ -89,13 +110,16 @@ export class EventService {
 		this.assertEnumValue(EventType, type, 'type');
 		this.assertEnumValue(EventDifficulty, difficulty, 'difficulty');
 
+		const resolvedType = (type as EventType) ?? EventType.MISSION;
+		this.assertCreditsAllowsType(chapter, resolvedType);
+
 		const nextPosition = await this.getNextPositionForChapter(chapterId);
 
 		const event = this.eventRepository.create({
 			position: nextPosition,
 			name,
 			description: this.normalizeText(data?.description) ?? '',
-			type: (type as EventType) ?? EventType.MISSION,
+			type: resolvedType,
 			difficulty: (difficulty as EventDifficulty) ?? EventDifficulty.NORMAL,
 			file: this.normalizeText(data?.file) ?? '',
 			chapter,
@@ -108,6 +132,9 @@ export class EventService {
 	async update(id: number, data: any): Promise<Event> {
 		const existing = await this.findOne(id);
 		if (!existing) throw new NotFoundException('Evento no encontrado');
+
+		let nextChapter = existing.chapter;
+		let nextType: EventType = existing.type;
 
 		if (data?.position !== undefined) {
 			const position = Number(data.position);
@@ -127,7 +154,7 @@ export class EventService {
 		if (data?.type !== undefined) {
 			const t = this.normalizeText(data?.type);
 			this.assertEnumValue(EventType, t, 'type');
-			existing.type = t as EventType;
+			nextType = t as EventType;
 		}
 
 		if (data?.difficulty !== undefined) {
@@ -141,8 +168,13 @@ export class EventService {
 			if (!Number.isFinite(chapterId)) throw new BadRequestException('chapterId inválido');
 			const chapter = await this.chapterRepository.findOneBy({ id: chapterId });
 			if (!chapter) throw new NotFoundException('Capítulo no encontrado');
-			existing.chapter = chapter;
+			nextChapter = chapter;
 		}
+
+		this.assertCreditsAllowsType(nextChapter, nextType);
+
+		existing.type = nextType;
+		existing.chapter = nextChapter;
 
 		if (data?.mapId !== undefined) {
 			const mapId = Number(data.mapId);
@@ -161,24 +193,28 @@ export class EventService {
 
 	async countByChapterForCampaign(
 		campaignId: number,
-	): Promise<Array<{ chapterId: number; count: number; warningCount: number }>> {
+	): Promise<Array<{ chapterId: number; count: number; warningCount: number; missionCount: number; cinematicCount: number }>> {
 		const rows = await this.eventRepository
 			.createQueryBuilder('event')
 			.leftJoin('event.chapter', 'chapter')
 			.select('chapter.id', 'chapterId')
 			.addSelect('COUNT(event.id)', 'count')
+			.addSelect("SUM(CASE WHEN event.type = 'MISSION' THEN 1 ELSE 0 END)", 'missionCount')
+			.addSelect("SUM(CASE WHEN event.type = 'CINEMATIC' THEN 1 ELSE 0 END)", 'cinematicCount')
 			.addSelect(
 				"SUM(CASE WHEN event.description IS NULL OR TRIM(event.description) = '' THEN 1 ELSE 0 END)",
 				'warningCount',
 			)
 			.where('chapter.campaignId = :campaignId', { campaignId })
 			.groupBy('chapter.id')
-			.getRawMany<{ chapterId: string; count: string; warningCount: string }>();
+			.getRawMany<{ chapterId: string; count: string; warningCount: string; missionCount: string; cinematicCount: string }>();
 
 		return (rows ?? []).map((r) => ({
 			chapterId: Number(r.chapterId),
 			count: Number(r.count),
 			warningCount: Number(r.warningCount ?? 0),
+			missionCount: Number((r as any).missionCount ?? 0),
+			cinematicCount: Number((r as any).cinematicCount ?? 0),
 		}));
 	}
 }

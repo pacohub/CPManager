@@ -15,6 +15,7 @@ import { diskStorage } from 'multer';
 import { Request } from 'express';
 import * as path from 'path';
 import { Chapter } from '../Entities/chapter.entity';
+import { Resource } from '../Entities/resource.entity';
 import { ChapterService } from '../Services/chapter.service';
 
 function fileName(req: Request, file: Express.Multer.File, cb: (error: Error | null, filename: string) => void) {
@@ -98,5 +99,16 @@ export class ChapterController {
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<void> {
     return this.chapterService.remove(Number(id));
+  }
+
+
+  @Get(':id/resources')
+  async getResources(@Param('id') id: string): Promise<Resource[]> {
+    return this.chapterService.getResources(Number(id));
+  }
+
+  @Put(':id/resources')
+  async setResources(@Param('id') id: string, @Body() body: any): Promise<Chapter> {
+    return this.chapterService.setResourceIds(Number(id), body?.resourceIds ?? []);
   }
 }

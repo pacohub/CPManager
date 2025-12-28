@@ -1,4 +1,9 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, JoinTable, ManyToMany } from 'typeorm';
+import { Resource } from './resource.entity';
+
+export enum ChapterSpecialType {
+  CREDITS = 'CREDITS',
+}
 
 @Entity()
 export class Chapter {
@@ -22,4 +27,11 @@ export class Chapter {
 
   @Column({ nullable: true })
   file: string;
+
+	@Column({ type: 'text', nullable: true })
+	specialType: ChapterSpecialType | null;
+
+  @ManyToMany(() => Resource, (resource) => resource.chapters, { cascade: false })
+  @JoinTable()
+  resources: Resource[];
 }

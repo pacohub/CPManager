@@ -85,7 +85,7 @@ function buildChapterUpdateFormData(chapter: Chapter, patch: Partial<Chapter> = 
 const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEvents }) => {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
-  const [eventCountsByChapterId, setEventCountsByChapterId] = useState<Record<number, { count: number; warningCount: number }>>({});
+  const [eventCountsByChapterId, setEventCountsByChapterId] = useState<Record<number, { count: number; warningCount: number; missionCount: number; cinematicCount: number }>>({});
   const [eventCountsLoaded, setEventCountsLoaded] = useState(false);
   const [chaptersDndEnabled, setChaptersDndEnabled] = useState(false);
   const [chapterModalOpen, setChapterModalOpen] = useState(false);
@@ -129,6 +129,62 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
       setEventCountsLoaded(false);
     });
   }, [refreshEventCounts]);
+
+  const normalizeNameForCompare = useCallback((value: any) => {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+  }, []);
+
+  const isCreditsChapter = useCallback((ch: Chapter) => {
+    if (String((ch as any)?.specialType ?? '') === 'CREDITS') return true;
+    const name = normalizeNameForCompare(ch?.name);
+    return name === 'creditos' || name === 'credits';
+  }, [normalizeNameForCompare]);
+
+  const isCinematicOnlyChapter = useCallback((ch: Chapter) => {
+    if (!eventCountsLoaded) return false;
+    const stats = eventCountsByChapterId[ch.id];
+    const total = Number(stats?.count ?? 0);
+    const mission = Number(stats?.missionCount ?? 0);
+    const cinematic = Number(stats?.cinematicCount ?? 0);
+    return total > 0 && mission === 0 && cinematic > 0;
+  }, [eventCountsByChapterId, eventCountsLoaded]);
+
+  const chapterLabelById = useMemo(() => {
+    const out: Record<number, string> = {};
+    const nonCredits = (chapters ?? []).filter((c) => !isCreditsChapter(c));
+    const firstNonCreditsId = nonCredits[0]?.id;
+    const lastNonCreditsId = nonCredits.length > 0 ? nonCredits[nonCredits.length - 1].id : undefined;
+
+    let cap = 0;
+    for (let idx = 0; idx < (chapters ?? []).length; idx++) {
+      const ch = chapters[idx];
+      if (isCreditsChapter(ch)) {
+        out[ch.id] = 'Créditos';
+        continue;
+      }
+
+      if (isCinematicOnlyChapter(ch)) {
+        if (firstNonCreditsId !== undefined && ch.id === firstNonCreditsId) out[ch.id] = 'Prólogo';
+        else if (lastNonCreditsId !== undefined && ch.id === lastNonCreditsId) out[ch.id] = 'Epílogo';
+        else out[ch.id] = 'Interludio';
+        continue;
+      }
+
+      // Fallback while counts load: use index-based numbering
+      if (!eventCountsLoaded) {
+        out[ch.id] = `Capítulo ${idx + 1}`;
+      } else {
+        cap += 1;
+        out[ch.id] = `Capítulo ${cap}`;
+      }
+    }
+
+    return out;
+  }, [chapters, eventCountsLoaded, isCinematicOnlyChapter, isCreditsChapter]);
 
   const bg = useMemo(() => {
     const url = getImageUrl(campaign?.image);
@@ -284,6 +340,12 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
 
                 const activeChapterId = Number(activeId.replace('chapter:', ''));
                 const overChapterId = Number(overId.replace('chapter:', ''));
+
+                const activeCh = chapters.find((c) => c.id === activeChapterId);
+                const overCh = chapters.find((c) => c.id === overChapterId);
+                if (!activeCh || !overCh) return;
+                if (isCreditsChapter(activeCh) || isCreditsChapter(overCh)) return;
+
                 const oldIndex = chapters.findIndex((c) => c.id === activeChapterId);
                 const newIndex = chapters.findIndex((c) => c.id === overChapterId);
                 if (oldIndex < 0 || newIndex < 0) return;
@@ -308,7 +370,7 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
               >
                 <div className="chapters-scroll" style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
                   {chapters.map((ch, idx) => (
-                    <SortableChapterRow key={ch.id} chapter={ch} enabled={chaptersDndEnabled}>
+                    <SortableChapterRow key={ch.id} chapter={ch} enabled={chaptersDndEnabled && !isCreditsChapter(ch)}>
                       <div
                         className="chapter-row"
                         style={{ padding: 0, position: 'relative', cursor: chaptersDndEnabled ? undefined : 'pointer' }}
@@ -355,7 +417,7 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
                         </button>
 
                         <div className="chapter-content" style={{ minWidth: 0 }}>
-                          <div className="chapter-label">Capítulo {idx + 1}</div>
+                          <div className="chapter-label">{chapterLabelById[ch.id] ?? `Capítulo ${idx + 1}`}</div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, marginTop: 2 }}>
                             <span style={{ minWidth: 0, wordBreak: 'break-word' }}>{ch.name}</span>
                             {(() => {
@@ -410,16 +472,18 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
                           >
                             <FaEdit size={16} />
                           </button>
-                          <button
-                            className="icon option"
-                            title="Eliminar"
-                            onClick={() => {
-                              setPendingDelete(ch);
-                              setConfirmOpen(true);
-                            }}
-                          >
-                            <FaTrash size={16} />
-                          </button>
+                          {!isCreditsChapter(ch) ? (
+                            <button
+                              className="icon option"
+                              title="Eliminar"
+                              onClick={() => {
+                                setPendingDelete(ch);
+                                setConfirmOpen(true);
+                              }}
+                            >
+                              <FaTrash size={16} />
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     </SortableChapterRow>

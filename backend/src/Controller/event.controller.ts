@@ -9,7 +9,7 @@ export class EventController {
 	@Get('count-by-chapter')
 	async countByChapter(
 		@Query('campaignId') campaignId?: string,
-	): Promise<Array<{ chapterId: number; count: number; warningCount: number }>> {
+	): Promise<Array<{ chapterId: number; count: number; warningCount: number; missionCount: number; cinematicCount: number }>> {
 		const id = Number(campaignId);
 		if (!Number.isFinite(id)) return [];
 		return this.eventService.countByChapterForCampaign(id);

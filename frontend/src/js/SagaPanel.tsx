@@ -7,7 +7,7 @@ import CampaignCard from '../components/CampaignCard';
 import CampaignModal from '../components/CampaignModal';
 import { getCampaignsBySaga, createCampaign, updateCampaign, deleteCampaign } from './campaignApi';
 import { getAllChapters } from './chapterApi';
-import { FaBookOpen, FaCubes, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaCompass, FaCogs } from 'react-icons/fa';
+import { FaBookOpen, FaCubes, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaCompass, FaCogs, FaMountain } from 'react-icons/fa';
 import { GiChest, GiCrossedSwords, GiWarPick } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
 
@@ -130,9 +130,10 @@ interface SagaPanelProps {
   onOpenProfessions?: () => void;
   onOpenObjects?: () => void;
 	onOpenComponents?: () => void;
+	onOpenResources?: () => void;
 }
 
-const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics, onOpenFactions, onOpenProfessions, onOpenObjects, onOpenComponents }) => {
+const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics, onOpenFactions, onOpenProfessions, onOpenObjects, onOpenComponents, onOpenResources }) => {
   // Campañas por saga
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -323,8 +324,21 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
       try {
         const all = await getAllChapters();
         if (cancelled) return;
+			const normalizeNameForCompare = (value: any) => {
+				return String(value ?? '')
+					.trim()
+					.toLowerCase()
+					.normalize('NFD')
+					.replace(/[\u0300-\u036f]/g, '');
+			};
+			const isCredits = (ch: any) => {
+				if (String(ch?.specialType ?? '') === 'CREDITS') return true;
+				const name = normalizeNameForCompare(ch?.name);
+				return name === 'creditos' || name === 'credits';
+			};
         const counts: Record<number, number> = {};
         (all ?? []).forEach((ch) => {
+			if (isCredits(ch)) return;
           const key = Number((ch as any).campaignId);
           if (Number.isNaN(key)) return;
           counts[key] = (counts[key] || 0) + 1;
@@ -442,6 +456,14 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
               onClick={() => onOpenObjects?.()}
             >
               <GiChest size={26} color="#FFD700" />
+            </button>
+            <button
+              className="icon"
+              aria-label="Recursos"
+              title="Recursos"
+              onClick={() => onOpenResources?.()}
+            >
+              <FaMountain size={26} color="#FFD700" />
             </button>
             <button
               className="icon"

@@ -6,6 +6,7 @@ import { FaArrowLeft, FaDownload, FaEdit, FaExclamation, FaExclamationTriangle, 
 import ConfirmModal from '../components/ConfirmModal';
 import ChapterFactionColorOverrideModal from '../components/ChapterFactionColorOverrideModal';
 import GroupNameModal from '../components/GroupNameModal';
+import IconSelect from '../components/IconSelect';
 import ChapterModal from '../components/ChapterModal';
 import EventModal from '../components/EventModal';
 import ObjectiveModal from '../components/ObjectiveModal';
@@ -16,12 +17,17 @@ import { FactionItem } from '../interfaces/faction';
 import { MechanicItem } from '../interfaces/mechanic';
 import { MapItem } from '../interfaces/map';
 import { ObjectiveItem } from '../interfaces/objective';
+import { ResourceItem } from '../interfaces/resource';
 import { deleteChapter, getChapter, updateChapter } from './chapterApi';
+import { getChaptersByCampaign } from './chapterApi';
 import { getChapterFactions, replaceChapterFactions, setChapterFactionColorOverride } from './chapterFactionApi';
+import { getChapterResources, setChapterResources as setChapterResourcesApi } from './chapterResourceApi';
 import { getFactions } from './factionApi';
 import { getMechanics } from './mechanicApi';
 import { getMaps } from './mapApi';
+import { getResources } from './resourceApi';
 import { createEvent, deleteEvent, getEvents, updateEvent } from './eventApi';
+import { getEventCountsByChapter } from './eventApi';
 import { createObjective, deleteObjective, getObjectives, updateObjective } from './objectiveApi';
 
 interface Props {
@@ -114,6 +120,14 @@ const fileUrl = (file?: string) => {
 	return `http://localhost:4000/${stripLeadingSlashes(file)}`;
 };
 
+const externalUrl = (raw?: string) => {
+	const v = String(raw ?? '').trim();
+	if (!v) return null;
+	if (v.startsWith('http://') || v.startsWith('https://')) return v;
+	if (v.startsWith('/')) return `http://localhost:4000/${stripLeadingSlashes(v)}`;
+	return `https://${v}`;
+};
+
 const imageUrl = (img?: string) => {
 	if (!img) return null;
 	if (img.startsWith('http') || img.startsWith('data:')) return img;
@@ -128,6 +142,14 @@ type ChapterColorState = {
 const normalizeGroupName = (value: unknown) => {
 	const trimmed = String(value ?? '').trim();
 	return trimmed ? trimmed : 'Grupo';
+};
+
+const normalizeNameForCompare = (value: any) => {
+	return String(value ?? '')
+		.trim()
+		.toLowerCase()
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '');
 };
 
 const uniqueInOrder = (values: string[]) => {
@@ -385,6 +407,9 @@ const SortableChapterFactionRow: React.FC<{
 
 const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 	const [chapter, setChapter] = useState<Chapter | null>(null);
+	const [chaptersInCampaign, setChaptersInCampaign] = useState<Chapter[]>([]);
+	const [eventCountsByChapterId, setEventCountsByChapterId] = useState<Record<number, { count: number; warningCount: number; missionCount: number; cinematicCount: number }>>({});
+	const [eventCountsLoaded, setEventCountsLoaded] = useState(false);
 	const [factions, setFactions] = useState<FactionItem[]>([]);
 	const [chapterFactions, setChapterFactions] = useState<ChapterFactionLink[]>([]);
 	const [chapterFactionsLoaded, setChapterFactionsLoaded] = useState(false);
@@ -392,6 +417,12 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 	const [selectedFactionToAddByGroup, setSelectedFactionToAddByGroup] = useState<Record<string, number | ''>>({});
 	const [groupNameModal, setGroupNameModal] = useState<{ mode: 'add' | 'rename'; from?: string } | null>(null);
 	const [colorOverrideTarget, setColorOverrideTarget] = useState<{ chapterId: number; factionId: number } | null>(null);
+
+	const [resources, setResources] = useState<ResourceItem[]>([]);
+	const [resourcesLoaded, setResourcesLoaded] = useState(false);
+	const [chapterResources, setChapterResources] = useState<ResourceItem[]>([]);
+	const [chapterResourcesLoaded, setChapterResourcesLoaded] = useState(false);
+	const [selectedResourceToAdd, setSelectedResourceToAdd] = useState<number | ''>('');
 
 	const [maps, setMaps] = useState<MapItem[]>([]);
 	const [mechanics, setMechanics] = useState<MechanicItem[]>([]);
@@ -429,13 +460,168 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 	}, [chapterId]);
 
 	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			if (!chapter) return;
+			try {
+				const [chs, counts] = await Promise.all([
+					getChaptersByCampaign(chapter.campaignId),
+					getEventCountsByChapter(chapter.campaignId),
+				]);
+				if (cancelled) return;
+				setChaptersInCampaign(chs || []);
+				setEventCountsByChapterId(counts || {});
+				setEventCountsLoaded(true);
+			} catch (e) {
+				if (cancelled) return;
+				setChaptersInCampaign([]);
+				setEventCountsByChapterId({});
+				setEventCountsLoaded(false);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+	}, [chapter]);
+
+	const isCreditsChapter = useMemo(() => {
+		if (!chapter) return false;
+		const st = String((chapter as any)?.specialType ?? '');
+		if (st === 'CREDITS') return true;
+		const name = normalizeNameForCompare((chapter as any)?.name);
+		return name === 'creditos' || name === 'credits';
+	}, [chapter]);
+
+	const isCinematicOnlyByCounts = useMemo(() => {
+		if (!chapter) return false;
+		if (!eventCountsLoaded) return false;
+		const stats = eventCountsByChapterId[chapter.id];
+		const total = Number(stats?.count ?? 0);
+		const mission = Number(stats?.missionCount ?? 0);
+		const cinematic = Number(stats?.cinematicCount ?? 0);
+		return total > 0 && mission === 0 && cinematic > 0;
+	}, [chapter, eventCountsLoaded, eventCountsByChapterId]);
+
+	const showResourcesSection = !isCreditsChapter && !isCinematicOnlyByCounts;
+
+	const chapterHeaderTitle = useMemo(() => {
+		if (!chapter) return 'Capítulo';
+		if (isCreditsChapter) return 'Créditos';
+
+		if (!eventCountsLoaded) {
+			return `${Number.isFinite(chapter.order) ? `Capítulo ${(chapter.order ?? 0) + 1}: ` : ''}${chapter.name}`;
+		}
+
+		const stats = eventCountsByChapterId[chapter.id];
+		const total = Number(stats?.count ?? 0);
+		const mission = Number(stats?.missionCount ?? 0);
+		const cinematic = Number(stats?.cinematicCount ?? 0);
+		const isCinematicOnly = total > 0 && mission === 0 && cinematic > 0;
+
+		const ordered = (chaptersInCampaign ?? []).slice();
+		const nonCredits = ordered.filter((c) => {
+			const st = String((c as any)?.specialType ?? '');
+			if (st === 'CREDITS') return false;
+			const nm = normalizeNameForCompare((c as any)?.name);
+			return nm !== 'creditos' && nm !== 'credits';
+		});
+		const firstNonCreditsId = nonCredits[0]?.id;
+		const lastNonCreditsId = nonCredits.length > 0 ? nonCredits[nonCredits.length - 1].id : undefined;
+
+		if (isCinematicOnly) {
+			const label = chapter.id === firstNonCreditsId ? 'Prólogo' : chapter.id === lastNonCreditsId ? 'Epílogo' : 'Interludio';
+			return `${label}: ${chapter.name}`;
+		}
+
+		let cap = 0;
+		for (const ch of ordered) {
+			const st = String((ch as any)?.specialType ?? '');
+			if (st === 'CREDITS') continue;
+			const nm = normalizeNameForCompare((ch as any)?.name);
+			if (nm === 'creditos' || nm === 'credits') continue;
+
+			const s = eventCountsByChapterId[ch.id];
+			const t = Number(s?.count ?? 0);
+			const m = Number(s?.missionCount ?? 0);
+			const c = Number(s?.cinematicCount ?? 0);
+			const chIsCinematicOnly = t > 0 && m === 0 && c > 0;
+			if (!chIsCinematicOnly) cap += 1;
+
+			if (ch.id === chapter.id) {
+				if (chIsCinematicOnly) {
+					const label = ch.id === firstNonCreditsId ? 'Prólogo' : ch.id === lastNonCreditsId ? 'Epílogo' : 'Interludio';
+					return `${label}: ${chapter.name}`;
+				}
+				return `Capítulo ${cap}: ${chapter.name}`;
+			}
+		}
+
+		return `${chapter.name}`;
+	}, [chapter, chaptersInCampaign, eventCountsByChapterId, eventCountsLoaded, isCreditsChapter]);
+
+	useEffect(() => {
 		getFactions().then((list) => setFactions(list ?? [])).catch((e) => {
 			console.error('Error cargando facciones', e);
 			setFactions([]);
 		});
 	}, []);
 
+	useEffect(() => {
+		if (!showResourcesSection) {
+			setResources([]);
+			setResourcesLoaded(true);
+			return;
+		}
+		setResourcesLoaded(false);
+		getResources().then((list) => {
+			setResources(list ?? []);
+			setResourcesLoaded(true);
+		}).catch((e) => {
+			console.error('Error cargando recursos', e);
+			setResources([]);
+			setResourcesLoaded(false);
+		});
+	}, [showResourcesSection]);
+
+	const refreshChapterResources = useCallback(async () => {
+		if (!showResourcesSection) {
+			setChapterResources([]);
+			setChapterResourcesLoaded(true);
+			return;
+		}
+		setChapterResourcesLoaded(false);
+		try {
+			const list = await getChapterResources(chapterId);
+			setChapterResources(list || []);
+			setChapterResourcesLoaded(true);
+		} catch (e) {
+			console.error('Error cargando recursos del capítulo', e);
+			setChapterResources([]);
+			setChapterResourcesLoaded(false);
+		}
+	}, [chapterId, showResourcesSection]);
+
+	useEffect(() => {
+		refreshChapterResources().catch((e) => console.error('Error cargando recursos del capítulo', e));
+		if (!showResourcesSection) setSelectedResourceToAdd('');
+	}, [refreshChapterResources, showResourcesSection]);
+
+	const persistChapterResources = useCallback(async (resourceIds: number[]) => {
+		await setChapterResourcesApi(chapterId, resourceIds);
+		await refreshChapterResources();
+	}, [chapterId, refreshChapterResources]);
+
 	const refreshChapterFactions = useCallback(async () => {
+		if (chapter) {
+			const st = String((chapter as any)?.specialType ?? '');
+			const nm = normalizeNameForCompare((chapter as any)?.name);
+			const isCredits = st === 'CREDITS' || nm === 'creditos' || nm === 'credits';
+			if (isCredits) {
+				setChapterFactions([]);
+				setChapterFactionsLoaded(true);
+				return;
+			}
+		}
 		setChapterFactionsLoaded(false);
 		try {
 			const list = await getChapterFactions(chapterId);
@@ -446,7 +632,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 			setChapterFactions([]);
 			setChapterFactionsLoaded(false);
 		}
-	}, [chapterId]);
+	}, [chapter, chapterId]);
 
 	useEffect(() => {
 		refreshChapterFactions().catch((e) => console.error('Error cargando facciones del capítulo', e));
@@ -511,6 +697,22 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 			.sort((a, b) => (Number(a.position ?? 0) - Number(b.position ?? 0)) || (a.id - b.id));
 	}, [events]);
 
+	const isCinematicOnlyChapter = useMemo(() => {
+		const list = events || [];
+		if (list.length === 0) return false;
+		return list.every((e) => String(e.type) === 'CINEMATIC');
+	}, [events]);
+
+	const showDifficultyFilters = !isCreditsChapter && !isCinematicOnlyChapter;
+
+	useEffect(() => {
+		if (showDifficultyFilters) return;
+		// Ensure hidden filters never affect results
+		setFilterEasy(true);
+		setFilterNormal(true);
+		setFilterHard(true);
+	}, [showDifficultyFilters]);
+
 	const objectivesByEventId = useMemo(() => {
 		const out: Record<number, ObjectiveItem[]> = {};
 		for (const obj of objectives || []) {
@@ -528,16 +730,18 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 		return out;
 	}, [objectives]);
 
-	const isDifficultyFilteringActive = !(filterEasy && filterNormal && filterHard);
+	const isDifficultyFilteringActive = showDifficultyFilters && !(filterEasy && filterNormal && filterHard);
 	const isFilteringActive = Boolean(search.trim()) || isDifficultyFilteringActive;
 
 	const filtered = useMemo(() => {
 		const q = search.trim().toLowerCase();
-		const allowedDifficulties = new Set<string>([
-			...(filterEasy ? ['EASY'] : []),
-			...(filterNormal ? ['NORMAL'] : []),
-			...(filterHard ? ['HARD'] : []),
-		]);
+		const allowedDifficulties = showDifficultyFilters
+			? new Set<string>([
+				...(filterEasy ? ['EASY'] : []),
+				...(filterNormal ? ['NORMAL'] : []),
+				...(filterHard ? ['HARD'] : []),
+			])
+			: new Set<string>(['EASY', 'NORMAL', 'HARD']);
 
 		const passesDifficulty = (ev: EventItem) => {
 			if (ev.type === 'CINEMATIC') return true;
@@ -575,7 +779,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 		};
 
 		return ordered.filter((ev) => (passesDifficulty(ev) && matchesText(ev)) || objectiveMatches(ev));
-	}, [ordered, objectivesByEventId, isDifficultyFilteringActive, search, filterEasy, filterNormal, filterHard]);
+	}, [ordered, objectivesByEventId, isDifficultyFilteringActive, search, filterEasy, filterNormal, filterHard, showDifficultyFilters]);
 
 	const toLabelDifficulty = (d: string) => (d === 'EASY' ? 'Fácil' : d === 'HARD' ? 'Difícil' : 'Normal');
 
@@ -600,17 +804,16 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
 				<h1 style={{ margin: 0, minWidth: 0, wordBreak: 'break-word' }}>
-					{chapter
-						? `${Number.isFinite(chapter.order) ? `Capítulo ${(chapter.order ?? 0) + 1}: ` : ''}${chapter.name}`
-						: 'Capítulo'}
+					{chapterHeaderTitle}
 				</h1>
 				<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
 					<button
 						className="icon option"
 						title="Editar"
-						disabled={!chapter}
+						disabled={!chapter || isCreditsChapter}
 						onClick={() => {
 							if (!chapter) return;
+							if (isCreditsChapter) return;
 							setChapterModalOpen(true);
 						}}
 					>
@@ -619,9 +822,10 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 					<button
 						className="icon option"
 						title="Eliminar"
-						disabled={!chapter}
+						disabled={!chapter || isCreditsChapter}
 						onClick={() => {
 							if (!chapter) return;
+							if (isCreditsChapter) return;
 							setConfirmChapterOpen(true);
 						}}
 					>
@@ -639,6 +843,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 							) : null}
 
 							{(() => {
+								if (isCreditsChapter) return null;
 								const linksRaw = chapterFactions || [];
 								const playable = linksRaw.find((l) => Boolean(l.isPlayable));
 								const playableGroupName = playable ? normalizeGroupName(playable.groupName) : null;
@@ -755,36 +960,28 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 											const items = links.filter((l) => normalizeGroupName(l.groupName) === groupName);
 											const selected = selectedFactionToAddByGroup[groupName] ?? '';
 											const canAdd = chapterFactionsLoaded && links.length < 24 && availableToAdd.length > 0;
+															const factionOptions = availableToAdd.map((f) => ({
+																value: f.id,
+																label: f.name,
+																iconUrl: imageUrl(f.iconImage),
+															}));
 											return (
 												<div key={groupName} style={{ marginTop: 10 }}>
 													<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
 														<div style={{ fontWeight: 900, opacity: 0.95 }}>{groupName}</div>
 														<div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-															<select
-																value={selected}
-																onChange={(e) => {
-																	const v = e.target.value;
-																	setSelectedFactionToAddByGroup((prev) => ({
-																		...prev,
-																		[groupName]: v ? Number(v) : '',
-																	}));
-																}}
-																disabled={!canAdd}
-																style={{
-																	background: 'rgba(0,0,0,0.35)',
-																	border: '1px solid rgba(255,215,0,0.35)',
-																	color: '#e2d9b7',
-																	padding: '6px 8px',
-																	borderRadius: 6,
-																}}
-															>
-																<option value="">Añadir facción…</option>
-																{availableToAdd.map((f) => (
-																	<option key={f.id} value={f.id}>
-																		{f.name}
-																	</option>
-																))}
-															</select>
+																		<IconSelect
+																			value={selected}
+																			placeholder="Añadir facción…"
+																			disabled={!canAdd}
+																			items={factionOptions}
+																			onChange={(v) => {
+																				setSelectedFactionToAddByGroup((prev) => ({
+																				...prev,
+																				[groupName]: v ? Number(v) : '',
+																			}));
+																			}}
+																		/>
 															<button
 																className="icon option"
 																disabled={!canAdd || !selected}
@@ -879,6 +1076,139 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 								</div>
 							);
 						})()}
+
+							{(() => {
+								if (!showResourcesSection) return null;
+								const linked = chapterResources || [];
+								const linkedIds = new Set<number>(linked.map((r) => r.id));
+								const availableToAdd = (resources || [])
+									.filter((r) => !linkedIds.has(r.id))
+									.slice()
+									.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+								const canAdd = chapterResourcesLoaded && resourcesLoaded && availableToAdd.length > 0;
+								const selected = selectedResourceToAdd;
+									const resourceOptions = availableToAdd.map((r) => ({
+										value: r.id,
+										label: `${r.name}${r.resourceType?.name ? ` (${r.resourceType.name})` : ''}`,
+										iconUrl: imageUrl(r.icon) ?? null,
+									}));
+
+								return (
+									<div
+										style={{
+											marginTop: 10,
+											borderTop: '1px solid rgba(255,215,0,0.18)',
+											paddingTop: 10,
+										}}
+										onPointerDown={(e) => e.stopPropagation()}
+										onClick={(e) => e.stopPropagation()}
+									>
+										<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+											<div style={{ fontWeight: 800 }}>
+												Recursos ({linked.length})
+												{!chapterResourcesLoaded || !resourcesLoaded ? <span style={{ opacity: 0.8 }}> — cargando…</span> : null}
+											</div>
+											<div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+												<IconSelect
+													value={selected}
+													placeholder="Añadir recurso…"
+													disabled={!canAdd}
+													items={resourceOptions}
+													onChange={(v) => setSelectedResourceToAdd(v ? Number(v) : '')}
+												/>
+													<button
+														className="icon option"
+														disabled={!canAdd || !selected}
+														title="Agregar recurso"
+														onClick={async () => {
+															if (!selected) return;
+															try {
+																await persistChapterResources([...linked.map((x) => x.id), Number(selected)]);
+																setSelectedResourceToAdd('');
+															} catch (e) {
+																console.error('Error agregando recurso al capítulo', e);
+																window.alert(String(e));
+															}
+														}}
+													>
+														+
+													</button>
+											</div>
+										</div>
+
+										{linked.length === 0 ? (
+											<div style={{ marginTop: 8, opacity: 0.85 }}>No hay recursos vinculados.</div>
+										) : (
+											<div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
+												{linked
+													.slice()
+													.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }))
+													.map((r) => (
+														<div
+															key={r.id}
+															style={{
+																display: 'flex',
+																alignItems: 'center',
+																gap: 10,
+																padding: '6px 8px',
+																background: 'rgba(0,0,0,0.35)',
+																border: '1px solid rgba(255,215,0,0.35)',
+																borderRadius: 8,
+															}}
+														>
+															<div
+																className="metallic-border metallic-border-square"
+																style={{
+																	width: 64,
+																	height: 64,
+																	minWidth: 64,
+																	display: 'flex',
+																	alignItems: 'stretch',
+																	justifyContent: 'stretch',
+																	backgroundImage: 'none',
+																}}
+															>
+																{r.icon ? (
+																	<img
+																		src={imageUrl(r.icon) ?? undefined}
+																		alt=""
+																		aria-hidden="true"
+																		style={{ width: 64, height: 64, objectFit: 'cover', display: 'block' }}
+																	/>
+																) : null}
+															</div>
+															<div style={{ minWidth: 0, flex: '1 1 auto' }}>
+																<div style={{ fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
+																{r.resourceType?.name ? <div style={{ fontSize: 12, opacity: 0.85 }}>{r.resourceType.name}</div> : null}
+																{r.fileLink ? (
+																	<div style={{ fontSize: 12, opacity: 0.9, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+																		<a href={externalUrl(r.fileLink) ?? undefined} target="_blank" rel="noopener noreferrer">
+																			{r.fileLink}
+																		</a>
+																	</div>
+																) : null}
+															</div>
+															<button
+																className="icon option"
+																title="Quitar"
+																onClick={async () => {
+																	try {
+																		await persistChapterResources(linked.filter((x) => x.id !== r.id).map((x) => x.id));
+																	} catch (e) {
+																		console.error('Error quitando recurso del capítulo', e);
+																		window.alert(String(e));
+																	}
+																}}
+															>
+																<FaTrash size={14} />
+															</button>
+														</div>
+													))}
+											</div>
+										)}
+									</div>
+								);
+							})()}
 							{chapter.file ? (
 								<div style={{ marginTop: 8, fontSize: 13, opacity: 0.95 }}>
 									Archivo: <a href={fileUrl(chapter.file) ?? undefined} target="_blank" rel="noopener noreferrer">{chapter.file}</a>
@@ -970,20 +1300,22 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 					style={{ flex: '1 1 260px', padding: 8, minWidth: 220 }}
 				/>
 
-				<div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, opacity: 0.95, flexWrap: 'wrap' }}>
-					<label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }} title="Mostrar eventos de dificultad Fácil">
-						<input type="checkbox" checked={filterEasy} onChange={(e) => setFilterEasy(e.target.checked)} />
-						Fácil
-					</label>
-					<label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }} title="Mostrar eventos de dificultad Normal">
-						<input type="checkbox" checked={filterNormal} onChange={(e) => setFilterNormal(e.target.checked)} />
-						Normal
-					</label>
-					<label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }} title="Mostrar eventos de dificultad Difícil">
-						<input type="checkbox" checked={filterHard} onChange={(e) => setFilterHard(e.target.checked)} />
-						Difícil
-					</label>
-				</div>
+				{showDifficultyFilters ? (
+					<div style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13, opacity: 0.95, flexWrap: 'wrap' }}>
+						<label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }} title="Mostrar eventos de dificultad Fácil">
+							<input type="checkbox" checked={filterEasy} onChange={(e) => setFilterEasy(e.target.checked)} />
+							Fácil
+						</label>
+						<label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }} title="Mostrar eventos de dificultad Normal">
+							<input type="checkbox" checked={filterNormal} onChange={(e) => setFilterNormal(e.target.checked)} />
+							Normal
+						</label>
+						<label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }} title="Mostrar eventos de dificultad Difícil">
+							<input type="checkbox" checked={filterHard} onChange={(e) => setFilterHard(e.target.checked)} />
+							Difícil
+						</label>
+					</div>
+				) : null}
 
 				<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
 					<button
@@ -1448,12 +1780,22 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 				<EventModal
 					open={modalOpen}
 					initial={initial}
+					fixedType={(() => {
+						const st = String((chapter as any)?.specialType ?? '');
+						const isCredits = st === 'CREDITS' || normalizeNameForCompare((chapter as any)?.name) === 'creditos' || normalizeNameForCompare((chapter as any)?.name) === 'credits';
+						return isCredits ? 'CINEMATIC' : undefined;
+					})()}
 					maps={maps}
 					onClose={() => {
 						setModalOpen(false);
 						setInitial(undefined);
 					}}
 					onSubmit={async (data) => {
+						const st = String((chapter as any)?.specialType ?? '');
+						const isCredits = st === 'CREDITS' || normalizeNameForCompare((chapter as any)?.name) === 'creditos' || normalizeNameForCompare((chapter as any)?.name) === 'credits';
+						if (isCredits && data.type !== 'CINEMATIC') {
+							throw new Error('En el capítulo Créditos solo se permiten eventos de tipo Cinemática');
+						}
 						if (initial?.id) {
 							await updateEvent(initial.id as number, { ...data });
 						} else {

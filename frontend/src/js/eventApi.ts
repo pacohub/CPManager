@@ -32,15 +32,17 @@ export async function getEvents(filters?: { chapterId?: number; mapId?: number }
 
 export async function getEventCountsByChapter(
 	campaignId: number,
-): Promise<Record<number, { count: number; warningCount: number }>> {
+): Promise<Record<number, { count: number; warningCount: number; missionCount: number; cinematicCount: number }>> {
 	const res = await fetch(`${API_URL}/count-by-chapter?campaignId=${encodeURIComponent(String(campaignId))}`);
-	const rows = await ensureOk<Array<{ chapterId: number; count: number; warningCount: number }>>(res);
-	const out: Record<number, { count: number; warningCount: number }> = {};
+	const rows = await ensureOk<Array<{ chapterId: number; count: number; warningCount: number; missionCount: number; cinematicCount: number }>>(res);
+	const out: Record<number, { count: number; warningCount: number; missionCount: number; cinematicCount: number }> = {};
 	for (const r of rows ?? []) {
 		const chapterId = Number((r as any).chapterId);
 		out[chapterId] = {
 			count: Number((r as any).count) || 0,
 			warningCount: Number((r as any).warningCount) || 0,
+			missionCount: Number((r as any).missionCount) || 0,
+			cinematicCount: Number((r as any).cinematicCount) || 0,
 		};
 	}
 	return out;

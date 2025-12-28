@@ -8,6 +8,7 @@ import { createMap } from '../js/mapApi';
 interface Props {
 	open: boolean;
 	initial?: Partial<EventItem>;
+	fixedType?: EventType;
 	maps: MapItem[];
 	onClose: () => void;
 	onSubmit: (data: {
@@ -20,7 +21,7 @@ interface Props {
 	}) => void | Promise<void>;
 }
 
-const EventModal: React.FC<Props> = ({ open, initial, maps, onClose, onSubmit }) => {
+const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, onSubmit }) => {
 	const initialMapId =
 		(initial as any)?.mapId ??
 		(initial as any)?.map?.id ??
@@ -28,7 +29,7 @@ const EventModal: React.FC<Props> = ({ open, initial, maps, onClose, onSubmit })
 
 	const [name, setName] = useState(initial?.name || '');
 	const [description, setDescription] = useState(initial?.description || '');
-	const [type, setType] = useState<EventType>((initial?.type as EventType) || 'MISSION');
+	const [type, setType] = useState<EventType>(fixedType ?? ((initial?.type as EventType) || 'MISSION'));
 	const [difficulty, setDifficulty] = useState<EventDifficulty>((initial?.difficulty as EventDifficulty) || 'NORMAL');
 	const [file, setFile] = useState(initial?.file || '');
 	const [mapId, setMapId] = useState<number>(Number(initialMapId) || 0);
@@ -52,7 +53,7 @@ const EventModal: React.FC<Props> = ({ open, initial, maps, onClose, onSubmit })
 		setLocalMaps(maps || []);
 		setName(initial?.name || '');
 		setDescription(initial?.description || '');
-		setType((initial?.type as EventType) || 'MISSION');
+		setType(fixedType ?? ((initial?.type as EventType) || 'MISSION'));
 		setDifficulty((initial?.difficulty as EventDifficulty) || 'NORMAL');
 		setFile(initial?.file || '');
 		setMapId(Number(initialMapId) || 0);
@@ -67,8 +68,15 @@ const EventModal: React.FC<Props> = ({ open, initial, maps, onClose, onSubmit })
 		initial?.difficulty,
 		initial?.file,
 		initialMapId,
+		fixedType,
 		maps,
 	]);
+
+	useEffect(() => {
+		if (!open) return;
+		if (!fixedType) return;
+		setType(fixedType);
+	}, [open, fixedType]);
 
 	const sortedMaps = useMemo(() => {
 		return (localMaps ?? []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
@@ -139,9 +147,20 @@ const EventModal: React.FC<Props> = ({ open, initial, maps, onClose, onSubmit })
 
 					<label style={{ marginBottom: 8, display: 'block' }}>
 						Tipo:
-						<select value={type} onChange={(e) => setType(e.target.value as EventType)} style={{ display: 'block', marginTop: 4 }}>
-							<option value="MISSION">Misión</option>
-							<option value="CINEMATIC">Cinemática</option>
+						<select
+							value={type}
+							onChange={(e) => setType(e.target.value as EventType)}
+							disabled={Boolean(fixedType)}
+							style={{ display: 'block', marginTop: 4 }}
+						>
+							{fixedType ? (
+								<option value={fixedType}>{fixedType === 'MISSION' ? 'Misión' : 'Cinemática'}</option>
+							) : (
+								<>
+									<option value="MISSION">Misión</option>
+									<option value="CINEMATIC">Cinemática</option>
+								</>
+							)}
 						</select>
 					</label>
 

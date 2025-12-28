@@ -2,12 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Campaign } from '../Entities/campaign.entity';
+import { Chapter, ChapterSpecialType } from '../Entities/chapter.entity';
 
 @Injectable()
 export class CampaignService {
   constructor(
     @InjectRepository(Campaign)
     private campaignRepository: Repository<Campaign>,
+		@InjectRepository(Chapter)
+		private chapterRepository: Repository<Chapter>,
   ) {}
 
   async findAllBySaga(sagaId?: number): Promise<Campaign[]> {
@@ -29,7 +32,21 @@ export class CampaignService {
 
   async create(data: Partial<Campaign>): Promise<Campaign> {
     const campaign = this.campaignRepository.create(data);
-    return this.campaignRepository.save(campaign);
+    const saved = await this.campaignRepository.save(campaign);
+
+    // Ensure every campaign has a system Credits chapter.
+    const credits = this.chapterRepository.create({
+      campaignId: saved.id,
+      name: 'Créditos',
+      order: 0,
+      description: '',
+      image: '',
+      file: '',
+      specialType: ChapterSpecialType.CREDITS,
+    });
+    await this.chapterRepository.save(credits);
+
+    return saved;
   }
 
   async update(id: number, data: Partial<Campaign>): Promise<Campaign | null> {
