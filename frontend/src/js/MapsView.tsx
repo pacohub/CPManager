@@ -4,14 +4,16 @@ import ConfirmModal from '../components/ConfirmModal';
 import MapCard from '../components/MapCard';
 import MapModal from '../components/MapModal';
 import { MapItem } from '../interfaces/map';
-import { createMap, deleteMap, getMaps, updateMap } from './mapApi';
+import { createMap, deleteMap, getMapComponents, getMaps, updateMap } from './mapApi';
 
 interface Props {
   onBack: () => void;
+	onOpenMap: (id: number) => void;
 }
 
-const MapsView: React.FC<Props> = ({ onBack }) => {
+const MapsView: React.FC<Props> = ({ onBack, onOpenMap }) => {
   const [maps, setMaps] = useState<MapItem[]>([]);
+  const [componentCountByMapId, setComponentCountByMapId] = useState<Record<number, number | undefined>>({});
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [initial, setInitial] = useState<Partial<MapItem> | undefined>(undefined);
@@ -20,7 +22,24 @@ const MapsView: React.FC<Props> = ({ onBack }) => {
 
   const refresh = useCallback(async () => {
     const list = await getMaps();
-    setMaps(list || []);
+    const mapsList = list || [];
+    setMaps(mapsList);
+
+    // Fetch component counts per map for warnings (best-effort).
+    Promise.allSettled(mapsList.map((m) => getMapComponents(m.id)))
+      .then((results) => {
+        const next: Record<number, number | undefined> = {};
+        for (let i = 0; i < mapsList.length; i++) {
+          const id = mapsList[i].id;
+          const r = results[i];
+          if (r.status === 'fulfilled') next[id] = (r.value || []).length;
+        }
+        setComponentCountByMapId(next);
+      })
+      .catch(() => {
+        // Ignore count errors; we just won't show the missing-components warning.
+        setComponentCountByMapId({});
+      });
   }, []);
 
   useEffect(() => {
@@ -85,7 +104,9 @@ const MapsView: React.FC<Props> = ({ onBack }) => {
             <MapCard
               key={m.id}
               map={m}
+              componentCount={componentCountByMapId[m.id]}
               onChanged={() => refresh().catch((e) => console.error('Error refrescando mapas', e))}
+					onOpen={() => onOpenMap(m.id)}
               onEdit={() => {
                 setInitial(m);
                 setModalOpen(true);
@@ -112,9 +133,10 @@ const MapsView: React.FC<Props> = ({ onBack }) => {
             setModalOpen(false);
             setInitial(undefined);
           }}
-          onSubmit={async (formData) => {
-            if (initial?.id) await updateMap(initial.id, formData);
-            else await createMap(formData);
+			onSubmit={async (formData) => {
+				let saved: MapItem;
+            if (initial?.id) saved = await updateMap(initial.id, formData);
+            else saved = await createMap(formData);
 
             await refresh();
             setModalOpen(false);

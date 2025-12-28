@@ -1,4 +1,5 @@
 import { MapItem } from '../interfaces/map';
+import { ComponentItem } from '../interfaces/component';
 
 const API_URL = 'http://localhost:4000/maps';
 
@@ -44,4 +45,18 @@ export async function updateMap(id: number, data: FormData): Promise<MapItem> {
 export async function deleteMap(id: number): Promise<void> {
   const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
   await ensureOk<void>(res);
+}
+
+export async function getMapComponents(mapId: number): Promise<ComponentItem[]> {
+  const res = await fetch(`${API_URL}/${mapId}/components`);
+  return ensureOk<ComponentItem[]>(res);
+}
+
+export async function setMapComponents(mapId: number, componentIds: number[]): Promise<MapItem> {
+  const res = await fetch(`${API_URL}/${mapId}/components`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ componentIds }),
+  });
+  return ensureOk<MapItem>(res);
 }

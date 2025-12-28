@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { GameObject } from './gameObject.entity';
 
 @Entity()
 export class Campaign {
@@ -22,4 +23,7 @@ export class Campaign {
 
   @Column({ type: 'int', default: 0 })
   order: number;
+
+  @ManyToMany(() => GameObject, (o) => o.campaigns)
+  objects: GameObject[];
 }

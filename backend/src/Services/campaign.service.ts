@@ -10,8 +10,17 @@ export class CampaignService {
     private campaignRepository: Repository<Campaign>,
   ) {}
 
-  async findAllBySaga(sagaId: number): Promise<Campaign[]> {
-    return this.campaignRepository.find({ where: { sagaId }, order: { order: 'ASC' } });
+  async findAllBySaga(sagaId?: number): Promise<Campaign[]> {
+    if (Number.isFinite(sagaId)) {
+      return this.campaignRepository.find({ where: { sagaId: sagaId as number }, order: { order: 'ASC' } });
+    }
+    return this.campaignRepository
+      .createQueryBuilder('campaign')
+      .orderBy('campaign.sagaId', 'ASC')
+      .addOrderBy('campaign.order', 'ASC')
+      .addOrderBy('LOWER(campaign.name)', 'ASC')
+      .addOrderBy('campaign.id', 'ASC')
+      .getMany();
   }
 
   async findOne(id: number): Promise<Campaign | null> {

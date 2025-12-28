@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Component } from './component.entity';
 
 @Entity()
 export class Map {
@@ -16,4 +17,8 @@ export class Map {
 
   @Column({ nullable: true })
   file: string;
+
+  @ManyToMany(() => Component, (component) => component.maps, { cascade: false })
+  @JoinTable()
+  components: Component[];
 }

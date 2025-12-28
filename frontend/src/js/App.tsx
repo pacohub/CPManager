@@ -1,12 +1,15 @@
 
 import React from 'react';
-import { BrowserRouter, Route, Routes, useNavigate, useParams } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import SagaPanel from './SagaPanel';
 import CampaignDetail from './CampaignDetail';
+import MapDetail from './MapDetail';
 import MapsView from './MapsView';
 import MechanicsView from './MechanicsView';
 import FactionsView from './FactionsView';
 import ProfessionsView from './ProfessionsView';
+import ObjectsView from './ObjectsView';
+import ComponentsView from './ComponentsView';
 import ChapterEventsView from './ChapterEventsView';
 
 function SagaPanelRoute() {
@@ -18,13 +21,24 @@ function SagaPanelRoute() {
 			onOpenMechanics={() => navigate('/mechanics')}
 			onOpenFactions={() => navigate('/factions')}
 			onOpenProfessions={() => navigate('/professions')}
+			onOpenObjects={() => navigate('/objects')}
+			onOpenComponents={() => navigate('/components')}
 		/>
 	);
 }
 
 function MapsRoute() {
 	const navigate = useNavigate();
-	return <MapsView onBack={() => navigate('/')} />;
+	return <MapsView onBack={() => navigate('/')} onOpenMap={(id) => navigate(`/maps/${id}`)} />;
+}
+
+function MapDetailRoute() {
+	const navigate = useNavigate();
+	const params = useParams();
+	const mapId = Number(params.id);
+
+	if (!Number.isFinite(mapId) || mapId <= 0) return <Navigate to="/maps" />;
+	return <MapDetail mapId={mapId} onBack={() => navigate('/maps')} />;
 }
 
 function MechanicsRoute() {
@@ -40,6 +54,16 @@ function FactionsRoute() {
 function ProfessionsRoute() {
 	const navigate = useNavigate();
 	return <ProfessionsView onBack={() => navigate('/')} />;
+}
+
+function ObjectsRoute() {
+	const navigate = useNavigate();
+	return <ObjectsView onBack={() => navigate('/')} />;
+}
+
+function ComponentsRoute() {
+	const navigate = useNavigate();
+	return <ComponentsView onBack={() => navigate('/')} />;
 }
 
 function CampaignDetailRoute() {
@@ -108,6 +132,9 @@ function App() {
 				<Route path="/mechanics" element={<MechanicsRoute />} />
 				<Route path="/factions" element={<FactionsRoute />} />
 				<Route path="/professions" element={<ProfessionsRoute />} />
+				<Route path="/objects" element={<ObjectsRoute />} />
+				<Route path="/components" element={<ComponentsRoute />} />
+				<Route path="/maps/:id" element={<MapDetailRoute />} />
 			</Routes>
 		</BrowserRouter>
 	);

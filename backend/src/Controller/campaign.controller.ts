@@ -17,8 +17,9 @@ export class CampaignController {
   constructor(private readonly campaignService: CampaignService) {}
 
   @Get()
-  async findAllBySaga(@Query('sagaId') sagaId: string): Promise<Campaign[]> {
-    return this.campaignService.findAllBySaga(Number(sagaId));
+  async findAllBySaga(@Query('sagaId') sagaId?: string): Promise<Campaign[]> {
+    const parsed = sagaId !== undefined ? Number(sagaId) : undefined;
+    return this.campaignService.findAllBySaga(parsed);
   }
 
   @Get(':id')

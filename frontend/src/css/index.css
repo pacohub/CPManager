@@ -63,6 +63,15 @@
     background-clip: padding-box;
 }
 
+/* Square variant: same metallic border, but no rounding */
+.metallic-border-square {
+	border-radius: 0;
+}
+
+.metallic-border-square::before {
+	border-radius: 0;
+}
+
 .metallic-border::before {
     content: '';
     position: absolute;
@@ -321,6 +330,7 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    align-self: center;
     border-radius: 8px;
     border: 1px solid #b0b3b8;
     background: linear-gradient(180deg, #2e63b4 0%, #17335f 55%, #0e203f 100%);

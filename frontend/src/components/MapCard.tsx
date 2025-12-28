@@ -8,6 +8,8 @@ interface Props {
   onEdit: () => void;
   onDelete: () => void;
   onChanged?: () => void;
+	onOpen?: () => void;
+	componentCount?: number;
 }
 
 const getImageUrl = (img?: string) => {
@@ -16,7 +18,7 @@ const getImageUrl = (img?: string) => {
   return encodeURI(`http://localhost:4000/${img.replace(/^\/+/, '')}`);
 };
 
-const MapCard: React.FC<Props> = ({ map, onEdit, onDelete, onChanged }) => {
+const MapCard: React.FC<Props> = ({ map, onEdit, onDelete, onChanged, onOpen, componentCount }) => {
   const bg = map.image ? `url("${getImageUrl(map.image)}")` : undefined;
 
   const [imageExists, setImageExists] = useState(true);
@@ -38,10 +40,12 @@ const MapCard: React.FC<Props> = ({ map, onEdit, onDelete, onChanged }) => {
   const hasDescription = Boolean((map.description ?? '').trim());
   const hasImage = Boolean(map.image) && imageExists;
   const hasFile = Boolean(map.file);
+  const hasComponents = typeof componentCount === 'number' ? componentCount > 0 : true;
   const missing: string[] = [];
   if (!hasDescription) missing.push('descripción');
   if (!hasImage) missing.push('imagen');
   if (!hasFile) missing.push('archivo');
+  if (!hasComponents) missing.push('componentes');
   const showWarning = missing.length > 0;
   const warningText = `Falta: ${missing.join(', ')}.`;
 
@@ -51,6 +55,7 @@ const MapCard: React.FC<Props> = ({ map, onEdit, onDelete, onChanged }) => {
       style={{ backgroundImage: bg, width: '100%', height: 'auto', aspectRatio: '4 / 3' }}
       tabIndex={0}
       aria-label={map.name}
+		onClick={() => onOpen?.()}
     >
       {showWarning ? (
         <span

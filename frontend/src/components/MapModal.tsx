@@ -47,7 +47,7 @@ const MapModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onClose 
     formData.append('description', description);
     if (image) formData.append('image', image);
     formData.append('file', fileLink.trim());
-    onSubmit(formData);
+		onSubmit(formData);
   };
 
   const previewUrl = image

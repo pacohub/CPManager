@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
+import { Component } from '../Entities/component.entity';
 import { Map } from '../Entities/map.entity';
 
 @Injectable()
@@ -8,6 +9,8 @@ export class MapService {
   constructor(
     @InjectRepository(Map)
     private mapRepository: Repository<Map>,
+		@InjectRepository(Component)
+		private componentRepository: Repository<Component>,
   ) {}
 
   async findAll(): Promise<Map[]> {
@@ -38,5 +41,19 @@ export class MapService {
 
   async remove(id: number): Promise<void> {
     await this.mapRepository.delete(id);
+  }
+
+  async getComponents(mapId: number): Promise<Component[]> {
+    const map = await this.mapRepository.findOne({ where: { id: mapId }, relations: { components: true } });
+    return map?.components ?? [];
+  }
+
+  async setComponentIds(mapId: number, componentIds: number[]): Promise<Map> {
+    const map = await this.mapRepository.findOne({ where: { id: mapId }, relations: { components: true } });
+    if (!map) throw new Error('Mapa no encontrado');
+    const ids = (componentIds || []).map(Number).filter((n) => Number.isFinite(n));
+    const components = ids.length ? await this.componentRepository.findBy({ id: In(ids) }) : [];
+    map.components = components;
+    return this.mapRepository.save(map);
   }
 }

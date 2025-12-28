@@ -13,6 +13,7 @@ import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { Request } from 'express';
 import * as path from 'path';
+import { Component } from '../Entities/component.entity';
 import { Map } from '../Entities/map.entity';
 import { MapService } from '../Services/map.service';
 
@@ -90,5 +91,15 @@ export class MapController {
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<void> {
     return this.mapService.remove(Number(id));
+  }
+
+  @Get(':id/components')
+  async getComponents(@Param('id') id: string): Promise<Component[]> {
+    return this.mapService.getComponents(Number(id));
+  }
+
+  @Put(':id/components')
+  async setComponents(@Param('id') id: string, @Body() body: any): Promise<Map> {
+    return this.mapService.setComponentIds(Number(id), body?.componentIds ?? []);
   }
 }

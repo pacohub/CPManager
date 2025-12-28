@@ -32,16 +32,22 @@ import { ChapterFactionController } from './Controller/chapterFaction.controller
 import { Profession } from './Entities/profession.entity';
 import { ProfessionService } from './Services/profession.service';
 import { ProfessionController } from './Controller/profession.controller';
+import { GameObject } from './Entities/gameObject.entity';
+import { GameObjectService } from './Services/gameObject.service';
+import { GameObjectController } from './Controller/gameObject.controller';
+import { Component } from './Entities/component.entity';
+import { ComponentService } from './Services/component.service';
+import { ComponentController } from './Controller/component.controller';
 
 @Module({
   imports: [
     TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'database.sqlite',
-      entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession],
+      entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, GameObject, Component],
       synchronize: true, // Solo para desarrollo
     }),
-    TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession]),
+    TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, GameObject, Component]),
   ],
   controllers: [
 		AppController,
@@ -55,7 +61,9 @@ import { ProfessionController } from './Controller/profession.controller';
 		FactionController,
     ChapterFactionController,
 		ProfessionController,
+    GameObjectController,
+		ComponentController,
 	],
-  providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService, ProfessionService],
+  providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService, ProfessionService, GameObjectService, ComponentService],
 })
 export class AppModule {}

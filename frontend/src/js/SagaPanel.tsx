@@ -7,8 +7,8 @@ import CampaignCard from '../components/CampaignCard';
 import CampaignModal from '../components/CampaignModal';
 import { getCampaignsBySaga, createCampaign, updateCampaign, deleteCampaign } from './campaignApi';
 import { getAllChapters } from './chapterApi';
-import { FaBookOpen, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaCompass, FaCogs } from 'react-icons/fa';
-import { GiCrossedSwords, GiWarPick } from 'react-icons/gi';
+import { FaBookOpen, FaCubes, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaCompass, FaCogs } from 'react-icons/fa';
+import { GiChest, GiCrossedSwords, GiWarPick } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
 
 interface SagaType {
@@ -128,9 +128,11 @@ interface SagaPanelProps {
   onOpenMechanics?: () => void;
   onOpenFactions?: () => void;
   onOpenProfessions?: () => void;
+  onOpenObjects?: () => void;
+	onOpenComponents?: () => void;
 }
 
-const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics, onOpenFactions, onOpenProfessions }) => {
+const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics, onOpenFactions, onOpenProfessions, onOpenObjects, onOpenComponents }) => {
   // Campañas por saga
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -432,6 +434,22 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
               onClick={() => onOpenProfessions?.()}
             >
               <GiWarPick size={26} color="#FFD700" />
+            </button>
+            <button
+              className="icon"
+              aria-label="Objetos"
+              title="Objetos"
+              onClick={() => onOpenObjects?.()}
+            >
+              <GiChest size={26} color="#FFD700" />
+            </button>
+            <button
+              className="icon"
+              aria-label="Componentes"
+              title="Componentes"
+              onClick={() => onOpenComponents?.()}
+            >
+              <FaCubes size={26} color="#FFD700" />
             </button>
             <button
               className="icon"
