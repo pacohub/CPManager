@@ -15,6 +15,8 @@ import ComponentsView from './ComponentsView';
 import ResourcesView from './ResourcesView';
 import ChapterEventsView from './ChapterEventsView';
 import ClassesView from './ClassesView';
+import CharactersView from './CharactersView';
+import CharacterDetail from './CharacterDetail';
 
 function SagaPanelRoute() {
 	const navigate = useNavigate();
@@ -25,6 +27,7 @@ function SagaPanelRoute() {
 			onOpenMechanics={() => navigate('/mechanics')}
 			onOpenFactions={() => navigate('/factions')}
 			onOpenClasses={() => navigate('/classes')}
+			onOpenCharacters={() => navigate('/characters')}
 			onOpenProfessions={() => navigate('/professions')}
 			onOpenObjects={() => navigate('/objects')}
 			onOpenComponents={() => navigate('/components')}
@@ -88,6 +91,20 @@ function ObjectsRoute() {
 function ClassesRoute() {
 	const navigate = useNavigate();
 	return <ClassesView onBack={() => navigate('/')} />;
+}
+
+function CharactersRoute() {
+	const navigate = useNavigate();
+	return <CharactersView onBack={() => navigate('/')} onOpenCharacter={(id) => navigate(`/characters/${id}`)} />;
+}
+
+function CharacterDetailRoute() {
+	const navigate = useNavigate();
+	const params = useParams();
+	const characterId = Number(params.id);
+
+	if (!Number.isFinite(characterId) || characterId <= 0) return <Navigate to="/characters" />;
+	return <CharacterDetail characterId={characterId} onBack={() => navigate('/characters')} />;
 }
 
 function ComponentsRoute() {
@@ -170,6 +187,8 @@ function App() {
 				<Route path="/professions/:id" element={<ProfessionDetailRoute />} />
 				<Route path="/objects" element={<ObjectsRoute />} />
 				<Route path="/classes" element={<ClassesRoute />} />
+				<Route path="/characters" element={<CharactersRoute />} />
+				<Route path="/characters/:id" element={<CharacterDetailRoute />} />
 				<Route path="/components" element={<ComponentsRoute />} />
 				<Route path="/resources" element={<ResourcesRoute />} />
 				<Route path="/maps/:id" element={<MapDetailRoute />} />

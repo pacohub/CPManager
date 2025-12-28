@@ -422,6 +422,19 @@ body {
     pointer-events: auto;
 }
 
+/* Character instances: show actions only on hover */
+.instance-actions {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.instance-row:hover .instance-actions,
+.instance-row:focus-within .instance-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 /* DnD: prevent text selection while dragging */
 .dnd-noselect {
     user-select: none;
