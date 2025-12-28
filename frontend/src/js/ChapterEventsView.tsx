@@ -2,8 +2,24 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DndContext, DragOverlay, PointerSensor, closestCenter, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { FaArrowLeft, FaDownload, FaEdit, FaExclamation, FaExclamationTriangle, FaFilm, FaLock, FaLockOpen, FaPlus, FaTrash } from 'react-icons/fa';
+import {
+	FaArrowLeft,
+	FaBoxOpen,
+	FaDownload,
+	FaEdit,
+	FaExclamation,
+	FaExclamationTriangle,
+	FaFilm,
+	FaFlag,
+	FaLock,
+	FaLockOpen,
+	FaPlus,
+	FaTrash,
+	FaUsers,
+} from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
+import FactionModal from '../components/FactionModal';
+import ResourceModal from '../components/ResourceModal';
 import ChapterFactionColorOverrideModal from '../components/ChapterFactionColorOverrideModal';
 import GroupNameModal from '../components/GroupNameModal';
 import IconSelect from '../components/IconSelect';
@@ -18,14 +34,16 @@ import { MechanicItem } from '../interfaces/mechanic';
 import { MapItem } from '../interfaces/map';
 import { ObjectiveItem } from '../interfaces/objective';
 import { ResourceItem } from '../interfaces/resource';
+import { ResourceTypeItem } from '../interfaces/resourceType';
 import { deleteChapter, getChapter, updateChapter } from './chapterApi';
 import { getChaptersByCampaign } from './chapterApi';
 import { getChapterFactions, replaceChapterFactions, setChapterFactionColorOverride } from './chapterFactionApi';
 import { getChapterResources, setChapterResources as setChapterResourcesApi } from './chapterResourceApi';
-import { getFactions } from './factionApi';
+import { createFaction, getFactions } from './factionApi';
 import { getMechanics } from './mechanicApi';
 import { getMaps } from './mapApi';
-import { getResources } from './resourceApi';
+import { createResource, getResources } from './resourceApi';
+import { createResourceType, getResourceTypes } from './resourceTypeApi';
 import { createEvent, deleteEvent, getEvents, updateEvent } from './eventApi';
 import { getEventCountsByChapter } from './eventApi';
 import { createObjective, deleteObjective, getObjectives, updateObjective } from './objectiveApi';
@@ -411,6 +429,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 	const [eventCountsByChapterId, setEventCountsByChapterId] = useState<Record<number, { count: number; warningCount: number; missionCount: number; cinematicCount: number }>>({});
 	const [eventCountsLoaded, setEventCountsLoaded] = useState(false);
 	const [factions, setFactions] = useState<FactionItem[]>([]);
+	const [showCreateFactionModal, setShowCreateFactionModal] = useState(false);
 	const [chapterFactions, setChapterFactions] = useState<ChapterFactionLink[]>([]);
 	const [chapterFactionsLoaded, setChapterFactionsLoaded] = useState(false);
 	const [chapterFactionGroups, setChapterFactionGroups] = useState<string[]>([]);
@@ -420,9 +439,12 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 
 	const [resources, setResources] = useState<ResourceItem[]>([]);
 	const [resourcesLoaded, setResourcesLoaded] = useState(false);
+	const [resourceTypes, setResourceTypes] = useState<ResourceTypeItem[]>([]);
+	const [resourceTypesLoaded, setResourceTypesLoaded] = useState(false);
 	const [chapterResources, setChapterResources] = useState<ResourceItem[]>([]);
 	const [chapterResourcesLoaded, setChapterResourcesLoaded] = useState(false);
 	const [selectedResourceToAdd, setSelectedResourceToAdd] = useState<number | ''>('');
+	const [showCreateResourceModal, setShowCreateResourceModal] = useState(false);
 
 	const [maps, setMaps] = useState<MapItem[]>([]);
 	const [mechanics, setMechanics] = useState<MechanicItem[]>([]);
@@ -566,21 +588,55 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 		});
 	}, []);
 
-	useEffect(() => {
+	const refreshFactions = useCallback(async () => {
+		try {
+			const list = await getFactions();
+			setFactions(list ?? []);
+		} catch (e) {
+			console.error('Error recargando facciones', e);
+		}
+	}, []);
+
+	const refreshResources = useCallback(async () => {
 		if (!showResourcesSection) {
 			setResources([]);
 			setResourcesLoaded(true);
 			return;
 		}
 		setResourcesLoaded(false);
-		getResources().then((list) => {
+		try {
+			const list = await getResources();
 			setResources(list ?? []);
 			setResourcesLoaded(true);
-		}).catch((e) => {
+		} catch (e) {
 			console.error('Error cargando recursos', e);
 			setResources([]);
 			setResourcesLoaded(false);
-		});
+		}
+	}, [showResourcesSection]);
+
+	useEffect(() => {
+		refreshResources().catch((e) => console.error('Error cargando recursos', e));
+		if (!showResourcesSection) setSelectedResourceToAdd('');
+	}, [refreshResources, showResourcesSection]);
+
+	useEffect(() => {
+		if (!showResourcesSection) {
+			setResourceTypes([]);
+			setResourceTypesLoaded(true);
+			return;
+		}
+		setResourceTypesLoaded(false);
+		getResourceTypes()
+			.then((list) => {
+				setResourceTypes(list ?? []);
+				setResourceTypesLoaded(true);
+			})
+			.catch((e) => {
+				console.error('Error cargando tipos de recursos', e);
+				setResourceTypes([]);
+				setResourceTypesLoaded(false);
+			});
 	}, [showResourcesSection]);
 
 	const refreshChapterResources = useCallback(async () => {
@@ -872,11 +928,22 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 												<button
 													className="icon option"
 													disabled={!chapterFactionsLoaded}
-													title="Añadir grupo"
+													data-tooltip="Añadir grupo"
+													aria-label="Añadir grupo"
 													onClick={() => setGroupNameModal({ mode: 'add' })}
-												style={{ padding: '2px 8px' }}
+													style={{ padding: '2px 8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
 												>
-													Añadir grupo
+													<FaUsers size={14} />
+												</button>
+												<button
+													className="icon option"
+													disabled={!chapterFactionsLoaded}
+													data-tooltip="Nueva facción"
+													aria-label="Nueva facción"
+													onClick={() => setShowCreateFactionModal(true)}
+													style={{ padding: '2px 8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+												>
+													<FaFlag size={14} />
 												</button>
 											</div>
 										</div>
@@ -1086,6 +1153,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 									.slice()
 									.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
 								const canAdd = chapterResourcesLoaded && resourcesLoaded && availableToAdd.length > 0;
+								const canCreate = chapterResourcesLoaded && resourcesLoaded && resourceTypesLoaded;
 								const selected = selectedResourceToAdd;
 									const resourceOptions = availableToAdd.map((r) => ({
 										value: r.id,
@@ -1116,23 +1184,33 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 													items={resourceOptions}
 													onChange={(v) => setSelectedResourceToAdd(v ? Number(v) : '')}
 												/>
-													<button
-														className="icon option"
-														disabled={!canAdd || !selected}
-														title="Agregar recurso"
-														onClick={async () => {
-															if (!selected) return;
-															try {
-																await persistChapterResources([...linked.map((x) => x.id), Number(selected)]);
-																setSelectedResourceToAdd('');
-															} catch (e) {
-																console.error('Error agregando recurso al capítulo', e);
-																window.alert(String(e));
-															}
-														}}
-													>
-														+
-													</button>
+												<button
+													className="icon option"
+													disabled={!canAdd || !selected}
+													data-tooltip="Añadir recurso"
+													aria-label="Añadir recurso"
+													onClick={async () => {
+														if (!selected) return;
+														try {
+															await persistChapterResources([...linked.map((x) => x.id), Number(selected)]);
+															setSelectedResourceToAdd('');
+														} catch (e) {
+															console.error('Error agregando recurso al capítulo', e);
+															window.alert(String(e));
+														}
+													}}
+												>
+													<FaPlus size={14} />
+												</button>
+												<button
+													className="icon option"
+													disabled={!canCreate}
+													data-tooltip="Nuevo recurso"
+													aria-label="Nuevo recurso"
+													onClick={() => setShowCreateResourceModal(true)}
+												>
+													<FaBoxOpen size={14} />
+												</button>
 											</div>
 										</div>
 
@@ -1848,6 +1926,59 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 					}}
 				/>
 			) : null}
+
+			<FactionModal
+				open={showCreateFactionModal}
+				initial={undefined}
+				existing={factions}
+				onClose={() => setShowCreateFactionModal(false)}
+				onSubmit={async (formData) => {
+					await createFaction(formData);
+					await refreshFactions();
+					setShowCreateFactionModal(false);
+				}}
+			/>
+
+			<ResourceModal
+				open={showCreateResourceModal}
+				initial={undefined}
+				existing={resources}
+				resourceTypes={resourceTypes}
+				onCreateType={async (name) => {
+					try {
+						const created = await createResourceType({ name });
+						setResourceTypes((prev) => {
+							const next = [...(prev || []), created];
+							const byId = new Map<number, any>();
+							for (const t of next) byId.set(t.id, t);
+							return Array.from(byId.values()).sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+						});
+						return created;
+					} catch (e) {
+						console.error('Error creando tipo de recursos', e);
+						return null;
+					}
+				}}
+				onClose={() => setShowCreateResourceModal(false)}
+				onSubmit={async (data) => {
+					try {
+						const fd = new FormData();
+						fd.append('name', data.name);
+						fd.append('description', data.description ?? '');
+						fd.append('fileLink', data.fileLink ?? '');
+						fd.append('resourceTypeId', String(data.resourceTypeId));
+						if (data.iconFile) fd.append('icon', data.iconFile);
+
+						const created = await createResource(fd);
+						await refreshResources();
+						setSelectedResourceToAdd(created?.id ? Number(created.id) : '');
+						setShowCreateResourceModal(false);
+					} catch (e) {
+						console.error('Error creando recurso', e);
+						window.alert(String(e));
+					}
+				}}
+			/>
 
 			<ConfirmModal
 				open={confirmChapterOpen}

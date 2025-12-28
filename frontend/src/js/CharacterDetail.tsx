@@ -4,8 +4,12 @@ import ConfirmModal from '../components/ConfirmModal';
 import CharacterModal from '../components/CharacterModal';
 import { CharacterItem } from '../interfaces/character';
 import { ClassItem } from '../interfaces/class';
+import { RaceItem } from '../interfaces/race';
+import { SoundItem } from '../interfaces/sound';
 import { getClasses } from './classApi';
 import { createCharacterInstance, deleteCharacterInstance, getCharacter, getCharacterInstances, updateCharacterInstance, uploadCharacterIcon, uploadCharacterImage } from './characterApi';
+import { getRaces } from './raceApi';
+import { getSounds } from './soundApi';
 
 function asImageUrl(raw?: string): string | undefined {
 	const v = (raw || '').trim();
@@ -32,6 +36,8 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 	const [character, setCharacter] = useState<CharacterItem | null>(null);
 	const [instances, setInstances] = useState<CharacterItem[]>([]);
 	const [classes, setClasses] = useState<ClassItem[]>([]);
+	const [races, setRaces] = useState<RaceItem[]>([]);
+	const [sounds, setSounds] = useState<SoundItem[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
@@ -45,10 +51,18 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 		setLoading(true);
 		setError(null);
 		try {
-			const [c, inst, klasses] = await Promise.all([getCharacter(characterId), getCharacterInstances(characterId), getClasses()]);
+			const [c, inst, klasses, r, s] = await Promise.all([
+				getCharacter(characterId),
+				getCharacterInstances(characterId),
+				getClasses(),
+				getRaces(),
+				getSounds(),
+			]);
 			setCharacter(c);
 			setInstances(inst || []);
 			setClasses(klasses || []);
+			setRaces(r || []);
+			setSounds(s || []);
 		} catch (e: any) {
 			setError(e?.message || 'Error cargando el personaje');
 		} finally {
@@ -63,6 +77,7 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 	const iconUrl = useMemo(() => asImageUrl(character?.icon), [character?.icon]);
 	const imageUrl = useMemo(() => asImageUrl((character as any)?.image), [character]);
 	const classById = useMemo(() => new Map((classes || []).map((c) => [c.id, c])), [classes]);
+	const raceById = useMemo(() => new Map((races || []).map((r) => [r.id, r])), [races]);
 
 	if (loading) {
 		return (
@@ -117,6 +132,9 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 							<div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>
 								Clase: {character.class?.name || `#${character.classId}`}
 							</div>
+							<div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>
+								Raza: {character.race?.name || raceById.get(Number((character as any)?.raceId) || 0)?.name || (Number((character as any)?.raceId) ? `#${(character as any)?.raceId}` : '-')}
+							</div>
 							{(character.model || '').trim() ? (
 								<div style={{ marginTop: 6, fontSize: 13, opacity: 0.9, wordBreak: 'break-all' }}>
 									Modelo: <a href={normalizeLink(character.model || '')} target="_blank" rel="noreferrer" style={{ color: '#e2c044', textDecoration: 'underline' }}>{(character.model || '').trim()}</a>
@@ -159,10 +177,12 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 								const instImageUrl = asImageUrl((inst as any)?.image);
 								const instIconUrl = asImageUrl(inst.icon);
 								const instClassName = classById.get(inst.classId)?.name || inst.class?.name;
+								const instRaceName = raceById.get(Number((inst as any)?.raceId) || 0)?.name || inst.race?.name;
 								const displayName = `${character.name}: ${inst.name}`;
 								const missing: string[] = [];
 								if (!instIconUrl) missing.push('icono');
 								if (!instClassName && !(Number.isFinite(inst.classId as any) && Number(inst.classId) > 0)) missing.push('clase');
+								if (!instRaceName && !(Number.isFinite((inst as any)?.raceId as any) && Number((inst as any)?.raceId) > 0)) missing.push('raza');
 								if (!String(inst.model ?? '').trim()) missing.push('modelo');
 								const showWarning = missing.length > 0;
 								const warningText = `Falta: ${missing.join(', ')}.`;
@@ -198,6 +218,7 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 												<div style={{ wordBreak: 'break-word' }}>{displayName}</div>
 											</div>
 											{instClassName ? <div className="campaign-subtitle">Clase: {instClassName}</div> : null}
+											{instRaceName ? <div className="campaign-subtitle">Raza: {instRaceName}</div> : null}
 										</div>
 										<div className="campaign-actions">
 											<button
@@ -263,6 +284,8 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 					initial={modalInitial}
 					existing={instances}
 					classes={classes}
+					races={races}
+					sounds={sounds}
 					onClose={() => {
 						setModalOpen(false);
 						setModalInitial(undefined);
@@ -286,7 +309,7 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 
 						const model = (data.model || '').trim();
 						const { iconFile: _ignoredIcon, imageFile: _ignoredImage, ...rest } = anyData;
-						const payload = { ...rest, icon, image, model } as { name: string; classId: number; icon?: string; image?: string; model?: string };
+						const payload = { ...rest, icon, image, model } as { name: string; classId: number; raceId: number; icon?: string; image?: string; model?: string };
 
 						if (modalInitial?.id) {
 							const updated = await updateCharacterInstance(characterId, modalInitial.id, payload);

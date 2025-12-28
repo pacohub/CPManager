@@ -129,9 +129,6 @@ const ChapterFactionColorOverrideModal: React.FC<Props> = ({ open, initialColor,
 				</div>
 
 				<div style={{ marginTop: 14, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-					<button className="icon option" onClick={onClose} disabled={saving}>
-						Cancelar
-					</button>
 					<button
 						className="icon option"
 						onClick={async () => {
@@ -147,6 +144,9 @@ const ChapterFactionColorOverrideModal: React.FC<Props> = ({ open, initialColor,
 						title="Guardar"
 					>
 						Guardar
+					</button>
+					<button className="icon option" onClick={onClose} disabled={saving}>
+						Cancelar
 					</button>
 				</div>
 			</div>

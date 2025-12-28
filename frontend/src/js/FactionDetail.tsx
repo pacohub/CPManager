@@ -258,7 +258,8 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 									placeholder="Buscar profesión..."
 									value={professionSearch}
 									onChange={(e) => setProfessionSearch(e.target.value)}
-									style={{ width: '100%', padding: 8, marginBottom: 8 }}
+									className="filters-input"
+									style={{ width: '100%', marginBottom: 8 }}
 								/>
 
 								<div style={{ maxHeight: 420, overflow: 'auto', paddingRight: 6 }}>
@@ -318,7 +319,8 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 									placeholder="Buscar clase..."
 									value={classSearch}
 									onChange={(e) => setClassSearch(e.target.value)}
-									style={{ width: '100%', padding: 8, marginBottom: 8 }}
+									className="filters-input"
+									style={{ width: '100%', marginBottom: 8 }}
 								/>
 
 								<div style={{ maxHeight: 420, overflow: 'auto', paddingRight: 6 }}>

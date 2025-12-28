@@ -1,4 +1,5 @@
 import { ClassItem } from './class';
+import { RaceItem } from './race';
 
 export interface CharacterItem {
 	id: number;
@@ -8,5 +9,7 @@ export interface CharacterItem {
 	model?: string;
 	classId: number;
 	class?: ClassItem;
+	raceId?: number | null;
+	race?: RaceItem | null;
 	parentId?: number | null;
 }

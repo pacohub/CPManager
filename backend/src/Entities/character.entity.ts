@@ -1,5 +1,6 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Class } from './class.entity';
+import { Race } from './race.entity';
 
 @Entity()
 export class Character {
@@ -31,6 +32,13 @@ export class Character {
 
 	@Column({ type: 'int' })
 	classId: number;
+
+	@ManyToOne(() => Race, { nullable: true, cascade: false, eager: true, onDelete: 'SET NULL' })
+	@JoinColumn({ name: 'raceId' })
+	race?: Race | null;
+
+	@Column({ type: 'int', nullable: true })
+	raceId: number | null;
 
 	@OneToMany(() => Character, (c) => c.parent)
 	children: Character[];

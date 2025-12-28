@@ -77,14 +77,16 @@ const MapsView: React.FC<Props> = ({ onBack, onOpenMap }) => {
         </button>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', padding: '0 12px 12px 12px' }}>
-        <input
-          type="text"
-          placeholder="Buscar mapa..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, padding: 8 }}
-        />
+      <div className="filters-bar">
+        <div className="filters-row">
+          <input
+            type="text"
+            placeholder="Buscar mapa..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="filters-input"
+          />
+        </div>
       </div>
       {search.trim() ? (
         <div style={{ marginTop: -8, marginBottom: 16, opacity: 0.9, fontSize: 13, padding: '0 12px' }}>

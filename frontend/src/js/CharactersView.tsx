@@ -6,8 +6,12 @@ import ConfirmModal from '../components/ConfirmModal';
 import CharacterModal from '../components/CharacterModal';
 import { CharacterItem } from '../interfaces/character';
 import { ClassItem } from '../interfaces/class';
+import { RaceItem } from '../interfaces/race';
+import { SoundItem } from '../interfaces/sound';
 import { getClasses } from './classApi';
 import { createCharacter, deleteCharacter, getCharacters, updateCharacter, uploadCharacterIcon, uploadCharacterImage } from './characterApi';
+import { getRaces } from './raceApi';
+import { getSounds } from './soundApi';
 
 function asImageUrl(raw?: string): string | undefined {
 	const v = (raw || '').trim();
@@ -25,6 +29,8 @@ interface Props {
 const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 	const [characters, setCharacters] = useState<CharacterItem[]>([]);
 	const [classes, setClasses] = useState<ClassItem[]>([]);
+	const [races, setRaces] = useState<RaceItem[]>([]);
+	const [sounds, setSounds] = useState<SoundItem[]>([]);
 	const [search, setSearch] = useState('');
 	const [error, setError] = useState<string | null>(null);
 
@@ -36,18 +42,31 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 
 	const refresh = useCallback(async () => {
 		setError(null);
-		const klasses = await getClasses().catch((e: any) => {
-			console.error('Error cargando clases', e);
-			setError((prev) => prev || (e?.message || 'No se pudieron cargar las clases.'));
-			return [] as ClassItem[];
-		});
+		const [klasses, r, s, list] = await Promise.all([
+			getClasses().catch((e: any) => {
+				console.error('Error cargando clases', e);
+				setError((prev) => prev || (e?.message || 'No se pudieron cargar las clases.'));
+				return [] as ClassItem[];
+			}),
+			getRaces().catch((e: any) => {
+				console.error('Error cargando razas', e);
+				setError((prev) => prev || (e?.message || 'No se pudieron cargar las razas.'));
+				return [] as RaceItem[];
+			}),
+			getSounds().catch((e: any) => {
+				console.error('Error cargando sonidos', e);
+				setError((prev) => prev || (e?.message || 'No se pudieron cargar los sonidos.'));
+				return [] as SoundItem[];
+			}),
+			getCharacters().catch((e: any) => {
+				console.error('Error cargando personajes', e);
+				setError((prev) => prev || (e?.message || 'No se pudieron cargar los personajes.'));
+				return [] as CharacterItem[];
+			}),
+		]);
 		setClasses(klasses || []);
-
-		const list = await getCharacters().catch((e: any) => {
-			console.error('Error cargando personajes', e);
-			setError((prev) => prev || (e?.message || 'No se pudieron cargar los personajes.'));
-			return [] as CharacterItem[];
-		});
+		setRaces(r || []);
+		setSounds(s || []);
 		setCharacters((list || []).filter((c) => !c.parentId));
 	}, []);
 
@@ -56,17 +75,19 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 	}, [refresh]);
 
 	const classById = useMemo(() => new Map((classes || []).map((c) => [c.id, c])), [classes]);
+	const raceById = useMemo(() => new Map((races || []).map((r) => [r.id, r])), [races]);
 
 	const filtered = useMemo(() => {
 		const q = search.trim().toLowerCase();
 		const list = q
 			? (characters || []).filter((c) => {
 				const className = classById.get(c.classId)?.name || c.class?.name || '';
-				return (c.name || '').toLowerCase().includes(q) || String(className).toLowerCase().includes(q);
+				const raceName = raceById.get(Number((c as any)?.raceId) || 0)?.name || c.race?.name || '';
+				return (c.name || '').toLowerCase().includes(q) || String(className).toLowerCase().includes(q) || String(raceName).toLowerCase().includes(q);
 			})
 			: (characters || []);
 		return list.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-	}, [characters, search, classById]);
+	}, [characters, search, classById, raceById]);
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
@@ -88,14 +109,16 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 				</button>
 			</div>
 
-			<div style={{ display: 'flex', alignItems: 'center', padding: '0 12px 12px 12px' }}>
-				<input
-					type="text"
-					placeholder="Buscar personaje..."
-					value={search}
-					onChange={(e) => setSearch(e.target.value)}
-					style={{ flex: 1, padding: 8 }}
-				/>
+			<div className="filters-bar">
+				<div className="filters-row">
+					<input
+						type="text"
+						placeholder="Buscar personaje..."
+						value={search}
+						onChange={(e) => setSearch(e.target.value)}
+						className="filters-input"
+					/>
+				</div>
 			</div>
 			{error ? (
 				<div style={{ padding: '0 12px 12px 12px', color: '#e2d9b7', opacity: 0.95, fontSize: 13 }}>
@@ -111,9 +134,11 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 					{filtered.map((c) => {
 						const iconUrl = asImageUrl(c.icon);
 						const className = classById.get(c.classId)?.name || c.class?.name;
+						const raceName = raceById.get(Number((c as any)?.raceId) || 0)?.name || c.race?.name;
 						const missing: string[] = [];
 						if (!iconUrl) missing.push('icono');
 						if (!className && !(Number.isFinite(c.classId as any) && Number(c.classId) > 0)) missing.push('clase');
+						if (!raceName && !(Number.isFinite((c as any)?.raceId as any) && Number((c as any)?.raceId) > 0)) missing.push('raza');
 						if (!(c.model || '').trim()) missing.push('modelo');
 						const showWarning = missing.length > 0;
 						const warningText = `Falta: ${missing.join(', ')}.`;
@@ -146,6 +171,7 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 											<div style={{ minWidth: 0 }}>
 												<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{c.name}</div>
 												{className ? <div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>Clase: {className}</div> : null}
+												{raceName ? <div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>Raza: {raceName}</div> : null}
 										</div>
 										</div>
 										{(c.model || '').trim() ? <div style={{ marginTop: 6, opacity: 0.9, fontSize: 13, wordBreak: 'break-all' }}>Modelo: {(c.model || '').trim()}</div> : null}
@@ -190,6 +216,8 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 					initial={initial}
 					existing={characters}
 					classes={classes}
+					races={races}
+					sounds={sounds}
 					onClose={() => {
 						setModalOpen(false);
 						setInitial(undefined);
@@ -214,7 +242,7 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 						const model = (data.model || '').trim();
 
 						const { iconFile: _ignoredIcon, imageFile: _ignoredImage, ...rest } = anyData;
-						const payload = { ...rest, icon, image, model } as { name: string; classId: number; icon?: string; image?: string; model?: string };
+						const payload = { ...rest, icon, image, model } as { name: string; classId: number; raceId: number; icon?: string; image?: string; model?: string };
 
 						if (initial?.id) await updateCharacter(initial.id, payload);
 						else await createCharacter(payload);

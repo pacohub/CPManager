@@ -9,6 +9,7 @@ interface Props {
 	onEdit: () => void;
 	onDelete: () => void;
 	onOpen?: () => void;
+	onRemoveCrest?: () => void;
 	professions?: ProfessionItem[];
 	classes?: ClassItem[];
 }
@@ -19,11 +20,21 @@ const toBackendUrl = (path?: string) => {
 	return encodeURI(`http://localhost:4000/${path.replace(/^\/+/, '')}`);
 };
 
-const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, professions, classes }) => {
+const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRemoveCrest, professions, classes }) => {
+	// "Imagen" (iconImage) es el fondo de la tarjeta
+	const [bgExists, setBgExists] = useState(true);
+	const bgUrl = useMemo(() => toBackendUrl(faction.iconImage), [faction.iconImage]);
+
+	// "Escudo" (crestImage) va a la izquierda del nombre
 	const [crestExists, setCrestExists] = useState(true);
 	const crestUrl = useMemo(() => toBackendUrl(faction.crestImage), [faction.crestImage]);
-	const [iconExists, setIconExists] = useState(true);
-	const iconUrl = useMemo(() => toBackendUrl(faction.iconImage), [faction.iconImage]);
+
+	useEffect(() => {
+		if (!bgUrl) return setBgExists(true);
+		fetch(bgUrl, { method: 'HEAD' })
+			.then((res) => setBgExists(res.ok))
+			.catch(() => setBgExists(false));
+	}, [bgUrl]);
 
 	useEffect(() => {
 		if (!crestUrl) return setCrestExists(true);
@@ -32,14 +43,7 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, profe
 			.catch(() => setCrestExists(false));
 	}, [crestUrl]);
 
-	useEffect(() => {
-		if (!iconUrl) return setIconExists(true);
-		fetch(iconUrl, { method: 'HEAD' })
-			.then((res) => setIconExists(res.ok))
-			.catch(() => setIconExists(false));
-	}, [iconUrl]);
-
-	const bg = crestUrl && crestExists ? `url("${crestUrl}")` : undefined;
+	const bg = bgUrl && bgExists ? `url("${bgUrl}")` : undefined;
 
 	const swatches = [faction.primaryColor, faction.secondaryColor, faction.tertiaryColor].filter(Boolean) as string[];
 
@@ -60,7 +64,7 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, profe
 	}, [professionNames]);
 
 	const hasPrimaryColor = Boolean((faction.primaryColor ?? '').trim());
-	const hasIcon = Boolean((faction.iconImage ?? '').trim());
+	const hasImage = Boolean((faction.iconImage ?? '').trim());
 	const hasCrest = Boolean((faction.crestImage ?? '').trim());
 	const hasDescription = Boolean((faction.description ?? '').trim());
 	const hasProfessionWarnings = useMemo(() => {
@@ -76,8 +80,8 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, profe
 	}, [classes]);
 	const missing: string[] = [];
 	if (!hasPrimaryColor) missing.push('color primario');
-	if (!hasIcon) missing.push('icono');
-	if (!hasCrest) missing.push('imagen');
+	if (!hasCrest) missing.push('escudo');
+	if (!hasImage) missing.push('imagen');
 	if (!hasDescription) missing.push('descripción');
 	if (hasProfessionWarnings) missing.push('profesiones incompletas');
 	if (hasClassWarnings) missing.push('clases incompletas');
@@ -113,9 +117,9 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, profe
 			) : null}
 			<div className="campaign-title">
 				<div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-					{iconUrl && iconExists ? (
+					{crestUrl && crestExists ? (
 						<img
-							src={iconUrl}
+							src={crestUrl}
 							alt=""
 							aria-hidden="true"
 							style={{ width: 22, height: 22, borderRadius: 6, objectFit: 'cover', flex: '0 0 auto' }}
@@ -149,6 +153,21 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, profe
 			</div>
 
 			<div className="campaign-actions">
+				{crestUrl && crestExists && onRemoveCrest ? (
+					<button
+						className="option"
+						tabIndex={-1}
+						aria-label="Eliminar escudo"
+						onClick={(e) => {
+							e.stopPropagation();
+							onRemoveCrest();
+						}}
+						onPointerDown={(e) => e.stopPropagation()}
+						style={{ fontSize: 12, padding: '0 6px' }}
+					>
+						Eliminar escudo
+					</button>
+				) : null}
 				<button
 					className="icon option"
 					title="Editar"

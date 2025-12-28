@@ -133,6 +133,7 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 	const [description, setDescription] = useState(initial?.description || '');
 	const [crestImage, setCrestImage] = useState<File | null>(null);
 	const [iconImage, setIconImage] = useState<File | null>(null);
+	const [removeIconImage, setRemoveIconImage] = useState(false);
 	const [primaryColor, setPrimaryColor] = useState(initial?.primaryColor || '');
 	const [secondaryColor, setSecondaryColor] = useState(initial?.secondaryColor || '');
 	const [tertiaryColor, setTertiaryColor] = useState(initial?.tertiaryColor || '');
@@ -145,6 +146,7 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 		setDescription(initial?.description || '');
 		setCrestImage(null);
 		setIconImage(null);
+		setRemoveIconImage(false);
 		setPrimaryColor(initial?.primaryColor || '');
 		setSecondaryColor(initial?.secondaryColor || '');
 		setTertiaryColor(initial?.tertiaryColor || '');
@@ -175,7 +177,9 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 
 	const iconPreviewUrl = iconImage
 		? URL.createObjectURL(iconImage)
-		: toBackendUrl(initial?.iconImage);
+		: removeIconImage
+			? undefined
+			: toBackendUrl(initial?.iconImage);
 
 	const handleSubmit = (e: React.FormEvent) => {
 		e.preventDefault();
@@ -189,7 +193,8 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 		formData.append('name', name);
 		formData.append('description', description);
 		if (crestImage) formData.append('crestImage', crestImage);
-		if (iconImage) formData.append('iconImage', iconImage);
+		if (removeIconImage) formData.append('iconImage', '');
+		else if (iconImage) formData.append('iconImage', iconImage);
 		formData.append('primaryColor', primaryColor);
 		formData.append('secondaryColor', secondaryColor);
 		formData.append('tertiaryColor', tertiaryColor);
@@ -255,16 +260,37 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 					) : null}
 
 					<label style={{ marginBottom: 8, display: 'block' }}>
-						Icono (imagen):
+						Imagen:
 						<input
 							type="file"
 							accept="image/*"
-							onChange={(e) => setIconImage(e.target.files?.[0] || null)}
+							onChange={(e) => {
+								setRemoveIconImage(false);
+								setIconImage(e.target.files?.[0] || null);
+							}}
 							style={{ display: 'block', marginTop: 4 }}
 						/>
 						{initial?.iconImage && !iconImage ? (
 							<div style={{ fontSize: 12, color: '#555', marginTop: 4 }}>
 								Ruta actual: <span style={{ wordBreak: 'break-all' }}>{initial.iconImage}</span>
+							</div>
+						) : null}
+						{initial?.id && initial?.iconImage && !iconImage ? (
+							<div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+								<button
+									type="button"
+									className="icon option"
+									onClick={() => {
+										setIconImage(null);
+										setRemoveIconImage(true);
+									}}
+									data-tooltip="Eliminar imagen"
+									aria-label="Eliminar imagen"
+									style={{ padding: '2px 8px' }}
+								>
+									Eliminar imagen
+								</button>
+								{removeIconImage ? <span style={{ fontSize: 12, opacity: 0.9 }}>Se eliminará al guardar.</span> : null}
 							</div>
 						) : null}
 					</label>

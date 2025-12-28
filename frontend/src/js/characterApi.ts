@@ -31,7 +31,7 @@ export async function getCharacter(id: number): Promise<CharacterItem> {
 	return ensureOk<CharacterItem>(res);
 }
 
-export async function createCharacter(data: { name: string; classId: number; icon?: string; image?: string; model?: string }): Promise<CharacterItem> {
+export async function createCharacter(data: { name: string; classId: number; raceId: number; icon?: string; image?: string; model?: string }): Promise<CharacterItem> {
 	const res = await fetch(API_URL, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
@@ -42,7 +42,7 @@ export async function createCharacter(data: { name: string; classId: number; ico
 
 export async function updateCharacter(
 	id: number,
-	data: Partial<{ name: string; classId: number; icon: string; image: string; model: string }>,
+	data: Partial<{ name: string; classId: number; raceId: number | null; icon: string; image: string; model: string }>,
 ): Promise<CharacterItem> {
 	const res = await fetch(`${API_URL}/${id}`, {
 		method: 'PUT',
@@ -92,7 +92,7 @@ export async function getCharacterInstances(characterId: number): Promise<Charac
 
 export async function createCharacterInstance(
 	characterId: number,
-	data: { name: string; classId: number; icon?: string; image?: string; model?: string },
+	data: { name: string; classId: number; raceId: number; icon?: string; image?: string; model?: string },
 ): Promise<CharacterItem> {
 	const res = await fetch(`${API_URL}/${characterId}/instances`, {
 		method: 'POST',
@@ -105,7 +105,7 @@ export async function createCharacterInstance(
 export async function updateCharacterInstance(
 	characterId: number,
 	instanceId: number,
-	data: Partial<{ name: string; classId: number; icon: string; image: string; model: string }>,
+	data: Partial<{ name: string; classId: number; raceId: number | null; icon: string; image: string; model: string }>,
 ): Promise<CharacterItem> {
 	const res = await fetch(`${API_URL}/${characterId}/instances/${instanceId}`, {
 		method: 'PUT',

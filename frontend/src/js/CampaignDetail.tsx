@@ -374,7 +374,7 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
                       <div
                         className="chapter-row"
                         style={{ padding: 0, position: 'relative', cursor: chaptersDndEnabled ? undefined : 'pointer' }}
-                        title={
+                        data-tooltip={
                           chaptersDndEnabled
                             ? undefined
                             : String(ch.description ?? '').trim()

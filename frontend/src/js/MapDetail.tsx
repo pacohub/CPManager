@@ -206,7 +206,8 @@ const MapDetail: React.FC<Props> = ({ mapId, onBack }) => {
 								placeholder="Buscar componente..."
 								value={componentSearch}
 								onChange={(e) => setComponentSearch(e.target.value)}
-								style={{ width: '100%', padding: 8, marginBottom: 8 }}
+								className="filters-input"
+								style={{ width: '100%', marginBottom: 8 }}
 							/>
 
 							<div style={{ maxHeight: 360, overflow: 'auto', paddingRight: 6 }}>

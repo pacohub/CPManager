@@ -2,8 +2,12 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FaPlus, FaTimes } from 'react-icons/fa';
 import { CharacterItem } from '../interfaces/character';
 import { ClassItem } from '../interfaces/class';
+import { RaceItem } from '../interfaces/race';
+import { SoundItem } from '../interfaces/sound';
 import ClassModal from './ClassModal';
+import RaceModal from './RaceModal';
 import { createClass, uploadClassIcon } from '../js/classApi';
+import { createRace, uploadRaceIcon } from '../js/raceApi';
 
 function asImageUrl(raw?: string): string | undefined {
 	const v = (raw || '').trim();
@@ -18,14 +22,17 @@ interface Props {
 	initial?: Partial<CharacterItem>;
 	existing: CharacterItem[];
 	classes: ClassItem[];
-	onSubmit: (data: { name: string; classId: number; icon?: string; iconFile?: File | null; image?: string; imageFile?: File | null; model?: string }) => void;
+	races: RaceItem[];
+	sounds: SoundItem[];
+	onSubmit: (data: { name: string; classId: number; raceId: number; icon?: string; iconFile?: File | null; image?: string; imageFile?: File | null; model?: string }) => void;
 	onClose: () => void;
 }
 
-const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, onSubmit, onClose }) => {
+const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, races, sounds, onSubmit, onClose }) => {
 	const initialImage = (initial as any)?.image;
 	const [name, setName] = useState(initial?.name || '');
 	const [classId, setClassId] = useState<number>(Number.isFinite(initial?.classId as any) ? Number(initial?.classId) : 0);
+	const [raceId, setRaceId] = useState<number>(Number.isFinite((initial as any)?.raceId as any) ? Number((initial as any)?.raceId) : 0);
 	const [icon, setIcon] = useState(initial?.icon || '');
 	const [iconFile, setIconFile] = useState<File | null>(null);
 	const [iconPreviewUrl, setIconPreviewUrl] = useState<string>('');
@@ -36,6 +43,8 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, onS
 	const [error, setError] = useState<string | null>(null);
 	const [classesState, setClassesState] = useState<ClassItem[]>(classes || []);
 	const [classModalOpen, setClassModalOpen] = useState(false);
+	const [racesState, setRacesState] = useState<RaceItem[]>(races || []);
+	const [raceModalOpen, setRaceModalOpen] = useState(false);
 	const iconInputRef = useRef<HTMLInputElement | null>(null);
 	const imageInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -43,6 +52,7 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, onS
 		if (!open) return;
 		setName(initial?.name || '');
 		setClassId(Number.isFinite(initial?.classId as any) ? Number(initial?.classId) : 0);
+		setRaceId(Number.isFinite((initial as any)?.raceId as any) ? Number((initial as any)?.raceId) : 0);
 		setIcon(initial?.icon || '');
 		setIconFile(null);
 		setIconPreviewUrl('');
@@ -51,12 +61,17 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, onS
 		setImagePreviewUrl('');
 		setModel(initial?.model || '');
 		setError(null);
-	}, [open, initial?.id, initial?.name, initial?.classId, initial?.icon, initialImage, initial?.model]);
+	}, [open, initial?.id, initial?.name, initial?.classId, (initial as any)?.raceId, initial?.icon, initialImage, initial?.model]);
 
 	useEffect(() => {
 		if (!open) return;
 		setClassesState(classes || []);
 	}, [open, classes]);
+
+	useEffect(() => {
+		if (!open) return;
+		setRacesState(races || []);
+	}, [open, races]);
 
 	useEffect(() => {
 		return () => {
@@ -76,6 +91,13 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, onS
 		const first = (classesState || [])[0];
 		if (first?.id) setClassId(first.id);
 	}, [open, classId, classesState]);
+
+	useEffect(() => {
+		if (!open) return;
+		if (raceId > 0) return;
+		const first = (racesState || [])[0];
+		if (first?.id) setRaceId(first.id);
+	}, [open, raceId, racesState]);
 
 	const isDuplicateName = useMemo(() => {
 		const normalized = name.trim().toLowerCase();
@@ -145,10 +167,16 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, onS
 			setError('Selecciona una clase.');
 			return;
 		}
+		const nextRaceId = Number(raceId);
+		if (!Number.isFinite(nextRaceId) || nextRaceId <= 0) {
+			setError('Selecciona una raza.');
+			return;
+		}
 		setError(null);
 		onSubmit({
 			name: name.trim(),
 			classId: nextClassId,
+			raceId: nextRaceId,
 			icon,
 			iconFile,
 			image,
@@ -205,6 +233,37 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, onS
 							title="Nueva Clase"
 							aria-label="Nueva Clase"
 							onClick={() => setClassModalOpen(true)}
+						>
+							<FaPlus size={16} />
+						</button>
+					</div>
+
+					<div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
+						<select
+							name="raceId"
+							value={String(raceId || '')}
+							onChange={(e) => setRaceId(Number(e.target.value))}
+							required
+							style={{ flex: 1, marginBottom: 0 }}
+						>
+							<option value="" disabled>
+								Selecciona una raza
+							</option>
+							{(racesState || [])
+								.slice()
+								.sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }))
+								.map((r) => (
+									<option key={r.id} value={r.id}>
+										{r.name || `Raza #${r.id}`}
+									</option>
+								))}
+						</select>
+						<button
+							type="button"
+							className="icon option"
+							title="Nueva Raza"
+							aria-label="Nueva Raza"
+							onClick={() => setRaceModalOpen(true)}
 						>
 							<FaPlus size={16} />
 						</button>
@@ -291,6 +350,34 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, onS
 							});
 							setClassId(created.id);
 							setClassModalOpen(false);
+						}}
+					/>
+				) : null}
+
+				{raceModalOpen ? (
+					<RaceModal
+						open={raceModalOpen}
+						existing={racesState}
+						sounds={sounds || []}
+						onClose={() => setRaceModalOpen(false)}
+						onSubmit={async (data) => {
+							const anyData = data as any;
+							const iconFile: File | null | undefined = anyData?.iconFile;
+							let icon = (data.icon || '').trim();
+							if (iconFile) {
+								const uploaded = await uploadRaceIcon(iconFile);
+								if (uploaded) icon = uploaded;
+							}
+							const { iconFile: _ignored, ...rest } = anyData;
+							const payload = { ...rest, icon } as Partial<RaceItem>;
+							const created = await createRace(payload);
+							setRacesState((prev) => {
+								const next = (prev || []).slice();
+								next.push(created);
+								return next;
+							});
+							setRaceId(created.id);
+							setRaceModalOpen(false);
 						}}
 					/>
 				) : null}
