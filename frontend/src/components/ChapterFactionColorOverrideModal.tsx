@@ -38,7 +38,7 @@ const ChapterFactionColorOverrideModal: React.FC<Props> = ({ open, initialColor,
 			>
 				<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
 					<h2 style={{ margin: 0 }}>Override de color (solo este capítulo)</h2>
-					<button className="icon option" title="Cerrar" onClick={onClose} disabled={saving}>
+					<button className="icon option" title="Cerrar" onClick={onClose} disabled={saving} style={{ position: 'absolute', top: 12, right: 12 }}>
 						<FaTimes size={16} />
 					</button>
 				</div>

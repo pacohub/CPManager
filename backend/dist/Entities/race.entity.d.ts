@@ -1,0 +1,31 @@
+import { Animation } from './animation.entity';
+import { ArmorType } from './armorType.entity';
+import { Sound } from './sound.entity';
+export declare const RACE_DEATH_TYPES: readonly ["no revive, no se pudre", "revive, no se pudre", "revive, se pudre", "no revive, se pudre"];
+export type RaceDeathType = (typeof RACE_DEATH_TYPES)[number];
+export declare const RACE_MOVEMENT_TYPES: readonly ["ninguno", "a pie", "jinete", "vuela", "levita", "flota", "anfibio"];
+export type RaceMovementType = (typeof RACE_MOVEMENT_TYPES)[number];
+export declare class Race {
+    id: number;
+    name: string;
+    icon: string;
+    deathType: string;
+    baseDefense: number;
+    movementSpeed: number;
+    movementType: string;
+    attack1: string;
+    attack2: string;
+    defenseType: string;
+    movementSound?: Sound | null;
+    movementSoundId?: number | null;
+    lifeRegen: number;
+    baseLife: number;
+    baseMana: number;
+    baseManaRegen: number;
+    initialMana: number;
+    transportSize: number;
+    armorType: string;
+    armorTypeEntity?: ArmorType | null;
+    armorTypeId?: number | null;
+    animations: Animation[];
+}

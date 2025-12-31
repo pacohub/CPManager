@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { RaceItem } from '../interfaces/race';
 import { SoundItem } from '../interfaces/sound';
+import { ArmorTypeItem } from '../interfaces/armorType';
+import { getArmorTypes } from '../js/armorTypeApi';
+import CpImage from './CpImage';
 
 function asImageUrl(raw?: string): string | undefined {
 	const v = (raw || '').trim();
@@ -13,7 +16,6 @@ function asImageUrl(raw?: string): string | undefined {
 
 const DEATH_TYPES = ['no revive, no se pudre', 'revive, no se pudre', 'revive, se pudre', 'no revive, se pudre'] as const;
 const MOVEMENT_TYPES = ['ninguno', 'a pie', 'jinete', 'vuela', 'levita', 'flota', 'anfibio'] as const;
-const ARMOR_TYPES = ['carne', 'etérea', 'metal', 'piedra', 'madera'] as const;
 
 function capitalizeFirst(raw: string): string {
 	const v = (raw || '').trim();
@@ -27,14 +29,19 @@ interface Props {
 	existing: RaceItem[];
 	sounds: SoundItem[];
 	onClose: () => void;
-	onSubmit: (data: Partial<RaceItem> & { iconFile?: File | null }) => void | Promise<void>;
+	onSubmit: (data: Partial<RaceItem> & { iconFile?: File | null; removeIcon?: boolean }) => void | Promise<void>;
 }
 
 const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, onSubmit }) => {
 	const [name, setName] = useState(initial?.name ?? '');
 	const [deathType, setDeathType] = useState((initial?.deathType || DEATH_TYPES[0]) as string);
 	const [movementType, setMovementType] = useState((initial?.movementType || MOVEMENT_TYPES[0]) as string);
-	const [armorType, setArmorType] = useState((initial?.armorType || ARMOR_TYPES[0]) as string);
+	const [armorTypes, setArmorTypes] = useState<ArmorTypeItem[]>([]);
+	const [loadingArmorTypes, setLoadingArmorTypes] = useState(false);
+	const [armorTypesError, setArmorTypesError] = useState<string | null>(null);
+	const [armorTypeId, setArmorTypeId] = useState<number | null>(
+		(initial?.armorTypeId ?? initial?.armorTypeEntity?.id ?? null) as number | null
+	);
 	const [baseDefense, setBaseDefense] = useState<number>(Number(initial?.baseDefense ?? 0));
 	const [movementSpeed, setMovementSpeed] = useState<number>(Number(initial?.movementSpeed ?? 0));
 	const [movementSoundId, setMovementSoundId] = useState<number | null>(initial?.movementSoundId ?? null);
@@ -44,11 +51,45 @@ const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, 
 	const [baseManaRegen, setBaseManaRegen] = useState<number>(Number(initial?.baseManaRegen ?? 0));
 	const [initialMana, setInitialMana] = useState<number>(Number(initial?.initialMana ?? 0));
 	const [transportSize, setTransportSize] = useState<number>(Number(initial?.transportSize ?? 0));
-	const [icon, setIcon] = useState(initial?.icon ?? '');
+	const [icon] = useState(initial?.icon ?? '');
 	const [iconFile, setIconFile] = useState<File | null>(null);
+	const [removeIcon, setRemoveIcon] = useState(false);
 	const [iconObjectUrl, setIconObjectUrl] = useState<string | null>(null);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (!open) return;
+		let cancelled = false;
+		setArmorTypesError(null);
+		setLoadingArmorTypes(true);
+		getArmorTypes()
+			.then((list) => {
+				if (cancelled) return;
+				setArmorTypes(list || []);
+			})
+			.catch((e: any) => {
+				if (cancelled) return;
+				setArmorTypes([]);
+				setArmorTypesError(e?.message || 'No se pudieron cargar los tipos de armadura.');
+			})
+			.finally(() => {
+				if (cancelled) return;
+				setLoadingArmorTypes(false);
+			});
+		return () => {
+			cancelled = true;
+		};
+	}, [open]);
+
+	useEffect(() => {
+		if (!open) return;
+		if (armorTypeId != null) return;
+		if ((armorTypes || []).length === 0) return;
+		const legacyName = String(initial?.armorType || '').trim().toLowerCase();
+		const byLegacy = legacyName ? (armorTypes || []).find((a) => String(a.name || '').trim().toLowerCase() === legacyName) : undefined;
+		setArmorTypeId(byLegacy?.id ?? (armorTypes[0]?.id ?? null));
+	}, [open, armorTypeId, armorTypes, initial?.armorType]);
 
 	const iconUrl = useMemo(() => asImageUrl(icon), [icon]);
 	useEffect(() => {
@@ -60,18 +101,27 @@ const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, 
 		setIconObjectUrl(url);
 		return () => URL.revokeObjectURL(url);
 	}, [iconFile]);
-	const iconPreviewUrl = iconObjectUrl || iconUrl;
+
+	useEffect(() => {
+		if (!open) return;
+		setRemoveIcon(false);
+	}, [open]);
+	const iconPreviewUrl = removeIcon ? null : (iconObjectUrl || iconUrl);
 	const existingNames = useMemo(() => new Set((existing || []).filter((x) => x.id !== initial?.id).map((x) => (x.name || '').trim().toLowerCase())), [existing, initial?.id]);
 	const movementSounds = useMemo(() => {
 		return (sounds || []).filter((s) => (s.types || []).some((t) => (t.name || '').toLowerCase() === 'sonido de movimiento'));
 	}, [sounds]);
+	const selectedArmorType = useMemo(() => {
+		if (armorTypeId == null) return null;
+		return (armorTypes || []).find((a) => a.id === armorTypeId) || null;
+	}, [armorTypeId, armorTypes]);
 
 	if (!open) return null;
 
 	return (
 		<div className="modal-overlay" role="dialog" aria-modal="true">
 			<div className="modal-content" style={{ width: 760, maxWidth: '94vw' }}>
-				<button className="icon option" title="Cerrar" onClick={onClose} aria-label="Cerrar">
+					<button className="icon option" title="Cerrar" onClick={onClose} aria-label="Cerrar" style={{ position: 'absolute', top: 12, right: 12 }}>
 					<FaTimes size={18} />
 				</button>
 				<h2 style={{ marginTop: 0 }}>{initial?.id ? 'Editar Raza' : 'Nueva Raza'}</h2>
@@ -89,6 +139,7 @@ const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, 
 								name: trimmed,
 								icon: icon.trim(),
 								iconFile,
+								removeIcon,
 								deathType,
 								baseDefense,
 								movementSpeed,
@@ -100,7 +151,8 @@ const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, 
 								baseManaRegen,
 								initialMana,
 								transportSize,
-								armorType,
+								armorTypeId,
+								armorType: (selectedArmorType?.name || initial?.armorType || '').trim() || undefined,
 							});
 						} catch (err: any) {
 							setError(err?.message || 'Error guardando raza');
@@ -117,19 +169,30 @@ const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, 
 
 						<div>
 							<div style={{ fontWeight: 800, marginBottom: 6 }}>Icono (64x64)</div>
-							<div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-								{iconPreviewUrl ? (
-									<div className="metallic-border metallic-border-square" style={{ width: 64, height: 64, minWidth: 64, backgroundImage: 'none' }}>
-										<img src={iconPreviewUrl} alt="" aria-hidden="true" style={{ width: 64, height: 64, objectFit: 'cover', display: 'block' }} />
-									</div>
-								) : (
-									<div className="metallic-border metallic-border-square" style={{ width: 64, height: 64, minWidth: 64, backgroundImage: 'none', opacity: 0.35 }} />
-								)}
-								<div style={{ flex: 1 }}>
-									<input type="file" accept="image/*" onChange={(e) => setIconFile(e.target.files?.[0] || null)} />
-									{icon ? <div style={{ marginTop: 6, opacity: 0.85, fontSize: 12, wordBreak: 'break-all' }}>{icon}</div> : null}
-								</div>
-							</div>
+                                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                                	<div style={{ position: 'relative' }} className="preview-container">
+                                		{initial?.id && icon && !iconFile && !removeIcon ? (
+												<button
+													type="button"
+													className="preview-remove-btn top-right"
+													data-tooltip="Eliminar icono"
+													aria-label="Eliminar icono"
+													onClick={() => {
+														setIconFile(null);
+														setRemoveIcon(true);
+													}}
+													>
+													<FaTimes size={14} />
+												</button>
+                                		) : null}
+                                		<CpImage src={iconPreviewUrl || undefined} width={64} height={64} fit="cover" />
+                                	</div>
+                                	<div style={{ flex: 1 }}>
+                                		<input type="file" accept="image/*" onChange={(e) => setIconFile(e.target.files?.[0] || null)} />
+                                		{icon ? <div style={{ marginTop: 6, opacity: 0.85, fontSize: 12, wordBreak: 'break-all' }}>{icon}</div> : null}
+                                	</div>
+                                </div>
+                                {removeIcon ? <div style={{ marginTop: 6, fontSize: 12, opacity: 0.9 }}>Se eliminará al guardar.</div> : null}
 						</div>
 
 						<label>
@@ -152,11 +215,12 @@ const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, 
 
 						<label>
 							Tipo de armadura
-							<select value={armorType} onChange={(e) => setArmorType(e.target.value)}>
-								{ARMOR_TYPES.map((t) => (
-									<option key={t} value={t}>{capitalizeFirst(t)}</option>
+							<select value={armorTypeId ?? ''} onChange={(e) => setArmorTypeId(e.target.value ? Number(e.target.value) : null)} disabled={loadingArmorTypes || (armorTypes || []).length === 0}>
+								{(armorTypes || []).map((t) => (
+									<option key={t.id} value={t.id}>{capitalizeFirst(t.name || '')}</option>
 								))}
 							</select>
+							{armorTypesError ? <div style={{ marginTop: 6, opacity: 0.85, fontSize: 12 }}>{armorTypesError}</div> : null}
 						</label>
 
 						<label>
@@ -216,7 +280,7 @@ const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, 
 					{error ? <div style={{ color: '#e24444', fontSize: 13 }}>{error}</div> : null}
 
 					<div className="actions">
-						<button type="submit" className="confirm" disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
+						<button type="submit" className="confirm" disabled={saving}>{saving ? 'Confirmando...' : 'Confirmar'}</button>
 						<button type="button" className="cancel" onClick={onClose} disabled={saving}>Cancelar</button>
 					</div>
 				</form>

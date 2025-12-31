@@ -2,21 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DndContext, DragOverlay, PointerSensor, closestCenter, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import {
-	FaArrowLeft,
-	FaBoxOpen,
-	FaDownload,
-	FaEdit,
-	FaExclamation,
-	FaExclamationTriangle,
-	FaFilm,
-	FaFlag,
-	FaLock,
-	FaLockOpen,
-	FaPlus,
-	FaTrash,
-	FaUsers,
-} from 'react-icons/fa';
+import { FaComment, FaArrowLeft, FaPlus, FaEdit, FaDownload, FaTrash, FaExclamation, FaUser, FaFilm, FaFlag, FaMountain } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import FactionModal from '../components/FactionModal';
 import ResourceModal from '../components/ResourceModal';
@@ -25,9 +11,13 @@ import GroupNameModal from '../components/GroupNameModal';
 import IconSelect from '../components/IconSelect';
 import ChapterModal from '../components/ChapterModal';
 import EventModal from '../components/EventModal';
+import DialogueModal from '../components/DialogueModal';
 import ObjectiveModal from '../components/ObjectiveModal';
+import CpImage from '../components/CpImage';
+import CpImageFill from '../components/CpImageFill';
 import { Chapter } from '../interfaces/chapter';
 import { ChapterFactionLink } from '../interfaces/chapterFaction';
+import { CharacterItem } from '../interfaces/character';
 import { EventItem } from '../interfaces/event';
 import { FactionItem } from '../interfaces/faction';
 import { MechanicItem } from '../interfaces/mechanic';
@@ -39,6 +29,7 @@ import { deleteChapter, getChapter, updateChapter } from './chapterApi';
 import { getChaptersByCampaign } from './chapterApi';
 import { getChapterFactions, replaceChapterFactions, setChapterFactionColorOverride } from './chapterFactionApi';
 import { getChapterResources, setChapterResources as setChapterResourcesApi } from './chapterResourceApi';
+import { getCharacters } from './characterApi';
 import { createFaction, getFactions } from './factionApi';
 import { getMechanics } from './mechanicApi';
 import { getMaps } from './mapApi';
@@ -126,6 +117,35 @@ const SortableObjectiveRow: React.FC<SortableObjectiveRowProps> = ({ objective, 
 	);
 };
 
+interface SortableDialogueLineRowProps {
+	id: string;
+	enabled: boolean;
+	children: React.ReactNode;
+}
+
+const SortableDialogueLineRow: React.FC<SortableDialogueLineRowProps> = ({ id, enabled, children }) => {
+	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+		id,
+		disabled: !enabled,
+		data: { type: 'dialogueLine' },
+	});
+
+	const style: React.CSSProperties = {
+		transform: CSS.Transform.toString(transform),
+		transition: transition || undefined,
+		opacity: isDragging ? 0.75 : 1,
+		position: isDragging ? 'relative' : undefined,
+		zIndex: isDragging ? 30 : undefined,
+		cursor: enabled ? 'grab' : undefined,
+	};
+
+	return (
+		<div ref={setNodeRef} style={style} {...(enabled ? { ...attributes, ...listeners } : {})}>
+			{children}
+		</div>
+	);
+};
+
 const stripLeadingSlashes = (value: string) => {
 	let next = value;
 	while (next.startsWith('/')) next = next.slice(1);
@@ -179,6 +199,11 @@ const uniqueInOrder = (values: string[]) => {
 		out.push(v);
 	}
 	return out;
+};
+
+const isObjectiveEventType = (rawType: any) => {
+	const t = String(rawType ?? '').toUpperCase();
+	return t === 'MISSION' || t === 'SECONDARY_MISSION' || t === 'DAILY_MISSION' || t === 'WEEKLY_MISSION';
 };
 
 const computeGroupOrder = (links: ChapterFactionLink[], localGroups: string[], playableGroupName: string | null) => {
@@ -361,11 +386,7 @@ const SortableChapterFactionRow: React.FC<{
 				onChange={onTogglePlayable}
 			/>
 
-			{iconUrl ? (
-				<img src={iconUrl} alt={faction.name} style={{ width: 18, height: 18, objectFit: 'contain' }} />
-			) : (
-				<div style={{ width: 18, height: 18 }} />
-			)}
+			<CpImage src={iconUrl || undefined} width={18} height={18} fit="contain" showFrame={false} alt={faction.name} />
 
 			<div style={{ minWidth: 0, flex: '1 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
 				<span style={{ fontWeight: isPlayable ? 900 : 600 }}>{faction.name}</span>
@@ -411,9 +432,9 @@ const SortableChapterFactionRow: React.FC<{
 					e.stopPropagation();
 					onOpenOverride();
 				}}
-				>
-					<FaExclamationTriangle size={14} />
-				</span>
+				  >
+					  <FaExclamation title="warning" />
+				  </span>
 			) : null}
 
 			<button className="icon option" title="Quitar" onClick={onRemove}>
@@ -448,20 +469,31 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 
 	const [maps, setMaps] = useState<MapItem[]>([]);
 	const [mechanics, setMechanics] = useState<MechanicItem[]>([]);
+	const [characters, setCharacters] = useState<CharacterItem[]>([]);
 	const [events, setEvents] = useState<EventItem[]>([]);
 	const [objectives, setObjectives] = useState<ObjectiveItem[]>([]);
 	const [search, setSearch] = useState('');
 	const [eventsDndEnabled, setEventsDndEnabled] = useState(false);
+	const [dialogueKeysByEventId, setDialogueKeysByEventId] = useState<Record<number, string[]>>({});
 	const [filterEasy, setFilterEasy] = useState(true);
 	const [filterNormal, setFilterNormal] = useState(true);
 	const [filterHard, setFilterHard] = useState(true);
 	const [mobaFactionToAddByKey, setMobaFactionToAddByKey] = useState<Record<string, number | ''>>({});
+	const [mobaTeamNameDraftByKey, setMobaTeamNameDraftByKey] = useState<Record<string, string>>({});
 
 	const [modalOpen, setModalOpen] = useState(false);
 	const [initial, setInitial] = useState<Partial<EventItem> | undefined>(undefined);
 
+	const [dialogueModalOpen, setDialogueModalOpen] = useState(false);
+	const [dialogueEvent, setDialogueEvent] = useState<EventItem | null>(null);
+	const [dialogueModalMode, setDialogueModalMode] = useState<'add' | 'edit'>('add');
+	const [dialogueEditIndex, setDialogueEditIndex] = useState<number | null>(null);
+	const [dialogueInitialLine, setDialogueInitialLine] = useState<any | null>(null);
+
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [pendingDelete, setPendingDelete] = useState<EventItem | null>(null);
+	const [confirmDialogueLineOpen, setConfirmDialogueLineOpen] = useState(false);
+	const [pendingDialogueLineDelete, setPendingDialogueLineDelete] = useState<{ eventId: number; index: number } | null>(null);
 
 	const [objectiveModalOpen, setObjectiveModalOpen] = useState(false);
 	const [objectiveInitial, setObjectiveInitial] = useState<Partial<ObjectiveItem> | undefined>(undefined);
@@ -469,6 +501,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 	const [confirmObjectiveOpen, setConfirmObjectiveOpen] = useState(false);
 	const [pendingDeleteObjective, setPendingDeleteObjective] = useState<ObjectiveItem | null>(null);
 	const [expandedObjectiveId, setExpandedObjectiveId] = useState<number | null>(null);
+	const [expandedEventIds, setExpandedEventIds] = useState<Set<number>>(() => new Set());
 	const [activeDragId, setActiveDragId] = useState<string | null>(null);
 
 	const [chapterModalOpen, setChapterModalOpen] = useState(false);
@@ -477,6 +510,25 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 	const sensors = useSensors(
 		useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
 	);
+
+	useEffect(() => {
+		// Keep stable UI-only keys for dialogue lines (needed for DnD).
+		setDialogueKeysByEventId((prev) => {
+			const next: Record<number, string[]> = { ...prev };
+			for (const ev of events || []) {
+				const raw = (ev as any)?.dialogue?.lines;
+				const len = Array.isArray(raw) ? raw.length : 0;
+				const current = Array.isArray(next[ev.id]) ? next[ev.id] : [];
+				if (current.length === len) continue;
+				const rebuilt = current.slice(0, len);
+				while (rebuilt.length < len) {
+					rebuilt.push(`dlg:${ev.id}:${Date.now()}:${Math.random().toString(16).slice(2)}`);
+				}
+				next[ev.id] = rebuilt;
+			}
+			return next;
+		});
+	}, [events]);
 
 	useEffect(() => {
 		getChapter(chapterId).then(setChapter).catch((e) => console.error('Error cargando capítulo', e));
@@ -527,12 +579,13 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 
 	const showResourcesSection = !isCreditsChapter && !isCinematicOnlyByCounts;
 
-	const chapterHeaderTitle = useMemo(() => {
-		if (!chapter) return 'Capítulo';
-		if (isCreditsChapter) return 'Créditos';
+	const chapterHeader = useMemo(() => {
+		if (!chapter) return { label: 'Capítulo', title: '' };
+		if (isCreditsChapter) return { label: 'Créditos', title: chapter.name || '' };
 
 		if (!eventCountsLoaded) {
-			return `${Number.isFinite(chapter.order) ? `Capítulo ${(chapter.order ?? 0) + 1}: ` : ''}${chapter.name}`;
+			const lbl = Number.isFinite(chapter.order) ? `Capítulo ${(chapter.order ?? 0) + 1}` : 'Capítulo';
+			return { label: lbl, title: chapter.name || '' };
 		}
 
 		const stats = eventCountsByChapterId[chapter.id];
@@ -552,8 +605,8 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 		const lastNonCreditsId = nonCredits.length > 0 ? nonCredits[nonCredits.length - 1].id : undefined;
 
 		if (isCinematicOnly) {
-			const label = chapter.id === firstNonCreditsId ? 'Prólogo' : chapter.id === lastNonCreditsId ? 'Epílogo' : 'Interludio';
-			return `${label}: ${chapter.name}`;
+			const lbl = chapter.id === firstNonCreditsId ? 'Prólogo' : chapter.id === lastNonCreditsId ? 'Epílogo' : 'Interludio';
+			return { label: lbl, title: chapter.name || '' };
 		}
 
 		let cap = 0;
@@ -572,14 +625,14 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 
 			if (ch.id === chapter.id) {
 				if (chIsCinematicOnly) {
-					const label = ch.id === firstNonCreditsId ? 'Prólogo' : ch.id === lastNonCreditsId ? 'Epílogo' : 'Interludio';
-					return `${label}: ${chapter.name}`;
+					const lbl = ch.id === firstNonCreditsId ? 'Prólogo' : ch.id === lastNonCreditsId ? 'Epílogo' : 'Interludio';
+					return { label: lbl, title: chapter.name || '' };
 				}
-				return `Capítulo ${cap}: ${chapter.name}`;
+				return { label: `Capítulo ${cap}`, title: chapter.name || '' };
 			}
 		}
 
-		return `${chapter.name}`;
+		return { label: 'Capítulo', title: chapter.name || '' };
 	}, [chapter, chaptersInCampaign, eventCountsByChapterId, eventCountsLoaded, isCreditsChapter]);
 
 	useEffect(() => {
@@ -726,8 +779,8 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 		return out;
 	}, [chapterFactions, mobaGroupOrder]);
 
-	const mobaKey = useCallback((eventId: number, team: 'A' | 'B', groupName: string) => {
-		return `${eventId}:${team}:${normalizeGroupName(groupName)}`;
+	const mobaKey = useCallback((eventId: number, teamIndex: number, groupName: string) => {
+		return `${eventId}:team${teamIndex}:${normalizeGroupName(groupName)}`;
 	}, []);
 
 	const persistChapterFactions = useCallback(
@@ -758,6 +811,28 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 			setMechanics([]);
 		});
 	}, []);
+
+	useEffect(() => {
+		getCharacters().then((list) => setCharacters(list ?? [])).catch((e) => {
+			console.error('Error cargando personajes', e);
+			setCharacters([]);
+		});
+	}, []);
+
+	const charactersById = useMemo(() => {
+		const map: Record<number, CharacterItem> = {};
+		for (const c of characters || []) map[c.id] = c;
+		return map;
+	}, [characters]);
+
+	const charactersByNameLower = useMemo(() => {
+		const map: Record<string, CharacterItem> = {};
+		for (const c of characters || []) {
+			const k = String(c.name || '').trim().toLowerCase();
+			if (k) map[k] = c;
+		}
+		return map;
+	}, [characters]);
 
 	const refresh = useCallback(async () => {
 		const list = await getEvents({ chapterId });
@@ -856,7 +931,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 		};
 
 		const objectiveMatches = (ev: EventItem) => {
-			if (ev.type !== 'MISSION') return false;
+			if (!isObjectiveEventType(ev.type)) return false;
 			const list = objectivesByEventId[ev.id] || [];
 			if (list.length === 0) return false;
 			return list.some((o) => {
@@ -894,13 +969,30 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 
 	return (
 		<div className={`panel panel-corners-soft block-border block-panel-border${dndEnabled ? ' dnd-noselect' : ''}`}>
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0, minWidth: 0, wordBreak: 'break-word' }}>
-					{chapterHeaderTitle}
-				</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 220px)',
+						padding: '6px 6% 8px 6%',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>{chapterHeader.label}</div>
+					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, minWidth: 0, wordBreak: 'break-word' }}>{chapterHeader.title}</div>
+				</div>
 				<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
 					<button
 						className="icon option"
@@ -972,7 +1064,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 													onClick={() => setGroupNameModal({ mode: 'add' })}
 													style={{ padding: '2px 8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
 												>
-													<FaUsers size={14} />
+													<FaUser size={14} />
 												</button>
 												<button
 													className="icon option"
@@ -1248,7 +1340,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 													aria-label="Nuevo recurso"
 													onClick={() => setShowCreateResourceModal(true)}
 												>
-													<FaBoxOpen size={14} />
+													<FaMountain size={14} />
 												</button>
 											</div>
 										</div>
@@ -1273,27 +1365,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 																borderRadius: 8,
 															}}
 														>
-															<div
-																className="metallic-border metallic-border-square"
-																style={{
-																	width: 64,
-																	height: 64,
-																	minWidth: 64,
-																	display: 'flex',
-																	alignItems: 'stretch',
-																	justifyContent: 'stretch',
-																	backgroundImage: 'none',
-																}}
-															>
-																{r.icon ? (
-																	<img
-																		src={imageUrl(r.icon) ?? undefined}
-																		alt=""
-																		aria-hidden="true"
-																		style={{ width: 64, height: 64, objectFit: 'cover', display: 'block' }}
-																	/>
-																) : null}
-															</div>
+															<CpImage src={imageUrl(r.icon) ?? undefined} width={64} height={64} fit="cover" />
 															<div style={{ minWidth: 0, flex: '1 1 auto' }}>
 																<div style={{ fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</div>
 																{r.resourceType?.name ? <div style={{ fontSize: 12, opacity: 0.85 }}>{r.resourceType.name}</div> : null}
@@ -1335,11 +1407,9 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 
 						{chapter.image ? (
 							<div style={{ flex: '0 0 auto' }}>
-								<img
-									src={imageUrl(chapter.image) ?? undefined}
-									alt={chapter.name}
-									style={{ width: 800, height: 600, maxWidth: '100%', objectFit: 'cover', borderRadius: 10 }}
-								/>
+								<div style={{ width: 800, height: 600, maxWidth: '100%', borderRadius: 10, overflow: 'hidden' }}>
+									<CpImageFill src={imageUrl(chapter.image) ?? undefined} alt={chapter.name} fit="cover" />
+								</div>
 							</div>
 						) : null}
 					</div>
@@ -1374,7 +1444,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 			<GroupNameModal
 				open={Boolean(groupNameModal)}
 				title={groupNameModal?.mode === 'rename' ? 'Renombrar grupo' : 'Añadir grupo'}
-				confirmText={groupNameModal?.mode === 'rename' ? 'Renombrar' : 'Crear'}
+				confirmText="Confirmar"
 				initialValue={groupNameModal?.mode === 'rename' ? groupNameModal?.from ?? '' : ''}
 				onCancel={() => setGroupNameModal(null)}
 				onConfirm={async (name) => {
@@ -1456,7 +1526,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 						}}
 						style={{ opacity: isFilteringActive ? 0.5 : 1 }}
 					>
-						{eventsDndEnabled ? <FaLockOpen size={18} color="#FFD700" /> : <FaLock size={18} color="#FFD700" />}
+						{/* lock icon removed */}
 					</button>
 				</div>
 			</div>
@@ -1509,7 +1579,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 										}
 
 										const toEvent = events.find((e) => e.id === toEventId);
-										if (!toEvent || toEvent.type !== 'MISSION') return;
+										if (!toEvent || !isObjectiveEventType(toEvent.type)) return;
 
 										const fromList = (objectivesByEventId[fromEventId] || [])
 											.slice()
@@ -1615,20 +1685,68 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 											const showMapWarning = !String(mapName || '').trim();
 											const mapWarningText = 'Este evento no tiene mapa asociado.';
 
+												const isEvent = ev.type === 'EVENT';
 												const isMission = ev.type === 'MISSION';
+												const isSecondaryMission = ev.type === 'SECONDARY_MISSION';
+												const isDailyMission = ev.type === 'DAILY_MISSION';
+												const isWeeklyMission = ev.type === 'WEEKLY_MISSION';
+												const isObjectiveType = isObjectiveEventType(ev.type);
 												const isMoba = ev.type === 'MOBA';
-												const isMissionLike = isMission || isMoba;
-												const icon = isMission ? (
-													<FaExclamation size={16} color="#FFD700" />
-												) : isMoba ? (
-													<FaUsers size={16} color="#FFD700" />
-												) : (
-													<FaFilm size={16} color="#FFD700" />
-												);
+												   const isMissionLike = isObjectiveType || isMoba;
+												   const dailyBlue = '#1E90FF';
+												   const gold = '#FFD700';
+												   const EventTypeIcon: React.FC<{ type: string }> = ({ type }) => {
+													 switch (type) {
+														 case 'SECONDARY_MISSION':
+															 return <FaExclamation color="#FFFFFF" />;
+														 case 'EVENT':
+															 return <FaFlag size={16} color={gold} />;
+														 case 'DAILY_MISSION':
+															 return <FaExclamation color={dailyBlue} />;
+														 case 'WEEKLY_MISSION':
+															 return (
+																 <span
+																		 style={{
+																			 display: 'inline-flex',
+																			 alignItems: 'center',
+																			 justifyContent: 'center',
+																			 border: `1px solid ${dailyBlue}`,
+																			 borderRadius: 999,
+																			 width: 22,
+																			 height: 22,
+																			 marginLeft: -3,
+																			 marginRight: -3,
+																		 }}
+																 >
+																	 <FaExclamation size={14} color={dailyBlue} />
+																 </span>
+															 );
+														 case 'MISSION':
+															 return <FaExclamation color={gold} />;
+														 case 'MOBA':
+															 return <FaUser />;
+														 default:
+															 return <FaFilm color={gold} />;
+													 }
+												   };
 												const showDifficultyText = isMissionLike && (ev.difficulty === 'NORMAL' || ev.difficulty === 'HARD');
 											const difficultyText = showDifficultyText ? toLabelDifficulty(String(ev.difficulty)) : '';
 											const showDescriptionWarning = !String(ev.description ?? '').trim();
 											const descriptionWarningText = 'Este evento no tiene descripción.';
+															const dialogueLinesRaw = (ev as any)?.dialogue?.lines;
+															const dialogueLines: any[] = Array.isArray(dialogueLinesRaw) ? dialogueLinesRaw : [];
+															const dialogueCount = dialogueLines.length;
+															const dialogueKeys = Array.isArray(dialogueKeysByEventId[ev.id]) ? dialogueKeysByEventId[ev.id] : [];
+															const dialogueIds = dialogueLines.map((_, idx) => dialogueKeys[idx] || `dlg:${ev.id}:${idx}`);
+														const expanded = expandedEventIds.has(ev.id);
+														const toggleExpanded = () => {
+															setExpandedEventIds((prevSet) => {
+																const nextSet = new Set(prevSet);
+																if (nextSet.has(ev.id)) nextSet.delete(ev.id);
+																else nextSet.add(ev.id);
+																return nextSet;
+															});
+														};
 
 											const objectivesForEvent = (objectivesByEventId[ev.id] || [])
 												.slice()
@@ -1641,14 +1759,48 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 												<div className="block-border block-border-soft event-card" style={{ padding: 12, position: 'relative' }}>
 													<div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
 														<div style={{ minWidth: 0, flex: 1 }}>
-															<div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-																<span style={{ display: 'inline-flex', alignItems: 'center' }}>{icon}</span>
+																		<div
+																			style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, cursor: 'pointer' }}
+																			onClick={toggleExpanded}
+																		>
+																<span style={{ display: 'inline-flex', alignItems: 'center' }}><EventTypeIcon type={ev.type} /></span>
 																	<div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
 																		<div style={{ fontWeight: 800, minWidth: 0, wordBreak: 'break-word' }}>{ev.name}</div>
-																		{showDifficultyText ? (
+																					{expanded && showDifficultyText ? (
 																			<span style={{ fontSize: 12, opacity: 0.9, whiteSpace: 'nowrap' }}>{difficultyText}</span>
 																		) : null}
-																		{showDescriptionWarning ? (
+																								{dialogueCount ? (
+																									<span
+																										title={`Diálogo: ${dialogueCount} línea(s)`}
+																										aria-label={`Diálogo: ${dialogueCount} línea(s)`}
+																										style={{ display: 'inline-flex', alignItems: 'center', gap: 6, opacity: 0.95, whiteSpace: 'nowrap' }}
+																										onPointerDown={(e) => e.stopPropagation()}
+																										onClick={(e) => e.stopPropagation()}
+																									>
+																										<FaComment title="comment" />
+																										<span style={{ fontSize: 12, opacity: 0.9 }}>{dialogueCount}</span>
+																									</span>
+																								) : null}
+																								{/* Mission-level warning when there are no objectives */}
+																								{isMissionLike && objectivesForEvent.length === 0 ? (
+																									(() => {
+																										const missionWarningText = 'Esta misión no tiene objetivos.';
+																										return (
+																											<span
+																												className="saga-warning"
+																												title={missionWarningText}
+																												aria-label={missionWarningText}
+																												data-tooltip={missionWarningText}
+																												style={{ marginLeft: 6 }}
+																												onPointerDown={(e) => e.stopPropagation()}
+																												onClick={(e) => e.stopPropagation()}
+																											>
+																												<FaExclamation title="warning" />
+																											</span>
+																										);
+																									})()
+																								) : null}
+																					{expanded && showDescriptionWarning ? (
 																			<span
 																				className="saga-warning"
 																				title={descriptionWarningText}
@@ -1656,138 +1808,369 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 																				onPointerDown={(e) => e.stopPropagation()}
 																				onClick={(e) => e.stopPropagation()}
 																			>
-																				<FaExclamationTriangle size={16} />
+																				   <FaExclamation title="warning" />
 																			</span>
 																		) : null}
 																	</div>
 																</div>
 
-																{ev.description ? <div style={{ opacity: 0.9, marginTop: 6 }}>{ev.description}</div> : null}
+																						{expanded ? (
+																			<>
+																				{ev.description ? <div style={{ opacity: 0.9, marginTop: 6 }}>{ev.description}</div> : null}
 																{url ? (
 																	<div style={{ marginTop: 6, fontSize: 13, display: 'flex', alignItems: 'center', gap: 8 }}>
 																		<a href={url} target="_blank" rel="noopener noreferrer">{ev.file}</a>
 																	</div>
 																) : null}
 
-																{isMoba ? (
-																	<div
-																		style={{ marginTop: 10 }}
-																		onPointerDown={(e) => {
-																			e.stopPropagation();
-																		}}
-																	>
-																		<div style={{ fontWeight: 800, opacity: 0.95 }}>MOBA</div>
-																		{!chapterFactionsLoaded ? (
-																			<div style={{ marginTop: 6, opacity: 0.85, fontSize: 13 }}>Cargando facciones del capítulo...</div>
-																		) : (chapterFactions || []).length === 0 ? (
-																			<div style={{ marginTop: 6, opacity: 0.85, fontSize: 13 }}>Este capítulo no tiene facciones añadidas.</div>
-																		) : (
-																			(() => {
-																				const teamAIds = Array.isArray((ev as any)?.moba?.teamAIds) ? (ev as any).moba.teamAIds : [];
-																				const teamBIds = Array.isArray((ev as any)?.moba?.teamBIds) ? (ev as any).moba.teamBIds : [];
-																				const uniq = (arr: any[]) => Array.from(new Set((arr || []).map((x) => Number(x)).filter((n) => Number.isFinite(n) && n > 0)));
-																				const aIds = uniq(teamAIds);
-																				const bIds = uniq(teamBIds);
-																				const patchMoba = async (nextA: number[], nextB: number[]) => {
-																					const updated = await updateEvent(ev.id, { moba: { teamAIds: nextA, teamBIds: nextB } });
-																					setEvents((prev) => (prev || []).map((x) => (x.id === updated.id ? updated : x)));
-																				};
+																										{dialogueCount ? (
+																											<div style={{ marginTop: 10, opacity: 0.95 }}>
+																												{dndEnabled ? (
+																													<DndContext
+																														sensors={sensors}
+																														collisionDetection={closestCenter}
+																														onDragEnd={async ({ active, over }) => {
+																															if (!dndEnabled) return;
+																															if (!over) return;
+																															if (active.id === over.id) return;
+																															const oldIndex = dialogueIds.indexOf(String(active.id));
+																															const newIndex = dialogueIds.indexOf(String(over.id));
+																															if (oldIndex < 0 || newIndex < 0) return;
+																															const nextIds = arrayMove(dialogueIds, oldIndex, newIndex);
+																															const nextLines = arrayMove(dialogueLines, oldIndex, newIndex);
+																															try {
+																																	setDialogueKeysByEventId((prev) => ({ ...prev, [ev.id]: nextIds }));
+																																	const updated = await updateEvent(ev.id, { dialogue: nextLines.length ? { lines: nextLines } : null });
+																																	setEvents((prev) => (prev || []).map((x) => (x.id === updated.id ? updated : x)));
+																															} catch {
+																																	// keep local order on error
+																															}
+																													}}
+																													>
+																														<SortableContext items={dialogueIds} strategy={verticalListSortingStrategy}>
+																															<div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+																																{dialogueLines.map((l: any, idx: number) => {
+																																	const id = dialogueIds[idx];
+																																	const speaker = String(l?.speaker ?? '').trim();
+																																	const text = String(l?.text ?? '').trim();
+																																	const speakerId = Number(speaker);
+																																	const speakerCharacter = Number.isFinite(speakerId)
+																																		? charactersById[speakerId]
+																																		: charactersByNameLower[speaker.toLowerCase()];
+																																	const speakerName = speakerCharacter?.name || (speaker ? speaker : 'Sin speaker');
+																																	const row = (
+																																		<div className="dialogue-line-row dialogue-line-card">
+																																			<div className="dialogue-speaker-icon dialogue-speaker-icon-frame">
+																																				<CpImage rawSrc={speakerCharacter?.icon} width={90} height={90} showFrame={false} />
+																																			</div>
+																																			<div style={{ flex: 1, minWidth: 0 }}>
+																																				<div style={{ fontWeight: 800, fontSize: 13, opacity: 0.95, wordBreak: 'break-word' }}>{speakerName}</div>
+																																				<div style={{ fontSize: 13, whiteSpace: 'pre-wrap', opacity: 0.92, wordBreak: 'break-word' }}>{text}</div>
+																																			</div>
+																																			<div className="dialogue-line-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+																																				<button
+																																					className="icon option"
+																																					type="button"
+																																					title="Editar línea"
+																																					onPointerDown={(e) => e.stopPropagation()}
+																																					onClick={(e) => {
+																																						e.stopPropagation();
+																																						setDialogueEvent(ev);
+																																						setDialogueModalMode('edit');
+																																						setDialogueEditIndex(idx);
+																																						setDialogueInitialLine({ speaker: l?.speaker, text: l?.text });
+																																						setDialogueModalOpen(true);
+																																					}}
+																																				>
+																																					<FaEdit size={14} />
+																																				</button>
+																																				<button
+																																					className="icon option"
+																																					type="button"
+																																					title="Eliminar línea"
+																																					onPointerDown={(e) => e.stopPropagation()}
+																																					onClick={(e) => {
+																																					e.stopPropagation();
+																																				setPendingDialogueLineDelete({ eventId: ev.id, index: idx });
+																																				setConfirmDialogueLineOpen(true);
+																																			}}
+																																				>
+																																					<FaTrash size={14} />
+																																				</button>
+																																			</div>
+																																		</div>
+																																	);
+																																	return (
+																																	<SortableDialogueLineRow key={id} id={id} enabled={true}>
+																																		{row}
+																																	</SortableDialogueLineRow>
+																																);
+																													})}
+																														</div>
+																													</SortableContext>
+																												</DndContext>
+																											) : (
+																													<div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+																														{dialogueLines.map((l: any, idx: number) => {
+																															const id = dialogueIds[idx];
+																														const speaker = String(l?.speaker ?? '').trim();
+																															const text = String(l?.text ?? '').trim();
+																														const speakerId = Number(speaker);
+																														const speakerCharacter = Number.isFinite(speakerId)
+																															? charactersById[speakerId]
+																															: charactersByNameLower[speaker.toLowerCase()];
+																														const speakerName = speakerCharacter?.name || (speaker ? speaker : 'Sin speaker');
+																															return (
+																																<div key={id} className="dialogue-line-row dialogue-line-card">
+																																	<div className="dialogue-speaker-icon dialogue-speaker-icon-frame">
+																																		<CpImage rawSrc={speakerCharacter?.icon} width={90} height={90} showFrame={false} />
+																																	</div>
+																																<div style={{ flex: 1, minWidth: 0 }}>
+																																	<div style={{ fontWeight: 800, fontSize: 13, opacity: 0.95, wordBreak: 'break-word' }}>{speakerName}</div>
+																																	<div style={{ fontSize: 13, whiteSpace: 'pre-wrap', opacity: 0.92, wordBreak: 'break-word' }}>{text}</div>
+																																</div>
+																																	<div className="dialogue-line-actions" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+																																		<button
+																																			className="icon option"
+																																			type="button"
+																																			title="Editar línea"
+																																			onPointerDown={(e) => e.stopPropagation()}
+																																			onClick={(e) => {
+																																			e.stopPropagation();
+																																			setDialogueEvent(ev);
+																																			setDialogueModalMode('edit');
+																																			setDialogueEditIndex(idx);
+																																			setDialogueInitialLine({ speaker: l?.speaker, text: l?.text });
+																																			setDialogueModalOpen(true);
+																																		}}
+																																		>
+																																			<FaEdit size={14} />
+																																		</button>
+																																		<button
+																																			className="icon option"
+																																			type="button"
+																																			title="Eliminar línea"
+																																			onPointerDown={(e) => e.stopPropagation()}
+																																				onClick={(e) => {
+																																				e.stopPropagation();
+																																				setPendingDialogueLineDelete({ eventId: ev.id, index: idx });
+																																				setConfirmDialogueLineOpen(true);
+																																			}}
+																																		>
+																																			<FaTrash size={14} />
+																																		</button>
+																																	</div>
+																																</div>
+																															);
+																													})}
+																												</div>
+																											)}
+																										</div>
+																									) : null}
 
-																				const renderTeam = (team: 'A' | 'B', title: string, ids: number[]) => {
+																		{isMoba ? (
+																			<div
+																				style={{ marginTop: 10 }}
+																				onPointerDown={(e) => {
+																					e.stopPropagation();
+																				}}
+																			>
+																			<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+																				<div style={{ fontWeight: 800, opacity: 0.95 }}>MOBA</div>
+																				<button
+																					className="icon option"
+																					title="Añadir equipo"
+																					type="button"
+																					onClick={async () => {
+																						const moba = (ev as any)?.moba;
+																						const uniq = (arr: any[]) => Array.from(new Set((arr || []).map((x) => Number(x)).filter((n) => Number.isFinite(n) && n > 0)));
+																						const legacyA = uniq(Array.isArray(moba?.teamAIds) ? moba.teamAIds : []);
+																						const legacyB = uniq(Array.isArray(moba?.teamBIds) ? moba.teamBIds : []);
+																						const fromTeams = Array.isArray(moba?.teams)
+																							? (moba.teams as any[]).map((t) => ({
+																									name: String(t?.name ?? ''),
+																									factionIds: uniq(Array.isArray(t?.factionIds) ? t.factionIds : []),
+																							}))
+																							: (legacyA.length || legacyB.length
+																								? [
+																										{ name: 'Equipo A', factionIds: legacyA },
+																										{ name: 'Equipo B', factionIds: legacyB },
+																								]
+																								: [{ name: 'Equipo 1', factionIds: [] }, { name: 'Equipo 2', factionIds: [] }]);
+																							const nextTeams = [...fromTeams, { name: `Equipo ${fromTeams.length + 1}`, factionIds: [] }];
+																							const updated = await updateEvent(ev.id, { moba: { teams: nextTeams } });
+																							setEvents((prev) => (prev || []).map((x) => (x.id === updated.id ? updated : x)));
+																					}}
+																				>
+																					<FaPlus size={12} />
+																				</button>
+																			</div>
+																			{!chapterFactionsLoaded ? (
+																				<div style={{ marginTop: 6, opacity: 0.85, fontSize: 13 }}>Cargando facciones del capítulo...</div>
+																			) : (chapterFactions || []).length === 0 ? (
+																				<div style={{ marginTop: 6, opacity: 0.85, fontSize: 13 }}>Este capítulo no tiene facciones añadidas.</div>
+																			) : (
+																				(() => {
+																					const moba = (ev as any)?.moba;
+																					const uniq = (arr: any[]) => Array.from(new Set((arr || []).map((x) => Number(x)).filter((n) => Number.isFinite(n) && n > 0)));
+																					const legacyA = uniq(Array.isArray(moba?.teamAIds) ? moba.teamAIds : []);
+																					const legacyB = uniq(Array.isArray(moba?.teamBIds) ? moba.teamBIds : []);
+																					const teams = Array.isArray(moba?.teams)
+																						? (moba.teams as any[]).map((t) => ({
+																									name: String(t?.name ?? ''),
+																									factionIds: uniq(Array.isArray(t?.factionIds) ? t.factionIds : []),
+																							}))
+																						: (legacyA.length || legacyB.length
+																								? [
+																										{ name: 'Equipo A', factionIds: legacyA },
+																										{ name: 'Equipo B', factionIds: legacyB },
+																								]
+																								: [{ name: 'Equipo 1', factionIds: [] }, { name: 'Equipo 2', factionIds: [] }]);
+
+																					const patchTeams = async (nextTeams: Array<{ name: string; factionIds: number[] }>) => {
+																						const updated = await updateEvent(ev.id, { moba: { teams: nextTeams } });
+																						setEvents((prev) => (prev || []).map((x) => (x.id === updated.id ? updated : x)));
+																					};
+
+																					const usedByTeamIndex: Array<Set<number>> = teams.map((t) => new Set<number>(t.factionIds || []));
+
 																					return (
-																						<div className="block-border block-border-soft" style={{ padding: 10 }}>
-																							<div style={{ fontWeight: 800, marginBottom: 8 }}>{title}</div>
-																							{(mobaGroupOrder || []).map((groupName) => {
-																								const g = normalizeGroupName(groupName);
-																								const availableLinks = chapterFactionLinksByGroup[g] || [];
-																								const selectedInGroup = ids
-																									.filter((fid) => chapterFactionGroupByFactionId.get(fid) === g)
-																									.map((fid) => ({
-																										id: fid,
-																											name: factionsById[fid]?.name || `#${fid}`,
-																										}));
-																								const key = mobaKey(ev.id, team, g);
-																								const selectedToAdd = mobaFactionToAddByKey[key] ?? '';
-																								const availableOptions = availableLinks
-																									.map((l) => l.factionId)
-																									.filter((fid) => !ids.includes(fid));
+																						<div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+																							{teams.map((team, teamIndex) => {
+																								const teamNameKey = `${ev.id}:teamname:${teamIndex}`;
+																								const draftName = mobaTeamNameDraftByKey[teamNameKey];
+																								const teamNameValue = typeof draftName === 'string' ? draftName : String(team.name ?? '');
+																								const otherUsed = new Set<number>();
+																								for (let i = 0; i < usedByTeamIndex.length; i++) {
+																										if (i === teamIndex) continue;
+																										for (const fid of usedByTeamIndex[i]) otherUsed.add(fid);
+																								}
 
 																								return (
-																								<div key={g} style={{ marginTop: 10 }}>
-																										<div style={{ fontWeight: 800, opacity: 0.95 }}>{g}</div>
-																										{selectedInGroup.length === 0 ? (
-																											<div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>-</div>
-																										) : (
-																											<div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
-																												{selectedInGroup.map((sf) => (
-																													<div key={sf.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
-																														<span style={{ wordBreak: 'break-word' }}>{sf.name}</span>
-																														<button
-																														className="icon option"
-																															title="Quitar"
-																															onClick={() => {
-																																	const nextIds = ids.filter((x) => x !== sf.id);
-																																	if (team === 'A') patchMoba(nextIds, bIds);
-																																	else patchMoba(aIds, nextIds);
-																																}}
-																														>
-																															<FaTrash size={12} />
-																														</button>
-																													</div>
-																												))}
-																											</div>
-																										) }
-
-																										<div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
-																											<select
-																												value={selectedToAdd}
+																									<div key={teamIndex} className="block-border block-border-soft" style={{ padding: 10 }}>
+																										<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+																											<input
+																											value={teamNameValue}
 																												onChange={(e) => {
-																													const v = e.target.value ? Number(e.target.value) : '';
-																													setMobaFactionToAddByKey((prev) => ({ ...prev, [key]: v }));
+																													setMobaTeamNameDraftByKey((prev) => ({ ...prev, [teamNameKey]: e.target.value }));
+																												}}
+																												onBlur={() => {
+																													const desired = String(mobaTeamNameDraftByKey[teamNameKey] ?? team.name ?? '').trim();
+																													const nextName = desired || `Equipo ${teamIndex + 1}`;
+																													setMobaTeamNameDraftByKey((prev) => {
+																														const next = { ...prev };
+																														delete next[teamNameKey];
+																														return next;
+																													});
+																													if (nextName !== String(team.name ?? '')) {
+																														const nextTeams = teams.map((t, i) => (i === teamIndex ? { ...t, name: nextName } : t));
+																														patchTeams(nextTeams);
+																													}
 																												}}
 																												style={{ flex: 1 }}
-																											>
-																												<option value="">Seleccionar...</option>
-																												{availableOptions.map((fid) => (
-																													<option key={fid} value={fid}>{factionsById[fid]?.name || `#${fid}`}</option>
-																												))}
-																											</select>
+																												title="Nombre del equipo"
+																											/>
 																											<button
 																												className="icon option"
-																												title="Añadir"
-																												disabled={!selectedToAdd}
+																												title="Eliminar equipo"
+																												type="button"
 																												onClick={() => {
-																													const fid = Number(selectedToAdd);
-																													if (!Number.isFinite(fid) || fid <= 0) return;
-																													const nextIds = Array.from(new Set([...ids, fid]));
-																													setMobaFactionToAddByKey((prev) => ({ ...prev, [key]: '' }));
-																													if (team === 'A') patchMoba(nextIds, bIds);
-																													else patchMoba(aIds, nextIds);
+																													const nextTeams = teams.filter((_, i) => i !== teamIndex);
+																													patchTeams(nextTeams);
 																												}}
 																											>
-																												<FaPlus size={12} />
+																												<FaTrash size={12} />
 																											</button>
 																										</div>
-																									</div>
-																								);
-																							})}
+
+																										{(mobaGroupOrder || []).map((groupName) => {
+																											const g = normalizeGroupName(groupName);
+																											const availableLinks = chapterFactionLinksByGroup[g] || [];
+																											const ids = team.factionIds || [];
+																											const selectedInGroup = ids
+																												.filter((fid) => chapterFactionGroupByFactionId.get(fid) === g)
+																												.map((fid) => ({ id: fid, name: factionsById[fid]?.name || `#${fid}` }));
+																											const key = mobaKey(ev.id, teamIndex, g);
+																											const selectedToAdd = mobaFactionToAddByKey[key] ?? '';
+																											const availableOptions = availableLinks
+																												.map((l) => l.factionId)
+																												.filter((fid) => !ids.includes(fid) && !otherUsed.has(fid));
+
+																											return (
+																												<div key={g} style={{ marginTop: 10 }}>
+																													<div style={{ fontWeight: 800, opacity: 0.95 }}>{g}</div>
+																													{selectedInGroup.length === 0 ? (
+																														<div style={{ opacity: 0.8, fontSize: 13, marginTop: 4 }}>-</div>
+																													) : (
+																														<div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 6 }}>
+																															{selectedInGroup.map((sf) => (
+																																<div key={sf.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+																																		<span style={{ wordBreak: 'break-word' }}>{sf.name}</span>
+																																		<button
+																																			className="icon option"
+																																			title="Quitar"
+																																			type="button"
+																																			onClick={() => {
+																																				const nextTeams = teams.map((t, i) =>
+																																					i === teamIndex ? { ...t, factionIds: (t.factionIds || []).filter((x) => x !== sf.id) } : t,
+																																				);
+																																				patchTeams(nextTeams);
+																																			}}
+																																			>
+																																				<FaTrash size={12} />
+																																			</button>
+																																		</div>
+																																))}
+																															</div>
+																																									)}
+
+																												<div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+																													<select
+																																value={selectedToAdd}
+																																onChange={(e) => {
+																																	const v = e.target.value ? Number(e.target.value) : '';
+																																	setMobaFactionToAddByKey((prev) => ({ ...prev, [key]: v }));
+																																}}
+																																style={{ flex: 1 }}
+																																>
+																																<option value="">Seleccionar...</option>
+																																{availableOptions.map((fid) => (
+																																	<option key={fid} value={fid}>{factionsById[fid]?.name || `#${fid}`}</option>
+																																))}
+																															</select>
+																																<button
+																																			className="icon option"
+																																			title="Añadir"
+																																			type="button"
+																																			disabled={!selectedToAdd}
+																																			onClick={() => {
+																																				const fid = Number(selectedToAdd);
+																																				if (!Number.isFinite(fid) || fid <= 0) return;
+																																				setMobaFactionToAddByKey((prev) => ({ ...prev, [key]: '' }));
+																																				const nextTeams = teams.map((t, i) => {
+																																					if (i !== teamIndex) return t;
+																																					return { ...t, factionIds: Array.from(new Set([...(t.factionIds || []), fid])) };
+																																				});
+																																				patchTeams(nextTeams);
+																																			}}
+																																			>
+																																				<FaPlus size={12} />
+																																			</button>
+																															</div>
+																																										</div>
+																																									);
+																																									})}
+																										</div>
+																									);
+																								})}
 																						</div>
 																					);
-																				};
+																				})()
+																				) }
+																		</div>
+																) : null}
 
-																				return (
-																					<div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 10, alignItems: 'start' }}>
-																						{renderTeam('A', 'Equipo A', aIds)}
-																						<div style={{ fontWeight: 900, opacity: 0.95, paddingTop: 8, textAlign: 'center' }}>V.S</div>
-																						{renderTeam('B', 'Equipo B', bIds)}
-																					</div>
-																				);
-																			})()
-																	) }
-																</div>
-															) : null}
-
-																{isMission ? (
+																	{isObjectiveType ? (
 																	<div style={{ marginTop: 10 }}>
 																		<div style={{ fontWeight: 800, opacity: 0.95 }}>Objetivos</div>
 																		<ObjectiveListDropZone eventId={ev.id} enabled={dndEnabled}>
@@ -1827,28 +2210,25 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 																												{showObjectiveDifficultyText ? (
 																													<span style={{ fontSize: 12, opacity: 0.9, whiteSpace: 'nowrap' }}>{objectiveDifficultyText}</span>
 																												) : null}
-																												{showObjectiveDescriptionWarning ? (
+																												{(() => {
+																													const objectiveWarnings: string[] = [];
+																													if (showObjectiveDescriptionWarning) objectiveWarnings.push(objectiveDescWarningText);
+																													if (showObjectiveDetailedWarning) objectiveWarnings.push(objectiveDetailedWarningText);
+																													if (objectiveWarnings.length === 0) return null;
+																													const tooltip = objectiveWarnings.join('\n');
+																													return (
 																													<span
 																														className="saga-warning"
-																															title={objectiveDescWarningText}
-																															aria-label={objectiveDescWarningText}
-																															onPointerDown={(e) => e.stopPropagation()}
-																															onClick={(e) => e.stopPropagation()}
-																														>
-																															<FaExclamationTriangle size={16} />
-																														</span>
-																													) : null}
-																												{showObjectiveDetailedWarning ? (
-																													<span
-																														className="saga-warning"
-																														title={objectiveDetailedWarningText}
-																														aria-label={objectiveDetailedWarningText}
+																														title={tooltip}
+																														aria-label={tooltip}
+																														data-tooltip={tooltip}
 																														onPointerDown={(e) => e.stopPropagation()}
 																														onClick={(e) => e.stopPropagation()}
 																													>
-																														<FaExclamationTriangle size={16} />
+																														<FaExclamation title="warning" />
 																													</span>
-																													) : null}
+																												);
+																												})()}
 																											</div>
 																											<div
 																												className="objective-actions"
@@ -1865,10 +2245,10 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 																														setObjectiveEventId(ev.id);
 																														setObjectiveInitial(o);
 																														setObjectiveModalOpen(true);
-																												}}
-																											>
-																												<FaEdit size={14} />
-																											</button>
+																													}}
+																												>
+																													<FaEdit size={14} />
+																												</button>
 																											<button
 																												className="icon option"
 																												title="Eliminar"
@@ -1878,7 +2258,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 																													e.stopPropagation();
 																													setPendingDeleteObjective(o);
 																													setConfirmObjectiveOpen(true);
-																											}}
+																												}}
 																											>
 																												<FaTrash size={14} />
 																											</button>
@@ -1886,7 +2266,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 																									</div>
 
 																							{expandedObjectiveId === o.id ? (
-																										<div style={{ marginTop: 6, opacity: 0.92, fontSize: 13 }}>
+																								<div style={{ marginTop: 6, opacity: 0.92, fontSize: 13 }}>
 																											{o.description ? <div style={{ whiteSpace: 'pre-wrap' }}>{o.description}</div> : null}
 																											{o.detailedDescription ? (
 																												<div style={{ marginTop: o.description ? 6 : 0, whiteSpace: 'pre-wrap', opacity: 0.95 }}>{o.detailedDescription}</div>
@@ -1910,11 +2290,14 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 																	</ObjectiveListDropZone>
 																</div>
 															) : null}
+																</>
+															) : null}
 														</div>
 
 														<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 }}>
+															{/* Always render action buttons so they're visible when collapsed or expanded */}
 															<div className="event-actions" style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }} onPointerDown={(e) => e.stopPropagation()}>
-																{isMission ? (
+																		{isObjectiveType ? (
 																		<button
 																			className="icon option"
 																			title="Nuevo Objetivo"
@@ -1929,6 +2312,21 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 																			<FaPlus size={14} />
 																		</button>
 																	) : null}
+																	<button
+																		className="icon option"
+																		title="Diálogo"
+																		type="button"
+																		onPointerDown={(e) => e.stopPropagation()}
+																		onClick={() => {
+																				setDialogueModalMode('add');
+																				setDialogueEditIndex(null);
+																				setDialogueInitialLine(null);
+																			setDialogueEvent(ev);
+																			setDialogueModalOpen(true);
+																		}}
+																	>
+																		<FaComment size={14} />
+																	</button>
 																	<button
 																		className="icon option"
 																		title="Editar"
@@ -1960,31 +2358,33 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 																	) : null}
 																</div>
 
-															{showMapWarning ? (
-																<div style={{ minWidth: 120, textAlign: 'right' }}>
-																	<span
-																		className="saga-warning"
-																		title={mapWarningText}
-																		aria-label={mapWarningText}
-																		onPointerDown={(e) => e.stopPropagation()}
-																		onClick={(e) => e.stopPropagation()}
-																	>
-																		<FaExclamationTriangle size={16} />
-																	</span>
-																</div>
-															) : showMapBlock && String(mapName || '').trim() ? (
-																<div style={{ minWidth: 160, maxWidth: 260, textAlign: 'right', opacity: 0.95, wordBreak: 'break-word' }} title={mapName}>
-																	<div>{mapName}</div>
-																	{mapImageUrl ? (
-																		<img
-																			src={mapImageUrl}
-																			alt={mapName}
-																			style={{ marginTop: 6, width: 220, maxWidth: '100%', maxHeight: 140, objectFit: 'cover', borderRadius: 6 }}
-																		/>
-																	) : null}
-																</div>
-															) : null}
-														</div>
+																{expanded ? (
+																	<>
+																		{showMapWarning ? (
+																			<div style={{ minWidth: 120, textAlign: 'right' }}>
+																				<span
+																					className="saga-warning"
+																					title={mapWarningText}
+																					aria-label={mapWarningText}
+																					onPointerDown={(e) => e.stopPropagation()}
+																					onClick={(e) => e.stopPropagation()}
+																				   >
+																					   <FaExclamation title="warning" />
+																				   </span>
+																			</div>
+																		) : showMapBlock && String(mapName || '').trim() ? (
+																			<div style={{ minWidth: 160, maxWidth: 260, textAlign: 'right', opacity: 0.95, wordBreak: 'break-word' }} title={mapName}>
+																				<div>{mapName}</div>
+																				{mapImageUrl ? (
+																					<div style={{ marginTop: 6, width: 220, maxWidth: '100%', height: 140, borderRadius: 6, overflow: 'hidden' }}>
+																						<CpImageFill src={mapImageUrl} alt={mapName} fit="cover" />
+																					</div>
+																				) : null}
+																			</div>
+																		) : null}
+																	</>
+																) : null}
+															</div>
 													</div>
 												</div>
 											);
@@ -2047,6 +2447,45 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 						await refresh();
 						setModalOpen(false);
 						setInitial(undefined);
+					}}
+				/>
+			) : null}
+
+			{dialogueModalOpen && dialogueEvent ? (
+				<DialogueModal
+					open={dialogueModalOpen}
+					event={dialogueEvent}
+					characters={characters}
+					mode={dialogueModalMode}
+					initialLine={dialogueModalMode === 'edit' ? (dialogueInitialLine as any) : undefined}
+					onClose={() => {
+						setDialogueModalOpen(false);
+						setDialogueEvent(null);
+						setDialogueEditIndex(null);
+						setDialogueInitialLine(null);
+					}}
+					onSubmit={async ({ line }) => {
+						const prevRaw = (dialogueEvent as any)?.dialogue?.lines;
+						const prevLines = Array.isArray(prevRaw) ? prevRaw : [];
+						let nextLines = prevLines;
+						if (dialogueModalMode === 'edit' && dialogueEditIndex !== null && dialogueEditIndex >= 0 && dialogueEditIndex < prevLines.length) {
+							nextLines = prevLines.map((l: any, idx: number) => (idx === dialogueEditIndex ? line : l));
+						} else {
+							nextLines = [...prevLines, line];
+							setDialogueKeysByEventId((prev) => ({
+								...prev,
+								[dialogueEvent.id]: [
+									...(Array.isArray(prev[dialogueEvent.id]) ? prev[dialogueEvent.id] : []),
+									`dlg:${dialogueEvent.id}:${Date.now()}:${Math.random().toString(16).slice(2)}`,
+								],
+							}));
+						}
+						const updated = await updateEvent(dialogueEvent.id, { dialogue: nextLines.length ? { lines: nextLines } : null });
+						setEvents((prev) => (prev || []).map((x) => (x.id === updated.id ? updated : x)));
+						setDialogueModalOpen(false);
+						setDialogueEvent(null);
+						setDialogueEditIndex(null);
+						setDialogueInitialLine(null);
 					}}
 				/>
 			) : null}
@@ -2155,6 +2594,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 
 			<ConfirmModal
 				open={confirmChapterOpen}
+				requireText="eliminar"
 				message={
 					<span>
 						¿Estás seguro de que deseas eliminar este capítulo?
@@ -2171,6 +2611,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 
 			<ConfirmModal
 				open={confirmOpen}
+				requireText="eliminar"
 				message={'¿Estás seguro de que deseas eliminar este evento?'}
 				onConfirm={async () => {
 					const target = pendingDelete;
@@ -2188,6 +2629,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 
 			<ConfirmModal
 				open={confirmObjectiveOpen}
+				requireText="eliminar"
 				message={'¿Estás seguro de que deseas eliminar este objetivo?'}
 				onConfirm={async () => {
 					const target = pendingDeleteObjective;
@@ -2200,6 +2642,36 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 				onCancel={() => {
 					setConfirmObjectiveOpen(false);
 					setPendingDeleteObjective(null);
+				}}
+			/>
+
+			<ConfirmModal
+				open={confirmDialogueLineOpen}
+				requireText="eliminar"
+				message={'¿Estás seguro de que deseas eliminar esta línea de diálogo?'}
+				onConfirm={async () => {
+					const target = pendingDialogueLineDelete;
+					setConfirmDialogueLineOpen(false);
+					setPendingDialogueLineDelete(null);
+					if (!target) return;
+					const ev = (events || []).find((x) => x.id === target.eventId);
+					const prevRaw = (ev as any)?.dialogue?.lines;
+					const prevLines = Array.isArray(prevRaw) ? prevRaw : [];
+					if (!ev || target.index < 0 || target.index >= prevLines.length) return;
+					const nextLines = prevLines.filter((_: any, i: number) => i !== target.index);
+					const prevKeys = Array.isArray(dialogueKeysByEventId[target.eventId]) ? dialogueKeysByEventId[target.eventId] : [];
+					const nextKeys = prevKeys.filter((_: any, i: number) => i !== target.index);
+					try {
+						setDialogueKeysByEventId((prev) => ({ ...prev, [target.eventId]: nextKeys }));
+						const updated = await updateEvent(target.eventId, { dialogue: nextLines.length ? { lines: nextLines } : null });
+						setEvents((prev) => (prev || []).map((x) => (x.id === updated.id ? updated : x)));
+					} catch {
+						// keep state on error
+					}
+				}}
+				onCancel={() => {
+					setConfirmDialogueLineOpen(false);
+					setPendingDialogueLineDelete(null);
 				}}
 			/>
 		</div>

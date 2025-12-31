@@ -26,12 +26,7 @@
 /* CampaignCard fills the cell and keeps aspect ratio */
 /* Card fills the slot completely */
 .campaigns-responsive-cell .campaign-card {
-    width: 100% !important;
-    height: 100% !important;
-    min-width: 0;
-    min-height: 0;
-    margin: 0 !important;
-    display: flex;
+    /* left cell may contain a small crest or be empty; center column keeps the name centered */
     flex-direction: column;
 }
 
@@ -100,17 +95,25 @@
     top: 0;
     left: 0;
     right: 0;
-    padding: 14px 10px 10px 10px;
+    padding: 12px;
+    margin: 0;
+    box-sizing: border-box;
     background: linear-gradient(0deg, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.1) 100%);
     color: #fff;
-    text-align: center;
     text-shadow: 0 2px 8px #000a;
     font-weight: 700;
     font-size: 18px;
     z-index: 20;
     pointer-events: none;
+    width: 100%;
+    white-space: normal;
+    display: block;
+    overflow: visible;
+    text-overflow: unset;
+    line-height: 1.15;
+    word-break: break-word;
+    text-align: center;
 }
-
 .campaign-subtitle {
     margin-top: 4px;
     font-size: 12px;
@@ -153,12 +156,140 @@
     border-bottom-right-radius: 5px;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s;
+    transform: translateY(8px);
+    transition: opacity 0.2s, transform 0.2s;
 }
 .campaign-card:hover .campaign-desc,
 .campaign-card:focus-within .campaign-desc {
     opacity: 1 !important;
     pointer-events: auto !important;
+    transform: translateY(0) !important;
+}
+
+/* Description content clamp + toggle */
+.campaign-desc .campaign-desc-content {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: max-height 0.22s ease;
+    max-height: 4.8em; /* approx 3 lines */
+}
+.campaign-desc .campaign-desc-content.expanded {
+    display: block;
+    -webkit-line-clamp: initial;
+    line-clamp: initial;
+    max-height: 1000px;
+}
+.desc-toggle {
+    background: transparent;
+    border: none;
+    color: #ffd870;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 8px;
+    text-decoration: none;
+    pointer-events: auto;
+    box-shadow: none;
+    padding: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.desc-toggle svg {
+    filter: drop-shadow(0 4px 10px rgba(255,216,112,0.9));
+    color: #ffd870;
+}
+
+.desc-toggle:focus {
+    outline: 2px solid rgba(255,216,112,0.16);
+    outline-offset: 2px;
+}
+
+/* Footer with name that moves up on hover to reveal description */
+.faction-footer {
+    position: absolute;
+    left: 0;
+    right: 0;
+    /* start just below the card and place it visually at the bottom
+       using a translate; explicit numeric top allows smooth animation */
+    top: 100%;
+    bottom: auto;
+    z-index: 21;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+    transform: translateY(-100%);
+    transition: top 0.32s cubic-bezier(.2,.8,.2,1), transform 0.32s cubic-bezier(.2,.8,.2,1);
+}
+
+.faction-top-row{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 48px;
+    box-sizing: border-box;
+    padding: 0 12px;
+    position: relative; /* allow left-positioned crest if needed */
+}
+.faction-name {
+    font-weight: 800;
+    font-size: 16px;
+    color: #fff;
+    text-shadow: 0 2px 8px #000a;
+    text-align: center;
+    z-index: 2;    
+}
+
+/* left cell may contain a small crest or be empty; center column kept centered by symmetric side columns */
+
+/* Move the whole footer (name + swatches) up on hover so they move together */
+.campaign-card:hover .faction-footer,
+.campaign-card:focus-within .faction-footer {
+    /* move the footer (name + swatches) to the top of the card with a smooth animation */
+    top: 0;
+    bottom: auto;
+    transform: translateY(0);
+}
+/* Hero area for faction detail page */
+.faction-hero {
+    width: 100%;
+    height: 240px;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 12px;
+}
+.faction-hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0);
+    transition: background 0.2s;
+}
+.faction-hero.has-crest::after {
+    background: rgba(0,0,0,0.5);
+}
+.faction-crest-large {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 160px;
+    height: 160px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
 }
 body {
     margin: 0px;
@@ -180,14 +311,14 @@ body {
     display: flex;
     justify-content: space-between;
     margin-bottom: 16px;
-    border-bottom: 1.5px solid #e2c044;
+    /* border-bottom removed: no yellow line under titles */
 }
 
 .panel-sticky-header {
     position: sticky;
     top: 0;
     z-index: 200;
-    background: #202020;
+    background: transparent; /* removed background for menu */
     padding-top: 8px;
 }
 
@@ -246,7 +377,8 @@ body {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    padding: 10px 0 6px 0;
+    z-index: 50; /* keep below modal overlay (1000) */
+    pointer-events: auto;
 }
 
 .saga-name {
@@ -268,12 +400,204 @@ body {
     border-radius: 6px;
 }
 
-.saga-warning {
+/* Truncate single-line fields (name / class / race) on character cards and show full text on hover/focus */
+.trunc-field {
+    position: relative;
+    display: block;
+    max-width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: default;
+}
+.trunc-field:focus {
+    outline: none;
+}
+.trunc-field .trunc-full {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: calc(100% + 6px);
+    z-index: 9999;
+    pointer-events: auto;
+    background: #111; /* dark background matching UI */
+    color: #e2d9b7;
+    padding: 8px 10px;
+    border-radius: 6px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    min-width: 160px;
+    max-width: 520px;
+    white-space: normal;
+    word-break: break-word;
+    font-size: 13px;
+}
+.trunc-field:hover .trunc-full,
+.trunc-field:focus .trunc-full,
+.trunc-field:focus-within .trunc-full {
+    display: block;
+}
+
+/* Fixed tooltip (used by JS) */
+.fixed-trunc-tooltip {
+    pointer-events: auto;
+    white-space: normal;
+    word-break: break-word;
+    font-size: 13px;
+}
+
+/* Hover preview card shown when hovering a character card */
+.card-hover-preview {
+    background: linear-gradient(180deg, #151515, #0b0b0b);
+    border: 1px solid rgba(255,255,255,0.04);
+    border-radius: 8px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.8);
+    color: #e2d9b7;
+    pointer-events: auto;
+}
+
+/* Mechanic select description tooltip */
+.fixed-mechanic-tooltip {
+    position: fixed;
+    transform: translate(-50%, 6px);
+    z-index: 16000; /* ensure tooltip is above the dropdown */
+    max-width: 420px;
+    pointer-events: auto;
+    background: #111;
+    color: #e2d9b7;
+    padding: 8px 10px;
+    border-radius: 6px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+    font-size: 13px;
+    word-break: break-word;
+}
+
+/* Custom mechanic select styles */
+.mechanic-select { position: relative; z-index: 13000; }
+.mechanic-select-value { cursor: pointer; z-index:13001; position: relative; display: flex; align-items: center; }
+.mechanic-select-caret { margin-left: 8px; opacity: 0.85; font-size: 12px; color: #e2d9b7; display: inline-block; transform: translateY(1px); }
+.mechanic-select-menu { position: absolute; left: 0; right: 0; margin-top: 6px; z-index: 14000; pointer-events: auto; max-height: 240px; overflow-y: auto; box-shadow: 0 12px 48px rgba(0,0,0,0.8); }
+.mechanic-select + .icon { position: relative; z-index: 1000; }
+.mechanic-option { padding: 8px 10px; cursor: pointer; }
+
+/* Make mechanic dropdown match form controls */
+.mechanic-select-value,
+.mechanic-select-menu {
+    border: 1px solid #1f1f1f;
+    background: linear-gradient(0deg, #151515, #0b0b0b);
+    border-top: 1px solid #101010;
+    border-bottom: 1px solid #3f3f3f;
+    border-radius: 5px;
+    padding: 10px;
+    box-shadow: inset 0px 0px 10px rgba(0,0,0,0.9);
+    box-sizing: border-box;
+    width: 100%;
+}
+
+.mechanic-select-menu {
+    background: #151515;
+    border-radius: 6px;
+    padding: 6px;
+    border: 1px solid #1f1f1f;
+}
+
+.mechanic-option {
+    padding: 10px;
+}
+
+/* Match form controls font and sizing for custom mechanic dropdown */
+.mechanic-select-value,
+.mechanic-select-menu,
+.mechanic-option {
+    font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+    font-size: 1rem;
+    color: #e2d9b7;
+}
+.mechanic-option:hover { background: rgba(226,192,68,0.06); }
+.mechanic-option[aria-selected="true"] { background: rgba(226,192,68,0.12); font-weight: 700; }
+
+
+
+/* Small overlay remove button shown on image previews */
+.preview-container {
+    position: relative;
+}
+.preview-remove-btn {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: none;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #e24444;
-    cursor: help;
+    background: rgba(0,0,0,0.18);
+    color: currentColor;
+    box-shadow: -8px -8px 18px rgba(0,0,0,0.45);
+    background: rgba(0,0,0,0.64);
+    border: 1px solid rgba(255,255,255,0.06);
+    color: #fff;
+    backdrop-filter: blur(2px);
+    z-index: 9999;
+    cursor: pointer;
+}
+.preview-remove-btn:focus {
+    outline: 2px solid rgba(255,255,255,0.12);
+    outline-offset: 2px;
+}
+
+/* Variant: place the remove button at the top-right corner of the preview */
+.preview-remove-btn.top-right {
+    left: auto;
+    right: 8px;
+    box-shadow: 8px -8px 18px rgba(0,0,0,0.45);
+}
+
+/* Ensure the SVG X is visible */
+.preview-remove-btn svg,
+.preview-remove-btn svg * {
+    fill: #fff !important;
+    stroke: #fff !important;
+}
+.preview-remove-btn > svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Fallback textual X in case SVG is hidden or blended; centered and always visible */
+.preview-remove-btn::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: none;
+    border: none;
+    padding: 0 6px;
+    box-shadow: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff !important;
+    z-index: 10000;
+    font-size: 14px;
+    font-weight: 700;
+    text-shadow: 0 0 6px rgba(0,0,0,0.8) !important;
+}
+
+/* Stronger selector to override other styles inside modal contexts */
+.modal-content .preview-container .preview-remove-btn,
+.modal-content .preview-container .preview-remove-btn::after {
+    z-index: 10001 !important;
+    color: #fff !important;
+}
+
+/* Ensure images inside preview containers sit below the remove button */
+.preview-container img,
+.preview-container > img {
+    position: relative;
+    z-index: 10;
 }
 
 .saga-card {
@@ -376,6 +700,83 @@ body {
     pointer-events: auto;
 }
 
+/* Dialogue lines: show edit/delete buttons only on hover */
+.dialogue-line-actions {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+/* Dialogue lines: metallic-style card (like campaigns) */
+.dialogue-line-row.dialogue-line-card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 5px;
+    min-height: 100px;
+    background: #202020;
+    box-shadow: 0 2px 12px #0007, inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.65);
+    overflow: hidden;
+    border: 2px solid #b0b3b8;
+    border-radius: 8px;
+    background-clip: padding-box;
+}
+
+.dialogue-line-row.dialogue-line-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 0 0 3px rgba(0,0,0,0.55);
+    z-index: 1;
+}
+
+.dialogue-speaker-icon {
+    width: 90px;
+    height: 90px;
+    flex: 0 0 90px;
+    z-index: 2;
+}
+
+/* Speaker icon frame: same border style as dialogue line card */
+.dialogue-speaker-icon-frame {
+    position: relative;
+    overflow: hidden;
+    background: #202020;
+    box-shadow: 0 2px 12px #0007, inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.65);
+    border: 2px solid #b0b3b8;
+    border-radius: 8px;
+    background-clip: padding-box;
+}
+
+.dialogue-speaker-icon-frame::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 8px;
+    pointer-events: none;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 0 0 3px rgba(0,0,0,0.55);
+    z-index: 1;
+}
+
+.dialogue-speaker-icon-frame > * {
+    position: relative;
+    z-index: 2;
+}
+
+/* Ensure content and actions sit above the metallic overlay */
+.dialogue-line-row.dialogue-line-card > * {
+    z-index: 2;
+}
+
+.dialogue-line-row:hover .dialogue-line-actions,
+.dialogue-line-row:focus-within .dialogue-line-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
 /* Objectives: borderless row with left stripe */
 .objective-row {
     display: flex;
@@ -418,8 +819,14 @@ body {
 
 .mechanic-card:hover .mechanic-actions,
 .mechanic-card:focus-within .mechanic-actions {
-    opacity: 1;
-    pointer-events: auto;
+        opacity: 1;
+        pointer-events: auto;
+}
+
+/* Ensure character cards don't clip the hover tooltip */
+.mechanic-card {
+    overflow: visible;
+    z-index: 2;
 }
 
 /* Character instances: show actions only on hover */
@@ -485,6 +892,17 @@ select {
 
 select {
     cursor: pointer;
+}
+
+/* Force native selects to visually match the custom mechanic dropdown (hide native arrow, show our caret) */
+select {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='10' viewBox='0 0 24 24'><path fill='%23e2d9b7' d='M7 10l5 5 5-5z'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 36px;
 }
 
 .wc3-color-combobox {
@@ -579,6 +997,14 @@ button.icon:hover {
     filter: drop-shadow(0 0 4px #e2c044);
 }
 
+/* Make menu icons scale on hover when inside the sticky header */
+.panel-sticky-header .icon {
+    transition: transform 120ms ease, filter 150ms ease;
+}
+.panel-sticky-header .icon:hover {
+    transform: scale(1.18);
+}
+
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -631,6 +1057,29 @@ button.icon:hover {
     z-index: 30;
 }
 
+/* Custom scrollbars for modal bodies to match site style */
+.modal-body {
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(226,192,68,0.9) rgba(0,0,0,0.16);
+}
+.modal-body::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+.modal-body::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.16);
+    border-radius: 12px;
+}
+.modal-body::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ffd870, #e2c044);
+    border-radius: 12px;
+    border: 2px solid rgba(0,0,0,0.16);
+}
+.modal-body::-webkit-scrollbar-thumb:hover {
+    filter: brightness(0.95);
+}
+
 .actions {
     display: flex;
     justify-content: center;
@@ -676,10 +1125,40 @@ button.icon:hover {
     pointer-events: none;
 }
 
-.campaign-card:hover::after,
-.campaign-card:focus-within::after {
-    background: rgba(0,0,0,0.35);
+/* No hover-specific dimming: background should be dimmed whenever the card has a crest */
+
+/* When a faction has a crest, dim the background image to make the crest stand out */
+.campaign-card.has-crest::after {
+    background: rgba(0,0,0,0.5);
 }
+
+/* Centered crest overlay */
+.faction-crest-center {
+    position: absolute;
+    left: 50%;
+    top: 44%;
+    transform: translate(-50%, -50%);
+    width: 64px;
+    height: 64px;
+    z-index: 18;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.55);
+}
+
+/* If no crest, keep the crest area (in footer) positioned to the left (previous behavior) */
+.campaign-card:not(.has-crest) .faction-top-row > *:first-child {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1;
+}
+
+/* When there is a crest, reserve space on the left so the name visually centers */
+/* removed special padding for .has-crest so centering uses flex; crest is absolutely positioned */
 
 .campaign-warning {
     position: absolute;
@@ -756,16 +1235,6 @@ input[type="radio"] {
 /* Custom tooltip (portal). title -> data-tooltip conversion happens in App.tsx */
 [data-tooltip]::after {
     content: none;
-}
-
-.cp-tooltip {
-    position: fixed;
-    transform: translate(-50%, -100%) translateY(-6px);
-    background: #151515;
-    color: #e2d9b7;
-    border: 1.5px solid #e2c044;
-    border-radius: 8px;
-    padding: 8px 10px;
     font-size: 12px;
     line-height: 1.2;
     white-space: pre-wrap;
@@ -781,6 +1250,24 @@ input[type="radio"] {
     transition: opacity 0.12s, transform 0.12s;
     display: none;
 }
+.cp-tooltip {
+    position: fixed;
+    left: 0;
+    top: 0;
+    transform: translate(-50%, -100%) translateY(-10px);
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+    background: #111;
+    color: #e2d9b7;
+    padding: 8px 10px;
+    border-radius: 6px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+    font-size: 13px;
+    word-break: break-word;
+    max-width: min(420px, calc(100vw - 16px));
+    z-index: 10010; /* default high when no modal open; overridden inline when modal present */
+}
 
 .cp-tooltip.cp-tooltip--below {
     transform: translate(-50%, 0%) translateY(6px);
@@ -789,6 +1276,8 @@ input[type="radio"] {
 .cp-tooltip--visible {
     opacity: 1;
     transform: translate(-50%, -100%) translateY(-10px);
+    pointer-events: auto;
+    display: block;
 }
 
 .cp-tooltip--below.cp-tooltip--visible {
@@ -805,4 +1294,55 @@ input[type="radio"] {
     width: 0;
     height: 0;
     display: none; /* Chrome/Safari */
+}
+
+/* Color swatches for factions: top-right corner */
+
+/* Swatches row under the name */
+.faction-swatches-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    margin-bottom: -40px;
+    pointer-events: none;
+    z-index: 24;
+}
+.faction-swatches-row > span {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(0,0,0,0.35);
+    display: inline-block;
+}
+
+.faction-name-row {
+    box-sizing: border-box;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    background: rgba(0,0,0,0.48); /* dark backdrop across the card width */
+    padding: 8px 12px 12px;
+    border-radius: 0 0 8px 8px;
+    pointer-events: none;
+    z-index: 24;
+}
+
+/* Unified warning badge used across the app (saga-warning)
+   Shows a compact icon with tooltip; keep pointer-events so JS tooltip can attach. */
+.saga-warning {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #e24444;
+    cursor: help;
+    background: rgba(0,0,0,0.55);
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 13px;
+    line-height: 1;
+    z-index: 9999;
 }

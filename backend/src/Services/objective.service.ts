@@ -39,6 +39,15 @@ export class ObjectiveService {
 		return Math.trunc(n);
 	}
 
+	private isObjectiveEventType(type: EventType): boolean {
+		return (
+			type === EventType.MISSION ||
+			type === EventType.SECONDARY_MISSION ||
+			type === EventType.DAILY_MISSION ||
+			type === EventType.WEEKLY_MISSION
+		);
+	}
+
 	async findAll(filters: ObjectiveFilters = {}): Promise<Objective[]> {
 		const qb = this.objectiveRepository
 			.createQueryBuilder('objective')
@@ -76,7 +85,7 @@ export class ObjectiveService {
 
 		const event = await this.eventRepository.findOneBy({ id: eventId });
 		if (!event) throw new NotFoundException('Evento no encontrado');
-		if (event.type !== EventType.MISSION) {
+		if (!this.isObjectiveEventType(event.type)) {
 			throw new BadRequestException('Los objetivos solo pueden pertenecer a eventos de tipo MISSION');
 		}
 		const mechanic = await this.mechanicRepository.findOneBy({ id: mechanicId });
@@ -148,7 +157,7 @@ export class ObjectiveService {
 			if (!Number.isFinite(eventId)) throw new BadRequestException('eventId inválido');
 			const event = await this.eventRepository.findOneBy({ id: eventId });
 			if (!event) throw new NotFoundException('Evento no encontrado');
-			if (event.type !== EventType.MISSION) {
+			if (!this.isObjectiveEventType(event.type)) {
 				throw new BadRequestException('Los objetivos solo pueden pertenecer a eventos de tipo MISSION');
 			}
 			existing.event = event;

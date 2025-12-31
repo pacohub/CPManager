@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FaPlus, FaTimes } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 import { EventDifficulty } from '../interfaces/event';
 import { MechanicItem } from '../interfaces/mechanic';
 import { ObjectiveItem } from '../interfaces/objective';
@@ -45,6 +46,13 @@ const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, onMechanicC
 		const fromInitial = Number((initial as any)?.mechanicId) || Number((initial as any)?.mechanic?.id) || 0;
 		return fromInitial;
 	});
+
+	const [mechTooltip, setMechTooltip] = useState<{ visible: boolean; text?: string; x?: number; y?: number }>({ visible: false });
+	const [mechanicOpen, setMechanicOpen] = useState(false);
+
+	useEffect(() => {
+		if (!mechanicOpen) setMechTooltip({ visible: false });
+	}, [mechanicOpen]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -124,7 +132,7 @@ const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, onMechanicC
 					/>
 
 					<div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-						<label style={{ flex: '1 1 180px', display: 'block' }}>
+						<label style={{ flex: '1 1 180px', display: 'block' }} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()}>
 							Dificultad:
 							<select
 								value={difficulty}
@@ -137,18 +145,59 @@ const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, onMechanicC
 							</select>
 						</label>
 
-						<label style={{ flex: '1 1 180px', display: 'block' }}>
-							Mecánica:
+						<div style={{ flex: '1 1 180px', display: 'block' }}>
+							<label style={{ display: 'block', marginBottom: 6 }} onClick={(e) => e.stopPropagation()} onMouseDown={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+								Mecánica:
+							</label>
 							<div style={{ display: 'flex', alignItems: 'stretch', gap: 8, marginTop: 4 }}>
-								<select
-									value={mechanicId || ''}
-									onChange={(e) => setMechanicId(Number(e.target.value))}
-									style={{ display: 'block', width: '100%', padding: 8 }}
-								>
-									{mechanicOptions.map((m) => (
-										<option key={m.id} value={m.id}>{m.name}</option>
-									))}
-								</select>
+								<div className="mechanic-select" style={{ position: 'relative', flex: '1 1 0' }}>
+									<div
+										className="mechanic-select-value"
+										role="button"
+										tabIndex={0}
+										aria-haspopup="listbox"
+										aria-expanded={mechanicOpen}
+										onMouseDown={(e) => { e.stopPropagation(); }}
+										onClick={(e) => { e.stopPropagation(); e.preventDefault(); setMechanicOpen((v) => !v); }}
+										onKeyDown={(e) => {
+											e.stopPropagation();
+											if (e.key === 'Enter' || e.key === ' ') {
+												e.preventDefault();
+												setMechanicOpen((v) => !v);
+											}
+											if (e.key === 'Escape') {
+												e.stopPropagation();
+												setMechanicOpen(false);
+											}
+										}}
+										style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: 8 }}
+									>
+										{(localMechanics.find((m) => m.id === mechanicId)?.name) || '(Sin mecánica)'}
+										<span className="mechanic-select-caret">▾</span>
+									</div>
+
+									{mechanicOpen ? (
+										<div className="mechanic-select-menu" role="listbox" tabIndex={-1}>
+											{mechanicOptions.map((m) => (
+												<div
+													key={m.id}
+													role="option"
+													className="mechanic-option"
+													aria-selected={m.id === mechanicId}
+													onClick={(e) => { e.stopPropagation(); e.preventDefault(); setMechanicId(m.id); setMechanicOpen(false); setMechTooltip({ visible: false }); }}
+													onMouseEnter={(e) => {
+													const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+													setMechTooltip({ visible: true, text: m.description || m.name, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+													}}
+													onMouseMove={(e) => setMechTooltip((t) => (t.visible ? { ...t, x: e.clientX, y: e.clientY + 18 } : t))}
+													onMouseLeave={() => setMechTooltip({ visible: false })}
+												>
+												{m.name}
+												</div>
+											))}
+										</div>
+									) : null}
+								</div>
 								<button
 									type="button"
 									className="icon option"
@@ -158,12 +207,20 @@ const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, onMechanicC
 										setMechanicModalOpen(true);
 									}}
 									style={{ flex: '0 0 auto', minWidth: 34 }}
+									disabled={mechanicOpen}
+									aria-disabled={mechanicOpen}
 								>
 									<FaPlus size={14} />
 								</button>
 							</div>
-						</label>
+						</div>
 					</div>
+
+					{mechTooltip.visible ? (
+						<div className="fixed-mechanic-tooltip" style={{ left: mechTooltip.x || 0, top: mechTooltip.y || 0 }}>
+							{mechTooltip.text}
+						</div>
+					) : null}
 
 					<div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
 						<label style={{ flex: '1 1 180px', display: 'block' }}>
@@ -189,7 +246,7 @@ const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, onMechanicC
 
 					<div className="actions">
 						<button type="submit" className="confirm" disabled={!mechanicId || !name.trim()}>
-							{initial?.id ? 'Actualizar' : 'Crear'}
+							Confirmar
 						</button>
 						<button type="button" className="cancel" onClick={onClose}>Cancelar</button>
 					</div>

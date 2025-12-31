@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { MapItem } from '../interfaces/map';
+import CpImageFill from './CpImageFill';
 
 interface Props {
   open: boolean;
@@ -14,6 +15,7 @@ const MapModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onClose 
   const [name, setName] = useState(initial?.name || '');
   const [description, setDescription] = useState(initial?.description || '');
   const [image, setImage] = useState<File | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
   const [fileLink, setFileLink] = useState(initial?.file || '');
   const [error, setError] = useState<string | null>(null);
 
@@ -22,6 +24,7 @@ const MapModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onClose 
     setName(initial?.name || '');
     setDescription(initial?.description || '');
     setImage(null);
+    setRemoveImage(false);
     setFileLink(initial?.file || '');
     setError(null);
   }, [open, initial?.id, initial?.name, initial?.description, initial?.file]);
@@ -46,17 +49,20 @@ const MapModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onClose 
     formData.append('name', name);
     formData.append('description', description);
     if (image) formData.append('image', image);
+    else if (removeImage) formData.append('image', '');
     formData.append('file', fileLink.trim());
 		onSubmit(formData);
   };
 
-  const previewUrl = image
-    ? URL.createObjectURL(image)
-    : initial?.image
-      ? initial.image.startsWith('http') || initial.image.startsWith('data:')
-        ? initial.image
-        : `http://localhost:4000/${initial.image.replace(/^\/+/, '')}`
-      : null;
+  const previewUrl = removeImage
+    ? null
+    : image
+      ? URL.createObjectURL(image)
+      : initial?.image
+        ? initial.image.startsWith('http') || initial.image.startsWith('data:')
+          ? initial.image
+          : `http://localhost:4000/${initial.image.replace(/^\/+/, '')}`
+        : null;
 
   return (
     <div className="modal-overlay">
@@ -97,16 +103,30 @@ const MapModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onClose 
               </div>
             ) : null}
           </label>
+          {/* removal will be handled by overlay button on the preview (top-right) */}
 
-          {previewUrl ? (
-            <div style={{ marginBottom: 8 }}>
-              <img
-                src={previewUrl}
-                alt="Previsualización"
-                style={{ maxWidth: '100%', maxHeight: 140, borderRadius: 8, border: '1px solid #ccc' }}
-              />
+            {previewUrl ? (
+            <div style={{ marginBottom: 8 }} className="preview-container">
+              <div style={{ width: '100%', height: 140, borderRadius: 8, border: '1px solid #ccc', overflow: 'hidden', position: 'relative' }}>
+                {initial?.id && initial?.image && !image ? (
+                  <button
+                    type="button"
+                    className="preview-remove-btn top-right"
+                    data-tooltip="Eliminar imagen"
+                    aria-label="Eliminar imagen"
+                    onClick={() => {
+                      setImage(null);
+                      setRemoveImage(true);
+                    }}
+                  >
+                    <FaTimes size={16} />
+                  </button>
+                ) : null}
+                <CpImageFill alt="Previsualización" src={previewUrl} />
+              </div>
+              {removeImage ? <div style={{ fontSize: 12, opacity: 0.9, marginTop: 6 }}>Se eliminará al guardar.</div> : null}
             </div>
-          ) : null}
+            ) : null}
 
           <label style={{ marginBottom: 8, display: 'block' }}>
             Archivo:
@@ -125,7 +145,7 @@ const MapModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onClose 
           </label>
 
           <div className="actions">
-            <button type="submit" className="confirm" disabled={isDuplicateName}>{initial?.id ? 'Actualizar' : 'Crear'}</button>
+            <button type="submit" className="confirm" disabled={isDuplicateName}>Confirmar</button>
             <button type="button" className="cancel" onClick={onClose}>Cancelar</button>
           </div>
 

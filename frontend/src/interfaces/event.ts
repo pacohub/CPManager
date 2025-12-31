@@ -1,10 +1,16 @@
 import { Chapter } from './chapter';
 import { MapItem } from './map';
 
-export type EventType = 'MISSION' | 'CINEMATIC' | 'MOBA';
+export type EventType = 'EVENT' | 'MISSION' | 'SECONDARY_MISSION' | 'DAILY_MISSION' | 'WEEKLY_MISSION' | 'CINEMATIC' | 'MOBA';
 export type EventDifficulty = 'EASY' | 'NORMAL' | 'HARD';
 
-export type MobaTeams = { teamAIds: number[]; teamBIds: number[] };
+export type MobaTeamsLegacy = { teamAIds: number[]; teamBIds: number[] };
+export type MobaTeam = { name: string; factionIds: number[] };
+export type MobaConfig = { teams: MobaTeam[] };
+export type MobaTeams = MobaTeamsLegacy | MobaConfig;
+
+export type DialogueLine = { speaker?: string; text: string };
+export type DialogueConfig = { lines: DialogueLine[] };
 
 export interface EventItem {
 	id: number;
@@ -15,6 +21,7 @@ export interface EventItem {
 	difficulty: EventDifficulty;
 	file?: string;
 	moba?: MobaTeams | null;
+	dialogue?: DialogueConfig | null;
 
 	// Backend devuelve relaciones eager
 	chapter?: Chapter;

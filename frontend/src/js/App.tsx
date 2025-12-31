@@ -20,24 +20,16 @@ import CharactersView from './CharactersView';
 import CharacterDetail from './CharacterDetail';
 import SoundsView from './SoundsView';
 import RacesView from './RacesView';
+import ArmorTypesView from './ArmorTypesView';
+import DefenseTypesView from './DefenseTypesView';
+import GlobalMenu from '../components/GlobalMenu';
+import ErrorBoundary from '../components/ErrorBoundary';
 
 function SagaPanelRoute() {
 	const navigate = useNavigate();
 	return (
 		<SagaPanel
 			onOpenCampaign={(id) => navigate(`/campaigns/${id}`)}
-			onOpenMaps={() => navigate('/maps')}
-			onOpenMechanics={() => navigate('/mechanics')}
-			onOpenFactions={() => navigate('/factions')}
-			onOpenClasses={() => navigate('/classes')}
-			onOpenCharacters={() => navigate('/characters')}
-			onOpenRaces={() => navigate('/races')}
-			onOpenSounds={() => navigate('/sounds')}
-			onOpenProfessions={() => navigate('/professions')}
-			onOpenObjects={() => navigate('/objects')}
-			onOpenComponents={() => navigate('/components')}
-			onOpenAnimations={() => navigate('/animations')}
-			onOpenResources={() => navigate('/resources')}
 		/>
 	);
 }
@@ -138,6 +130,16 @@ function RacesRoute() {
 	return <RacesView onBack={() => navigate('/')} />;
 }
 
+function ArmorTypesRoute() {
+	const navigate = useNavigate();
+	return <ArmorTypesView onBack={() => navigate('/')} />;
+}
+
+function DefenseTypesRoute() {
+	const navigate = useNavigate();
+	return <DefenseTypesView onBack={() => navigate('/')} />;
+}
+
 function CampaignDetailRoute() {
 	const navigate = useNavigate();
 	const params = useParams();
@@ -146,8 +148,27 @@ function CampaignDetailRoute() {
 	if (!Number.isFinite(campaignId)) {
 		return (
 			<div className="panel panel-corners-soft block-border block-panel-border">
-				<div className="panel-header">
-					<h1 style={{ margin: 0 }}>Campaña</h1>
+				<div className="panel-header" style={{ position: 'relative' }}>
+					<div
+						style={{
+							position: 'absolute',
+							left: '50%',
+							transform: 'translateX(-50%)',
+							top: 0,
+							bottom: 0,
+							display: 'flex',
+							flexDirection: 'column',
+							alignItems: 'center',
+							justifyContent: 'center',
+							textAlign: 'center',
+							maxWidth: 'calc(100% - 120px)',
+							padding: '6px 60px 8px 60px',
+							minWidth: 0,
+						}}
+					>
+						<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Campaña</div>
+						<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>—</div>
+					</div>
 				</div>
 				<div style={{ padding: 12 }}>
 					Id de campaña inválido.
@@ -177,8 +198,27 @@ function ChapterEventsRoute() {
 	if (!Number.isFinite(campaignId) || !Number.isFinite(chapterId)) {
 		return (
 			<div className="panel panel-corners-soft block-border block-panel-border">
-				<div className="panel-header">
-					<h1 style={{ margin: 0 }}>Eventos</h1>
+				<div className="panel-header" style={{ position: 'relative' }}>
+					<div
+						style={{
+							position: 'absolute',
+							left: '50%',
+							transform: 'translateX(-50%)',
+							top: 0,
+							bottom: 0,
+							display: 'flex',
+							flexDirection: 'column',
+							alignItems: 'center',
+							justifyContent: 'center',
+							textAlign: 'center',
+							maxWidth: 'calc(100% - 120px)',
+							padding: '6px 60px 8px 60px',
+							minWidth: 0,
+						}}
+					>
+						<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Eventos</div>
+						<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>—</div>
+					</div>
 				</div>
 				<div style={{ padding: 12 }}>
 					Parámetros inválidos.
@@ -196,10 +236,18 @@ function ChapterEventsRoute() {
 function App() {
 	useLayoutEffect(() => {
 		function applyTooltipToElement(el: HTMLElement) {
-			const title = el.getAttribute('title');
-			if (!title) return;
+			// Read attribute first (will be string if present). If React/other code
+			// put a non-string `title` on the element (rare), coerce to a safe string.
+			let title = el.getAttribute('title');
+			if (!title) {
+				// Some code might set the DOM property directly to a non-string value.
+				// Coerce defensively.
+				const maybe = (el as any).title;
+				if (maybe === undefined || maybe === null) return;
+				title = String(maybe);
+			}
 			// Solo convertir si no hay tooltip explícito.
-			if (!el.getAttribute('data-tooltip')) el.setAttribute('data-tooltip', title);
+			if (!el.getAttribute('data-tooltip')) el.setAttribute('data-tooltip', String(title));
 			el.removeAttribute('title');
 		}
 
@@ -271,11 +319,21 @@ function App() {
 		}
 
 		function showTooltip(target: HTMLElement) {
-			const text = (target.getAttribute('data-tooltip') || '').trim();
+			// Coerce to string in case some element contains a non-string value.
+			const raw = target.getAttribute('data-tooltip');
+			const text = String(raw || '').trim();
 			if (!text) return;
 			currentTarget = target;
 			const el = ensureTooltipEl();
 			el.textContent = text;
+			// If the target is inside a modal, render tooltip below modal overlay
+			const anyModalOpen = Boolean(document.querySelector('.modal-overlay'));
+			const insideModal = Boolean(target.closest('.modal-overlay') || target.closest('.modal-content'));
+			if (anyModalOpen || insideModal) {
+				el.style.zIndex = '900'; // below modal overlay which uses 1000
+			} else {
+				el.style.zIndex = '10000'; // above most content so header/tooltips are visible
+			}
 			el.style.display = 'block';
 			positionTooltip();
 			requestAnimationFrame(() => {
@@ -378,8 +436,10 @@ function App() {
 	}, []);
 
 	return (
-		<BrowserRouter>
-			<Routes>
+		    <BrowserRouter>
+			    <GlobalMenu />
+			    <ErrorBoundary>
+			    <Routes>
 				<Route path="/" element={<SagaPanelRoute />} />
 				<Route path="/campaigns/:id" element={<CampaignDetailRoute />} />
 				<Route path="/campaigns/:campaignId/chapters/:chapterId/events" element={<ChapterEventsRoute />} />
@@ -398,8 +458,11 @@ function App() {
 				<Route path="/resources" element={<ResourcesRoute />} />
 				<Route path="/sounds" element={<SoundsRoute />} />
 				<Route path="/races" element={<RacesRoute />} />
+				<Route path="/armor-types" element={<ArmorTypesRoute />} />
+				<Route path="/defense-types" element={<DefenseTypesRoute />} />
 				<Route path="/maps/:id" element={<MapDetailRoute />} />
 			</Routes>
+			</ErrorBoundary>
 		</BrowserRouter>
 	);
 }

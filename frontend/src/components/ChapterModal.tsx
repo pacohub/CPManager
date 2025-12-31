@@ -3,6 +3,7 @@ import { Chapter } from '../interfaces/chapter';
 import { FaTimes } from 'react-icons/fa';
 import { getAllChapters } from '../js/chapterApi';
 import { getCampaign } from '../js/campaignApi';
+import CpImageFill from './CpImageFill';
 
 const getImageUrl = (img?: string) => {
   if (!img) return undefined;
@@ -22,6 +23,7 @@ const ChapterModal: React.FC<Props> = ({ open, campaignId, initial, onSubmit, on
   const [name, setName] = useState(initial?.name || '');
   const [description, setDescription] = useState(initial?.description || '');
   const [image, setImage] = useState<File | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
   const [fileLink, setFileLink] = useState(initial?.file || '');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -112,6 +114,7 @@ const ChapterModal: React.FC<Props> = ({ open, campaignId, initial, onSubmit, on
     formData.append('name', name);
     formData.append('description', description);
     if (image) formData.append('image', image);
+    else if (removeImage) formData.append('image', '');
     formData.append('file', fileLink.trim());
     try {
       setSubmitting(true);
@@ -162,13 +165,28 @@ const ChapterModal: React.FC<Props> = ({ open, campaignId, initial, onSubmit, on
             ) : null}
           </label>
 
+          {/* removal handled by overlay button on the preview */}
+
           {(image || initial?.image) ? (
-            <div style={{ marginBottom: 8 }}>
-              <img
-                src={image ? URL.createObjectURL(image) : getImageUrl(initial?.image)}
-                alt="Previsualización"
-                style={{ maxWidth: '100%', maxHeight: 140, borderRadius: 8, border: '1px solid #ccc' }}
-              />
+            <div style={{ marginBottom: 8 }} className="preview-container">
+                <div style={{ width: '100%', height: 140, borderRadius: 8, border: '1px solid #ccc', overflow: 'hidden', position: 'relative' }}>
+                  {initial?.id && initial?.image && !image ? (
+                    <button
+                      type="button"
+                      className="preview-remove-btn top-right"
+                      data-tooltip="Eliminar imagen"
+                      aria-label="Eliminar imagen"
+                      onClick={() => {
+                        setImage(null);
+                        setRemoveImage(true);
+                      }}
+                    >
+                      <FaTimes size={14} />
+                    </button>
+                  ) : null}
+                  <CpImageFill alt="Previsualización" src={image ? URL.createObjectURL(image) : getImageUrl(initial?.image)} />
+                </div>
+                {removeImage ? <div style={{ fontSize: 12, opacity: 0.9, marginTop: 6 }}>Se eliminará al guardar.</div> : null}
             </div>
           ) : null}
           <label style={{ marginBottom: 8, display: 'block' }}>
@@ -187,7 +205,7 @@ const ChapterModal: React.FC<Props> = ({ open, campaignId, initial, onSubmit, on
             ) : null}
           </label>
           <div className="actions">
-            <button type="submit" className="confirm" disabled={submitting || Boolean(duplicate)}>{initial?.id ? 'Actualizar' : 'Crear'}</button>
+            <button type="submit" className="confirm" disabled={submitting || Boolean(duplicate)}>Confirmar</button>
             <button type="button" className="cancel" onClick={onClose} disabled={submitting}>Cancelar</button>
           </div>
           {error ? <div style={{ color: 'red', marginTop: 8 }}>{error}</div> : null}

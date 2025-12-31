@@ -1,9 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FaArrowLeft, FaEdit, FaPlus, FaTimes, FaTrash } from 'react-icons/fa';
+import { FaArrowLeft, FaTrash } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
+import { FaEdit } from 'react-icons/fa';
 import { GiChest } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
 import GameObjectModal from '../components/GameObjectModal';
 import IconSelect, { IconSelectItem } from '../components/IconSelect';
+import CpImage from '../components/CpImage';
 import { GameObjectItem } from '../interfaces/gameObject';
 import { ProfessionItem } from '../interfaces/profession';
 import { ProfessionObjectLink } from '../interfaces/professionObject';
@@ -168,11 +172,30 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 	if (loading) {
 		return (
 			<div className="panel panel-corners-soft block-border block-panel-border">
-				<div className="panel-header">
+				<div className="panel-header" style={{ position: 'relative' }}>
 					<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 						<FaArrowLeft size={22} color="#FFD700" />
 					</button>
-					<h1 style={{ margin: 0 }}>Profesión</h1>
+					<div
+						style={{
+							position: 'absolute',
+							left: '50%',
+							transform: 'translateX(-50%)',
+							top: 0,
+							bottom: 0,
+							display: 'flex',
+							flexDirection: 'column',
+							alignItems: 'center',
+							justifyContent: 'center',
+							textAlign: 'center',
+							maxWidth: 'calc(100% - 140px)',
+							padding: '6px 70px 8px 70px',
+							minWidth: 0,
+						}}
+					>
+						<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Profesión</div>
+						<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, minWidth: 0, wordBreak: 'break-word' }}>Cargando...</div>
+					</div>
 					<div style={{ width: 32 }} />
 				</div>
 				<div style={{ padding: 12, opacity: 0.9 }}>Cargando...</div>
@@ -183,11 +206,30 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 	if (error || !profession) {
 		return (
 			<div className="panel panel-corners-soft block-border block-panel-border">
-				<div className="panel-header">
+				<div className="panel-header" style={{ position: 'relative' }}>
 					<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 						<FaArrowLeft size={22} color="#FFD700" />
 					</button>
-					<h1 style={{ margin: 0 }}>Profesión</h1>
+					<div
+						style={{
+							position: 'absolute',
+							left: '50%',
+							transform: 'translateX(-50%)',
+							top: 0,
+							bottom: 0,
+							display: 'flex',
+							flexDirection: 'column',
+							alignItems: 'center',
+							justifyContent: 'center',
+							textAlign: 'center',
+							maxWidth: 'calc(100% - 140px)',
+							padding: '6px 70px 8px 70px',
+							minWidth: 0,
+						}}
+					>
+						<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Profesión</div>
+						<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, minWidth: 0, wordBreak: 'break-word' }}>—</div>
+					</div>
 					<div style={{ width: 32 }} />
 				</div>
 				<div style={{ padding: 12, color: '#e2d9b7', opacity: 0.95 }}>{error || 'No se pudo cargar la profesión.'}</div>
@@ -197,11 +239,30 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0 }}>{profession.name || 'Profesión'}</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 140px)',
+						padding: '6px 70px 8px 70px',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Profesión</div>
+					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, minWidth: 0, wordBreak: 'break-word' }}>{profession.name || 'Profesión'}</div>
+				</div>
 				<div style={{ width: 32 }} />
 			</div>
 
@@ -307,11 +368,7 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 											<tr style={{ borderTop: '1px solid rgba(255,215,0,0.12)' }}>
 												<td style={{ padding: '10px 6px' }}>
 													<div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-														{iconUrl ? (
-															<div className="metallic-border metallic-border-square" style={{ width: 28, height: 28, minWidth: 28, backgroundImage: 'none' }}>
-																<img src={iconUrl} alt="" aria-hidden="true" style={{ width: 28, height: 28, objectFit: 'cover', display: 'block' }} />
-															</div>
-														) : null}
+														{iconUrl ? <CpImage src={iconUrl} width={28} height={28} fit="cover" /> : null}
 														<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{o?.name || `Objeto #${l.objectId}`}</div>
 													</div>
 												</td>
@@ -377,7 +434,7 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 																return (
 																	<span key={rl.resourceId} title={title} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
 																		{rIconUrl ? (
-																			<img src={rIconUrl} alt="" aria-hidden="true" style={{ width: 18, height: 18, objectFit: 'contain' }} />
+																			<CpImage src={rIconUrl} width={18} height={18} fit="contain" showFrame={false} />
 																		) : (
 																			<div style={{ width: 18, height: 18, border: '1px solid rgba(255,215,0,0.25)', borderRadius: 3 }} />
 																		)}
@@ -474,7 +531,7 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 																	return (
 																		<div key={rl.resourceId} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
 																			<span title={rTitle} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0, flex: '1 1 auto' }}>
-																				{rIcon ? <img src={rIcon} alt="" aria-hidden="true" style={{ width: 16, height: 16, objectFit: 'contain' }} /> : <div style={{ width: 16, height: 16 }} />}
+																				{rIcon ? <CpImage src={rIcon} width={16} height={16} fit="contain" showFrame={false} /> : <div style={{ width: 16, height: 16 }} />}
 																				<span style={{ fontWeight: 700, opacity: 0.95 }}>{r?.name || `Recurso #${rl.resourceId}`}</span>
 																			</span>
 																			<label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, opacity: 0.9, width: 120 }}>

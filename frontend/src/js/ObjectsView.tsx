@@ -1,8 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaArrowLeft, FaEdit, FaExclamationTriangle, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
+import { FaExclamation } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
+import { FaEdit, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
 import { GiChest } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
 import GameObjectModal from '../components/GameObjectModal';
+import CpImage from '../components/CpImage';
+import ClearableSearchInput from '../components/ClearableSearchInput';
 import { GameObjectItem } from '../interfaces/gameObject';
 import { createObject, deleteObject, getObjects, updateObject, uploadObjectIcon } from './gameObjectApi';
 
@@ -58,11 +62,30 @@ const ObjectsView: React.FC<Props> = ({ onBack }) => {
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0 }}>Objetos</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 160px)',
+						padding: '6px 80px 8px 80px',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Listado</div>
+					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>Objetos</div>
+				</div>
 				<button
 					className="icon"
 					aria-label="Nuevo Objeto"
@@ -78,11 +101,10 @@ const ObjectsView: React.FC<Props> = ({ onBack }) => {
 
 			<div className="filters-bar">
 				<div className="filters-row">
-					<input
-						type="text"
-						placeholder="Buscar objeto..."
+					<ClearableSearchInput
 						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						onChange={(v) => setSearch(v)}
+						placeholder="Buscar objeto..."
 						className="filters-input"
 					/>
 				</div>
@@ -113,26 +135,14 @@ const ObjectsView: React.FC<Props> = ({ onBack }) => {
 										onClick={(e) => e.stopPropagation()}
 										onPointerDown={(e) => e.stopPropagation()}
 									>
-										<FaExclamationTriangle size={14} />
+										<FaExclamation size={14} />
 									</span>
 								) : null}
 
 								<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
 									<div style={{ minWidth: 0 }}>
 										<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-											{iconUrl ? (
-												<div
-													className="metallic-border metallic-border-square"
-													style={{ width: 32, height: 32, minWidth: 32, backgroundImage: 'none', flex: '0 0 auto' }}
-												>
-													<img
-														src={iconUrl}
-														alt=""
-														aria-hidden="true"
-														style={{ width: 32, height: 32, objectFit: 'cover', display: 'block' }}
-													/>
-												</div>
-											) : null}
+												<CpImage src={iconUrl} width={32} height={32} fit="cover" frameStyle={{ flex: '0 0 auto' }} />
 											<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{o.name}</div>
 										</div>
 
@@ -201,7 +211,9 @@ const ObjectsView: React.FC<Props> = ({ onBack }) => {
 						const anyData = data as any;
 						const iconFile: File | null | undefined = anyData?.iconFile;
 						let icon = (data.icon || '').trim();
-						if (iconFile) {
+						if ((anyData as any).removeIcon) {
+							icon = '';
+						} else if (iconFile) {
 							const uploaded = await uploadObjectIcon(iconFile);
 							if (uploaded) icon = uploaded;
 						}
@@ -220,6 +232,7 @@ const ObjectsView: React.FC<Props> = ({ onBack }) => {
 
 			<ConfirmModal
 				open={confirmOpen}
+				requireText="eliminar"
 				message={'¿Estás seguro de que deseas eliminar este objeto?'}
 				onConfirm={async () => {
 					const target = pendingDelete;

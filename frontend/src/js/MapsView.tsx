@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { FaArrowLeft, FaCompass } from 'react-icons/fa';
+import { FaCompass } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import MapCard from '../components/MapCard';
 import MapModal from '../components/MapModal';
+import ClearableSearchInput from '../components/ClearableSearchInput';
 import { MapItem } from '../interfaces/map';
 import { createMap, deleteMap, getMapComponents, getMaps, updateMap } from './mapApi';
 
@@ -59,11 +61,30 @@ const MapsView: React.FC<Props> = ({ onBack, onOpenMap }) => {
 
   return (
     <div className="panel panel-corners-soft block-border block-panel-border">
-      <div className="panel-header">
+      <div className="panel-header" style={{ position: 'relative' }}>
         <button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
           <FaArrowLeft size={22} color="#FFD700" />
         </button>
-        <h1 style={{ margin: 0 }}>Mapas</h1>
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            top: 0,
+            bottom: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            maxWidth: 'calc(100% - 160px)',
+            padding: '6px 80px 8px 80px',
+            minWidth: 0,
+          }}
+        >
+          <div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Listado</div>
+          <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>Mapas</div>
+        </div>
         <button
           className="icon"
           aria-label="Nuevo Mapa"
@@ -79,11 +100,10 @@ const MapsView: React.FC<Props> = ({ onBack, onOpenMap }) => {
 
       <div className="filters-bar">
         <div className="filters-row">
-          <input
-            type="text"
-            placeholder="Buscar mapa..."
+          <ClearableSearchInput
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(v) => setSearch(v)}
+            placeholder="Buscar mapa..."
             className="filters-input"
           />
         </div>
@@ -148,6 +168,7 @@ const MapsView: React.FC<Props> = ({ onBack, onOpenMap }) => {
 
       <ConfirmModal
         open={confirmOpen}
+        requireText="eliminar"
         message={'¿Estás seguro de que deseas eliminar este mapa?'}
         onConfirm={async () => {
           const target = pendingDelete;

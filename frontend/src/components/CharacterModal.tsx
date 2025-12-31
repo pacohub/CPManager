@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FaPlus, FaTimes } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 import { CharacterItem } from '../interfaces/character';
 import { ClassItem } from '../interfaces/class';
 import { RaceItem } from '../interfaces/race';
@@ -8,6 +9,7 @@ import ClassModal from './ClassModal';
 import RaceModal from './RaceModal';
 import { createClass, uploadClassIcon } from '../js/classApi';
 import { createRace, uploadRaceIcon } from '../js/raceApi';
+import CpImage from './CpImage';
 
 function asImageUrl(raw?: string): string | undefined {
 	const v = (raw || '').trim();
@@ -24,7 +26,7 @@ interface Props {
 	classes: ClassItem[];
 	races: RaceItem[];
 	sounds: SoundItem[];
-	onSubmit: (data: { name: string; classId: number; raceId: number; icon?: string; iconFile?: File | null; image?: string; imageFile?: File | null; model?: string }) => void;
+	onSubmit: (data: { name: string; classId: number; raceId: number; icon?: string; iconFile?: File | null; removeIcon?: boolean; image?: string; imageFile?: File | null; removeImage?: boolean; model?: string }) => void;
 	onClose: () => void;
 }
 
@@ -39,6 +41,8 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, rac
 	const [image, setImage] = useState(initialImage || '');
 	const [imageFile, setImageFile] = useState<File | null>(null);
 	const [imagePreviewUrl, setImagePreviewUrl] = useState<string>('');
+	const [removeIcon, setRemoveIcon] = useState(false);
+	const [removeImage, setRemoveImage] = useState(false);
 	const [model, setModel] = useState(initial?.model || '');
 	const [error, setError] = useState<string | null>(null);
 	const [classesState, setClassesState] = useState<ClassItem[]>(classes || []);
@@ -59,6 +63,8 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, rac
 		setImage(initialImage || '');
 		setImageFile(null);
 		setImagePreviewUrl('');
+		setRemoveIcon(false);
+		setRemoveImage(false);
 		setModel(initial?.model || '');
 		setError(null);
 	}, [open, initial?.id, initial?.name, initial?.classId, (initial as any)?.raceId, initial?.icon, initialImage, initial?.model]);
@@ -107,7 +113,7 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, rac
 
 	if (!open) return null;
 
-	const currentIconUrl = iconPreviewUrl || asImageUrl(icon);
+	const currentIconUrl = removeIcon ? null : (iconPreviewUrl || asImageUrl(icon));
 	const currentImageUrl = imagePreviewUrl || asImageUrl(image);
 
 	const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,6 +135,7 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, rac
 		const objectUrl = URL.createObjectURL(file);
 		setError(null);
 		setIconFile(file);
+		setRemoveIcon(false);
 		if (iconPreviewUrl) URL.revokeObjectURL(iconPreviewUrl);
 		setIconPreviewUrl(objectUrl);
 	};
@@ -152,6 +159,7 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, rac
 		const objectUrl = URL.createObjectURL(file);
 		setError(null);
 		setImageFile(file);
+		setRemoveImage(false);
 		if (imagePreviewUrl) URL.revokeObjectURL(imagePreviewUrl);
 		setImagePreviewUrl(objectUrl);
 	};
@@ -179,8 +187,10 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, rac
 			raceId: nextRaceId,
 			icon,
 			iconFile,
+			removeIcon,
 			image,
 			imageFile,
+			removeImage,
 			model: model.trim(),
 		});
 	};
@@ -272,13 +282,22 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, rac
 					<div style={{ marginBottom: 8 }}>
 						<div style={{ fontSize: 13, marginBottom: 4, opacity: 0.9 }}>Icono (imagen 64x64)</div>
 						<div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-							<div
-								className="metallic-border metallic-border-square"
-								style={{ width: 64, height: 64, minWidth: 64, display: 'flex', alignItems: 'stretch', justifyContent: 'stretch', backgroundImage: 'none' }}
-							>
-								{currentIconUrl ? (
-									<img src={currentIconUrl} alt="" aria-hidden="true" style={{ width: 64, height: 64, objectFit: 'cover', display: 'block' }} />
+							<div style={{ position: 'relative' }} className="preview-container">
+								{initial?.id && initial?.icon && !iconFile && !removeIcon ? (
+									<button
+										type="button"
+										className="preview-remove-btn top-right"
+										data-tooltip="Eliminar icono"
+										aria-label="Eliminar icono"
+										onClick={() => {
+											setIconFile(null);
+											setRemoveIcon(true);
+										}}
+										>
+										<FaTimes size={14} />
+									</button>
 								) : null}
+								<CpImage src={currentIconUrl || undefined} width={64} height={64} fit="cover" />
 							</div>
 							<div style={{ minWidth: 0, flex: 1 }}>
 								<input ref={iconInputRef} type="file" accept="image/*" onChange={handleIconChange} />
@@ -286,18 +305,28 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, rac
 							</div>
 						</div>
 						{initial?.icon && !iconFile && currentIconUrl ? <div style={{ fontSize: 12, marginTop: 4, opacity: 0.85 }}>Icono actual cargado.</div> : null}
+						{removeIcon ? <div style={{ marginTop: 8, fontSize: 12, opacity: 0.9 }}>Se eliminará al guardar.</div> : null}
 					</div>
 
 					<div style={{ marginBottom: 8 }}>
 						<div style={{ fontSize: 13, marginBottom: 4, opacity: 0.9 }}>Imagen (vista previa)</div>
 						<div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-							<div
-								className="metallic-border metallic-border-square"
-								style={{ width: 96, height: 96, minWidth: 96, display: 'flex', alignItems: 'stretch', justifyContent: 'stretch', backgroundImage: 'none' }}
-							>
-								{currentImageUrl ? (
-									<img src={currentImageUrl} alt="" aria-hidden="true" style={{ width: 96, height: 96, objectFit: 'cover', display: 'block' }} />
+							<div style={{ position: 'relative' }} className="preview-container">
+								{initial?.id && (initial as any)?.image && !imageFile ? (
+									<button
+										type="button"
+										className="preview-remove-btn top-right"
+										data-tooltip="Eliminar imagen"
+										aria-label="Eliminar imagen"
+										onClick={() => {
+											setImageFile(null);
+											setRemoveImage(true);
+										}}
+										>
+										<FaTimes size={14} />
+										</button>
 								) : null}
+								<CpImage src={currentImageUrl || undefined} width={96} height={96} fit="cover" />
 							</div>
 							<div style={{ minWidth: 0, flex: 1 }}>
 								<input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageChange} />
@@ -305,6 +334,7 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, rac
 							</div>
 						</div>
 						{(initial as any)?.image && !imageFile && currentImageUrl ? <div style={{ fontSize: 12, marginTop: 4, opacity: 0.85 }}>Imagen actual cargada.</div> : null}
+						{removeImage ? <div style={{ marginTop: 8, fontSize: 12, opacity: 0.9 }}>Se eliminará al guardar.</div> : null}
 					</div>
 
 					<input
@@ -317,7 +347,7 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, rac
 
 					<div className="actions">
 						<button type="submit" className="confirm" disabled={isDuplicateName}>
-							{initial?.id ? 'Actualizar' : 'Crear'}
+							Confirmar
 						</button>
 						<button type="button" className="cancel" onClick={onClose}>
 							Cancelar
@@ -336,7 +366,9 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, rac
 							const anyData = data as any;
 							const iconFile: File | null | undefined = anyData?.iconFile;
 							let icon = (data.icon || '').trim();
-							if (iconFile) {
+							if ((anyData as any).removeIcon) {
+								icon = '';
+							} else if (iconFile) {
 								const uploaded = await uploadClassIcon(iconFile);
 								if (uploaded) icon = uploaded;
 							}
@@ -364,7 +396,9 @@ const CharacterModal: React.FC<Props> = ({ open, initial, existing, classes, rac
 							const anyData = data as any;
 							const iconFile: File | null | undefined = anyData?.iconFile;
 							let icon = (data.icon || '').trim();
-							if (iconFile) {
+							if ((anyData as any).removeIcon) {
+								icon = '';
+							} else if (iconFile) {
 								const uploaded = await uploadRaceIcon(iconFile);
 								if (uploaded) icon = uploaded;
 							}

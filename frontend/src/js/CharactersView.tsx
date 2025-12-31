@@ -1,9 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaArrowLeft, FaEdit, FaTrash } from 'react-icons/fa';
-import { FaUser } from 'react-icons/fa';
-import { FaExclamationTriangle } from 'react-icons/fa';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { FaUser, FaExclamation } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import CharacterModal from '../components/CharacterModal';
+import CpImage from '../components/CpImage';
+import ClearableSearchInput from '../components/ClearableSearchInput';
 import { CharacterItem } from '../interfaces/character';
 import { ClassItem } from '../interfaces/class';
 import { RaceItem } from '../interfaces/race';
@@ -33,6 +35,17 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 	const [sounds, setSounds] = useState<SoundItem[]>([]);
 	const [search, setSearch] = useState('');
 	const [error, setError] = useState<string | null>(null);
+
+	const [tooltip, setTooltip] = useState<{ visible: boolean; text?: string; x?: number; y?: number }>({ visible: false });
+	const [hoverPreview, setHoverPreview] = useState<{ id: number; rect: DOMRect } | null>(null);
+	const [previewHovered, setPreviewHovered] = useState(false);
+	const hideTimerRef = useRef<number | null>(null);
+
+	useEffect(() => {
+		return () => {
+			if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+		};
+	}, []);
 
 	const [modalOpen, setModalOpen] = useState(false);
 	const [initial, setInitial] = useState<Partial<CharacterItem> | undefined>(undefined);
@@ -91,11 +104,30 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0 }}>Personajes</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 160px)',
+						padding: '6px 80px 8px 80px',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Listado</div>
+					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>Personajes</div>
+				</div>
 				<button
 					className="icon"
 					aria-label="Nuevo Personaje"
@@ -110,15 +142,14 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 			</div>
 
 			<div className="filters-bar">
-				<div className="filters-row">
-					<input
-						type="text"
-						placeholder="Buscar personaje..."
-						value={search}
-						onChange={(e) => setSearch(e.target.value)}
-						className="filters-input"
-					/>
-				</div>
+					<div className="filters-row">
+						<ClearableSearchInput
+							value={search}
+							onChange={(v) => setSearch(v)}
+							placeholder="Buscar personaje..."
+							className="filters-input"
+						/>
+					</div>
 			</div>
 			{error ? (
 				<div style={{ padding: '0 12px 12px 12px', color: '#e2d9b7', opacity: 0.95, fontSize: 13 }}>
@@ -148,6 +179,22 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 								className="block-border block-border-soft mechanic-card"
 								style={{ padding: 12, cursor: onOpenCharacter ? 'pointer' : 'default', position: 'relative' }}
 								onClick={() => onOpenCharacter?.(c.id)}
+								onMouseEnter={(e) => {
+									if (hideTimerRef.current) {
+										window.clearTimeout(hideTimerRef.current);
+										hideTimerRef.current = null;
+									}
+									const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+									setHoverPreview({ id: c.id, rect });
+								}}
+								onMouseLeave={() => {
+									// delay hiding to allow moving into the preview without flicker
+									if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+									hideTimerRef.current = window.setTimeout(() => {
+										if (!previewHovered) setHoverPreview(null);
+										hideTimerRef.current = null;
+									}, 120) as unknown as number;
+								}}
 							>
 								{showWarning ? (
 									<span
@@ -157,27 +204,84 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 										onClick={(e) => e.stopPropagation()}
 										onPointerDown={(e) => e.stopPropagation()}
 									>
-										<FaExclamationTriangle size={14} />
+										<FaExclamation size={14} />
 									</span>
 								) : null}
-								<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-									<div style={{ minWidth: 0 }}>
-										<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-											{iconUrl ? (
-												<div className="metallic-border metallic-border-square" style={{ width: 32, height: 32, minWidth: 32, backgroundImage: 'none', flex: '0 0 auto' }}>
-													<img src={iconUrl} alt="" aria-hidden="true" style={{ width: 32, height: 32, objectFit: 'cover', display: 'block' }} />
+								<div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'stretch' }}>
+									<div style={{ minWidth: 0, flex: 1, display: 'flex', gap: 12, alignItems: 'stretch' }}>
+										<CpImage src={iconUrl} width={64} height={64} fit="cover" frameClassName="metallic-border metallic-border-square" />
+										<div style={{ minWidth: 0, flex: 1 }}>
+												<div
+													className="trunc-field name-field"
+													style={{ fontWeight: 800, marginBottom: 2 }}
+													tabIndex={0}
+													aria-label={c.name}
+													onMouseEnter={(e) => {
+														const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+														setTooltip({ visible: true, text: c.name, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+													}}
+													onMouseMove={(e) => setTooltip((t) => (t.visible ? { ...t, x: e.clientX, y: e.clientY + 18 } : t))}
+													onMouseLeave={() => setTooltip({ visible: false })}
+													onFocus={(e) => {
+														const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+														setTooltip({ visible: true, text: c.name, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+													}}
+													onBlur={() => setTooltip({ visible: false })}
+												>
+													{c.name}
 												</div>
+												{className ? (
+													<div
+														className="trunc-field"
+														style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}
+														tabIndex={0}
+														aria-label={`Clase: ${className}`}
+														onMouseEnter={(e) => {
+															const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+															setTooltip({ visible: true, text: className, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+														}}
+														onMouseMove={(e) => setTooltip((t) => (t.visible ? { ...t, x: e.clientX, y: e.clientY + 18 } : t))}
+														onMouseLeave={() => setTooltip({ visible: false })}
+														onFocus={(e) => {
+															const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+															setTooltip({ visible: true, text: className, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+														}}
+														onBlur={() => setTooltip({ visible: false })}
+													>
+														{className}
+													</div>
+												) : null}
+												{raceName ? (
+													<div
+														className="trunc-field"
+														style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}
+														tabIndex={0}
+														aria-label={`Raza: ${raceName}`}
+														onMouseEnter={(e) => {
+															const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+															setTooltip({ visible: true, text: raceName, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+														}}
+														onMouseMove={(e) => setTooltip((t) => (t.visible ? { ...t, x: e.clientX, y: e.clientY + 18 } : t))}
+														onMouseLeave={() => setTooltip({ visible: false })}
+														onFocus={(e) => {
+															const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+															setTooltip({ visible: true, text: raceName, x: rect.left + rect.width / 2, y: rect.bottom + 8 });
+														}}
+														onBlur={() => setTooltip({ visible: false })}
+													>
+														{raceName}
+													</div>
+												) : null}
+											{(c.model || '').trim() ? (
+												<div style={{ marginTop: 6, opacity: 0.9, fontSize: 13, wordBreak: 'break-all' }}>Modelo: {(c.model || '').trim()}</div>
 											) : null}
-											<div style={{ minWidth: 0 }}>
-												<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{c.name}</div>
-												{className ? <div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>Clase: {className}</div> : null}
-												{raceName ? <div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>Raza: {raceName}</div> : null}
 										</div>
-										</div>
-										{(c.model || '').trim() ? <div style={{ marginTop: 6, opacity: 0.9, fontSize: 13, wordBreak: 'break-all' }}>Modelo: {(c.model || '').trim()}</div> : null}
 									</div>
 
-									<div className="mechanic-actions" style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+									<div
+										className="mechanic-actions"
+										style={{ display: 'flex', alignItems: 'flex-start', gap: 8, position: 'absolute', top: 10, right: 10, zIndex: 2 }}
+									>
 										<button
 											className="icon option"
 											title="Editar"
@@ -207,6 +311,48 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 					})}
 				</div>
 
+				{hoverPreview ? (() => {
+					const target = filtered.find((x) => x.id === hoverPreview.id) || characters.find((x) => x.id === hoverPreview.id);
+					if (!target) return null;
+					const rect = hoverPreview.rect;
+					const preferRight = rect.right + 340 < window.innerWidth;
+					const left = preferRight ? rect.right + 12 : Math.max(8, rect.left);
+					const top = rect.top;
+					const classNameFull = classById.get(target.classId)?.name || target.class?.name || '';
+					const raceNameFull = raceById.get(Number((target as any)?.raceId) || 0)?.name || target.race?.name || '';
+					const iconUrl = asImageUrl(target.icon);
+						return (
+						<div
+							className="card-hover-preview"
+							style={{ position: 'fixed', left: rect.left, top: rect.top, width: rect.width, zIndex: 11000, transform: 'none' }}
+							onMouseEnter={() => {
+								if (hideTimerRef.current) {
+									window.clearTimeout(hideTimerRef.current);
+									hideTimerRef.current = null;
+								}
+								setPreviewHovered(true);
+							}}
+							onMouseLeave={() => {
+								setPreviewHovered(false);
+								if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
+								hideTimerRef.current = window.setTimeout(() => setHoverPreview(null), 120) as unknown as number;
+							}}
+						>
+							<div style={{ display: 'flex', gap: 12, padding: 12 }}>
+								<div style={{ width: 96, height: 96, flex: '0 0 96px' }}>
+									<CpImage src={iconUrl} width={96} height={96} fit="cover" frameClassName="metallic-border metallic-border-square" />
+								</div>
+								<div style={{ minWidth: 0, flex: 1 }}>
+									<div style={{ fontWeight: 900, fontSize: 16, marginBottom: 6 }}>{target.name}</div>
+									{classNameFull ? <div style={{ marginTop: 2, opacity: 0.95 }}>{classNameFull}</div> : null}
+									{raceNameFull ? <div style={{ marginTop: 2, opacity: 0.95 }}>{raceNameFull}</div> : null}
+									{(target.model || '').trim() ? <div style={{ marginTop: 8, opacity: 0.9 }}>Modelo: {(target.model || '').trim()}</div> : null}
+								</div>
+							</div>
+						</div>
+					);
+				})() : null}
+
 				{filtered.length === 0 ? <div style={{ marginTop: 12, opacity: 0.8, color: '#e2d9b7' }}>No hay personajes todavía.</div> : null}
 			</div>
 
@@ -228,13 +374,17 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 						const imageFile: File | null | undefined = anyData?.imageFile;
 
 						let icon = (data.icon || '').trim();
-						if (iconFile) {
+						if ((anyData as any).removeIcon) {
+							icon = '';
+						} else if (iconFile) {
 							const uploaded = await uploadCharacterIcon(iconFile);
 							if (uploaded) icon = uploaded;
 						}
 
 						let image = (data as any)?.image ? String((data as any).image).trim() : '';
-						if (imageFile) {
+						if ((anyData as any).removeImage) {
+							image = '';
+						} else if (imageFile) {
 							const uploaded = await uploadCharacterImage(imageFile);
 							if (uploaded) image = uploaded;
 						}
@@ -255,6 +405,7 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 
 			<ConfirmModal
 				open={confirmOpen}
+				requireText="eliminar"
 				message={'¿Estás seguro de que deseas eliminar este personaje?'}
 				onConfirm={async () => {
 					const target = pendingDelete;
@@ -269,6 +420,27 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 					setPendingDelete(null);
 				}}
 			/>
+
+			{tooltip.visible ? (
+				<div
+					className="fixed-trunc-tooltip"
+					style={{
+						position: 'fixed',
+						left: tooltip.x || 0,
+						top: tooltip.y || 0,
+						transform: 'translate(-50%, 6px)',
+						zIndex: 10000,
+						maxWidth: 520,
+						padding: 8,
+						background: '#111',
+						color: '#e2d9b7',
+						borderRadius: 6,
+						boxShadow: '0 6px 20px rgba(0,0,0,0.6)',
+					}}
+				>
+					{tooltip.text}
+				</div>
+			) : null}
 		</div>
 	);
 };

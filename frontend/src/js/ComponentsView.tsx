@@ -1,7 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaArrowLeft, FaCubes, FaEdit, FaExclamationTriangle, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
+import { FaCubes, FaExclamation } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
+import { FaEdit, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import ComponentModal from '../components/ComponentModal';
+import CpImage from '../components/CpImage';
+import ClearableSearchInput from '../components/ClearableSearchInput';
 import { ComponentItem } from '../interfaces/component';
 import { createComponent, deleteComponent, getComponents, updateComponent } from './componentApi';
 
@@ -55,11 +59,30 @@ const ComponentsView: React.FC<Props> = ({ onBack }) => {
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0 }}>Componentes</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 160px)',
+						padding: '6px 80px 8px 80px',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Listado</div>
+					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>Componentes</div>
+				</div>
 				<button
 					className="icon"
 					aria-label="Nuevo Componente"
@@ -75,11 +98,10 @@ const ComponentsView: React.FC<Props> = ({ onBack }) => {
 
 			<div className="filters-bar">
 				<div className="filters-row">
-					<input
-						type="text"
-						placeholder="Buscar componente..."
+					<ClearableSearchInput
 						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						onChange={(v) => setSearch(v)}
+						placeholder="Buscar componente..."
 						className="filters-input"
 					/>
 				</div>
@@ -98,26 +120,14 @@ const ComponentsView: React.FC<Props> = ({ onBack }) => {
 								const warningText = `Falta: ${missing.join(', ')}.`;
 								return (
 									<span className="campaign-warning" title={warningText} aria-label={warningText}>
-										<FaExclamationTriangle size={14} />
+										<FaExclamation size={14} />
 									</span>
 								);
 							})()}
 							<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
 								<div style={{ minWidth: 0 }}>
 									<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-										{asImageUrl(c.image) ? (
-											<div
-												className="metallic-border metallic-border-square"
-												style={{ width: 32, height: 32, minWidth: 32, backgroundImage: 'none', flex: '0 0 auto' }}
-											>
-												<img
-													src={asImageUrl(c.image)}
-													alt=""
-													aria-hidden="true"
-													style={{ width: 32, height: 32, objectFit: 'cover', display: 'block' }}
-												/>
-											</div>
-										) : null}
+										<CpImage src={asImageUrl(c.image)} width={32} height={32} fit="cover" frameStyle={{ flex: '0 0 auto' }} />
 										<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{c.name}</div>
 									</div>
 									<div style={{ opacity: 0.85, fontSize: 12, marginTop: 2 }}>{c.type}</div>
@@ -192,6 +202,7 @@ const ComponentsView: React.FC<Props> = ({ onBack }) => {
 
 			<ConfirmModal
 				open={confirmOpen}
+				requireText="eliminar"
 				message={'¿Estás seguro de que deseas eliminar este componente?'}
 				onConfirm={async () => {
 					const target = pendingDelete;

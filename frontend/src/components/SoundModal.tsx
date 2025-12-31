@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { FaPlus, FaTimes } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 import NameModal from './NameModal';
 import { SoundItem } from '../interfaces/sound';
 import { SoundTypeItem } from '../interfaces/soundType';
@@ -11,13 +12,14 @@ interface Props {
 	types: SoundTypeItem[];
 	onClose: () => void;
 	onCreateType?: (name: string) => Promise<void>;
-	onSubmit: (data: { name: string; typeIds: number[]; file?: File | null }) => void | Promise<void>;
+	onSubmit: (data: { name: string; typeIds: number[]; file?: File | null; removeFile?: boolean }) => void | Promise<void>;
 }
 
 const SoundModal: React.FC<Props> = ({ open, initial, existing, types, onClose, onCreateType, onSubmit }) => {
 	const [name, setName] = useState(initial?.name ?? '');
 	const [typeIds, setTypeIds] = useState<number[]>(() => (initial?.types || []).map((t) => t.id));
 	const [file, setFile] = useState<File | null>(null);
+	const [removeFile, setRemoveFile] = useState(false);
 	const [saving, setSaving] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [createTypeOpen, setCreateTypeOpen] = useState(false);
@@ -30,7 +32,7 @@ const SoundModal: React.FC<Props> = ({ open, initial, existing, types, onClose, 
 	return (
 		<div className="modal-overlay" role="dialog" aria-modal="true">
 			<div className="modal-content" style={{ width: 640, maxWidth: '92vw' }}>
-				<button className="icon option" title="Cerrar" onClick={onClose} aria-label="Cerrar">
+					<button className="icon option" title="Cerrar" onClick={onClose} aria-label="Cerrar" style={{ position: 'absolute', top: 12, right: 12 }}>
 					<FaTimes size={18} />
 				</button>
 				<h2 style={{ marginTop: 0 }}>{initial?.id ? 'Editar Sonido' : 'Nuevo Sonido'}</h2>
@@ -45,7 +47,7 @@ const SoundModal: React.FC<Props> = ({ open, initial, existing, types, onClose, 
 							if ((typeIds || []).length === 0) return setError('Debes seleccionar al menos un tipo.');
 						try {
 							setSaving(true);
-							await onSubmit({ name: trimmed, typeIds, file });
+							await onSubmit({ name: trimmed, typeIds, file, removeFile });
 						} catch (err: any) {
 							setError(err?.message || 'Error guardando sonido');
 						} finally {
@@ -111,11 +113,29 @@ const SoundModal: React.FC<Props> = ({ open, initial, existing, types, onClose, 
 							<div style={{ marginTop: 6, opacity: 0.85, fontSize: 12, wordBreak: 'break-all' }}>Actual: {initial.file}</div>
 						) : null}
 					</label>
+					{initial?.id && initial?.file && !file ? (
+						<div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+							<button
+								type="button"
+								className="icon option"
+								onClick={() => {
+									setFile(null);
+									setRemoveFile(true);
+								}}
+								data-tooltip="Eliminar archivo"
+								aria-label="Eliminar archivo"
+								style={{ padding: '2px 8px' }}
+							>
+								Eliminar archivo
+							</button>
+							{removeFile ? <span style={{ fontSize: 12, opacity: 0.9 }}>Se eliminará al guardar.</span> : null}
+						</div>
+					) : null}
 
 					{error ? <div style={{ color: '#e24444', fontSize: 13 }}>{error}</div> : null}
 
 					<div className="actions">
-						<button type="submit" className="confirm" disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</button>
+						<button type="submit" className="confirm" disabled={saving}>{saving ? 'Confirmando...' : 'Confirmar'}</button>
 						<button type="button" className="cancel" onClick={onClose} disabled={saving}>Cancelar</button>
 					</div>
 				</form>
@@ -124,7 +144,7 @@ const SoundModal: React.FC<Props> = ({ open, initial, existing, types, onClose, 
 			<NameModal
 				open={createTypeOpen}
 				title="Nuevo tipo de sonido"
-				confirmText="Crear"
+				confirmText="Confirmar"
 				placeholder="Nombre del tipo"
 				helperText="Ejemplo: “Sonido de movimiento”."
 				errorText={createTypeError}

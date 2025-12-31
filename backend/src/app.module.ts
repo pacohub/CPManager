@@ -60,24 +60,34 @@ import { SoundType } from './Entities/soundType.entity';
 import { Sound } from './Entities/sound.entity';
 import { Race } from './Entities/race.entity';
 import { Animation } from './Entities/animation.entity';
+import { ArmorType } from './Entities/armorType.entity';
+import { DefenseType } from './Entities/defenseType.entity';
+import { VisualEffect } from './Entities/visualEffect.entity';
+import { Effect } from './Entities/effect.entity';
+import { Skill } from './Entities/skill.entity';
+import { SkillEffect } from './Entities/skillEffect.entity';
 import { SoundTypeService } from './Services/soundType.service';
 import { SoundService } from './Services/sound.service';
 import { RaceService } from './Services/race.service';
 import { AnimationService } from './Services/animation.service';
+import { ArmorTypeService } from './Services/armorType.service';
+import { DefenseTypeService } from './Services/defenseType.service';
 import { SoundTypeController } from './Controller/soundType.controller';
 import { SoundController } from './Controller/sound.controller';
 import { RaceController } from './Controller/race.controller';
 import { AnimationController } from './Controller/animation.controller';
+import { ArmorTypeController } from './Controller/armorType.controller';
+import { DefenseTypeController } from './Controller/defenseType.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
+		TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'database.sqlite',
-			entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, Character, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType, SoundType, Sound, Race, Animation],
+					entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, Character, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType, SoundType, Sound, Race, Animation, ArmorType, DefenseType, VisualEffect, Effect, Skill, SkillEffect],
       synchronize: true, // Solo para desarrollo
     }),
-		TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, Character, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType, SoundType, Sound, Race, Animation]),
+		TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, Character, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType, SoundType, Sound, Race, Animation, ArmorType, DefenseType, VisualEffect, Effect, Skill, SkillEffect]),
   ],
   controllers: [
 		AppController,
@@ -103,7 +113,9 @@ import { AnimationController } from './Controller/animation.controller';
 		SoundController,
 		RaceController,
 		AnimationController,
+		ArmorTypeController,
+		DefenseTypeController,
 	],
-	providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService, ProfessionService, ClassService, CharacterService, ProfessionObjectService, ProfessionObjectResourceService, GameObjectService, ComponentService, ResourceService, ResourceTypeService, SoundTypeService, SoundService, RaceService, AnimationService],
+	providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService, ProfessionService, ClassService, CharacterService, ProfessionObjectService, ProfessionObjectResourceService, GameObjectService, ComponentService, ResourceService, ResourceTypeService, SoundTypeService, SoundService, RaceService, AnimationService, ArmorTypeService, DefenseTypeService],
 })
 export class AppModule {}

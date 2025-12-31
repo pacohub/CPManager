@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { FaDownload, FaEdit, FaTrash, FaUpload, FaExclamationTriangle } from 'react-icons/fa';
+import { FaExclamation } from 'react-icons/fa';
+import { FaDownload, FaEdit, FaTrash, FaUpload } from 'react-icons/fa';
 import { MapItem } from '../interfaces/map';
 import { updateMap } from '../js/mapApi';
 
@@ -65,7 +66,7 @@ const MapCard: React.FC<Props> = ({ map, onEdit, onDelete, onChanged, onOpen, co
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <FaExclamationTriangle size={14} />
+          <FaExclamation size={14} />
         </span>
       ) : null}
       <div className="campaign-title">

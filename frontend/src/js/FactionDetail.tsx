@@ -1,13 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FaArrowLeft, FaLock, FaLockOpen, FaPlus } from 'react-icons/fa';
+import { FaArrowLeft, FaPlus } from 'react-icons/fa';
+import { FaLockOpen, FaLock } from 'react-icons/fa';
 import ClassModal from '../components/ClassModal';
 import ProfessionModal from '../components/ProfessionModal';
+import CpImage from '../components/CpImage';
+import CpImageFill from '../components/CpImageFill';
 import { ClassItem } from '../interfaces/class';
 import { FactionItem } from '../interfaces/faction';
 import { ProfessionItem } from '../interfaces/profession';
 import { createClass, getClasses, uploadClassIcon } from './classApi';
 import { getFaction, getFactionClasses, getFactionProfessions, setFactionClasses, setFactionProfessions } from './factionApi';
 import { createProfession, getProfessions } from './professionApi';
+import ClearableSearchInput from '../components/ClearableSearchInput';
 
 function asImageUrl(raw?: string): string | undefined {
 	const v = (raw || '').trim();
@@ -72,8 +76,6 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 			setClasses([]);
 			setSelectedProfessionIds([]);
 			setSelectedClassIds([]);
-			didInitProfessions.current = true;
-			didInitClasses.current = true;
 		} finally {
 			setLoading(false);
 		}
@@ -156,13 +158,43 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-					Facción: {faction?.name ?? (loading ? '...' : '(No encontrada)')}
-				</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 140px)',
+						padding: '6px 70px 8px 70px',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Facción</div>
+					<div
+						style={{
+							fontSize: 22,
+							fontWeight: 900,
+							lineHeight: 1.1,
+							minWidth: 0,
+							overflow: 'hidden',
+							textOverflow: 'ellipsis',
+							whiteSpace: 'nowrap',
+						}}
+					>
+						{faction?.name ?? (loading ? '...' : '(No encontrada)')}
+					</div>
+					</div>
+				<div style={{ width: 32 }} />
 			</div>
 
 			{error ? (
@@ -182,18 +214,18 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 								width: '100%',
 								height: 'auto',
 								aspectRatio: '16 / 5',
-								backgroundImage: `url("${crestUrl}")`,
-								backgroundSize: 'cover',
-								backgroundPosition: 'center',
 								position: 'relative',
 								overflow: 'hidden',
 							}}
 						>
-							<div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)' }} />
+							<div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+								<CpImageFill src={crestUrl} alt={faction.name} fit="cover" />
+							</div>
+							<div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1 }} />
 							<div
 								style={{
-									position: 'absolute',
-									inset: 0,
+									position: 'relative',
+									zIndex: 2,
 									display: 'flex',
 									flexDirection: 'column',
 									alignItems: 'center',
@@ -203,16 +235,7 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 									gap: 10,
 								}}
 							>
-								{iconUrl ? (
-									<div className="metallic-border metallic-border-square" style={{ width: 84, height: 84, backgroundImage: 'none' }}>
-										<img
-											src={iconUrl}
-											alt=""
-											aria-hidden="true"
-											style={{ width: 84, height: 84, objectFit: 'cover', display: 'block' }}
-										/>
-									</div>
-								) : null}
+								<CpImage src={iconUrl} width={84} height={84} fit="cover" />
 								<div style={{ fontWeight: 900, fontSize: 20, color: '#e2d9b7' }}>{faction.name}</div>
 								<div style={{ maxWidth: 720, opacity: 0.95, color: '#e2d9b7', whiteSpace: 'pre-wrap' }}>
 									{(faction.description || '').trim() || '—'}
@@ -253,11 +276,10 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 							</div>
 
 							<div style={{ padding: '0 12px 12px 12px' }}>
-								<input
-									type="text"
-									placeholder="Buscar profesión..."
+								<ClearableSearchInput
 									value={professionSearch}
-									onChange={(e) => setProfessionSearch(e.target.value)}
+									onChange={(v) => setProfessionSearch(v)}
+									placeholder="Buscar profesión..."
 									className="filters-input"
 									style={{ width: '100%', marginBottom: 8 }}
 								/>
@@ -314,11 +336,10 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 							</div>
 
 							<div style={{ padding: '0 12px 12px 12px' }}>
-								<input
-									type="text"
-									placeholder="Buscar clase..."
+								<ClearableSearchInput
 									value={classSearch}
-									onChange={(e) => setClassSearch(e.target.value)}
+									onChange={(v) => setClassSearch(v)}
+									placeholder="Buscar clase..."
 									className="filters-input"
 									style={{ width: '100%', marginBottom: 8 }}
 								/>

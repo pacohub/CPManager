@@ -1,5 +1,6 @@
 import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Animation } from './animation.entity';
+import { ArmorType } from './armorType.entity';
 import { Sound } from './sound.entity';
 
 export const RACE_DEATH_TYPES = [
@@ -22,9 +23,6 @@ export const RACE_MOVEMENT_TYPES = [
 ] as const;
 
 export type RaceMovementType = (typeof RACE_MOVEMENT_TYPES)[number];
-
-export const RACE_ARMOR_TYPES = ['carne', 'etérea', 'metal', 'piedra', 'madera'] as const;
-export type RaceArmorType = (typeof RACE_ARMOR_TYPES)[number];
 
 @Entity()
 export class Race {
@@ -85,6 +83,13 @@ export class Race {
 
 	@Column({ type: 'text', nullable: true })
 	armorType: string;
+
+	@ManyToOne(() => ArmorType, { nullable: true, eager: true, onDelete: 'SET NULL' })
+	@JoinColumn({ name: 'armorTypeId' })
+	armorTypeEntity?: ArmorType | null;
+
+	@Column({ type: 'integer', nullable: true })
+	armorTypeId?: number | null;
 
 	@ManyToMany(() => Animation, (animation) => animation.races)
 	@JoinTable({ name: 'race_animations' })

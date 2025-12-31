@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FaPlus, FaTimes } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 import NameModal from './NameModal';
+import CpImage from './CpImage';
 import { ResourceItem } from '../interfaces/resource';
 import { ResourceTypeItem } from '../interfaces/resourceType';
 
@@ -18,7 +20,7 @@ interface Props {
 	existing: ResourceItem[];
 	resourceTypes: ResourceTypeItem[];
 	onCreateType: (name: string) => Promise<ResourceTypeItem | null>;
-	onSubmit: (data: { name: string; description?: string; fileLink?: string; resourceTypeId: number; iconFile?: File | null }) => void;
+	onSubmit: (data: { name: string; description?: string; fileLink?: string; resourceTypeId: number; iconFile?: File | null; removeIcon?: boolean }) => void;
 	onClose: () => void;
 }
 
@@ -31,6 +33,7 @@ const ResourceModal: React.FC<Props> = ({ open, initial, existing, resourceTypes
 	const [resourceTypeId, setResourceTypeId] = useState<number | ''>(initialTypeId);
 	const [iconFile, setIconFile] = useState<File | null>(null);
 	const [iconPreviewUrl, setIconPreviewUrl] = useState<string>('');
+	const [removeIcon, setRemoveIcon] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [createTypeModalOpen, setCreateTypeModalOpen] = useState(false);
 	const [createTypeError, setCreateTypeError] = useState<string | null>(null);
@@ -44,6 +47,7 @@ const ResourceModal: React.FC<Props> = ({ open, initial, existing, resourceTypes
 		setResourceTypeId(initialTypeId);
 		setIconFile(null);
 		setIconPreviewUrl('');
+		setRemoveIcon(false);
 		setError(null);
 		setCreateTypeModalOpen(false);
 		setCreateTypeError(null);
@@ -61,7 +65,7 @@ const ResourceModal: React.FC<Props> = ({ open, initial, existing, resourceTypes
 		return (existing || []).some((r) => (r.name || '').trim().toLowerCase() === normalized && r.id !== initial?.id);
 	}, [existing, name, initial?.id]);
 
-	const currentIconUrl = iconPreviewUrl || asImageUrl(initial?.icon);
+	const currentIconUrl = removeIcon ? null : (iconPreviewUrl || asImageUrl(initial?.icon));
 
 	if (!open) return null;
 
@@ -71,6 +75,7 @@ const ResourceModal: React.FC<Props> = ({ open, initial, existing, resourceTypes
 			setIconFile(null);
 			if (iconPreviewUrl) URL.revokeObjectURL(iconPreviewUrl);
 			setIconPreviewUrl('');
+			setRemoveIcon(false);
 			return;
 		}
 
@@ -86,6 +91,7 @@ const ResourceModal: React.FC<Props> = ({ open, initial, existing, resourceTypes
 		setIconFile(file);
 		if (iconPreviewUrl) URL.revokeObjectURL(iconPreviewUrl);
 		setIconPreviewUrl(objectUrl);
+		setRemoveIcon(false);
 	};
 
 	const handleCreateType = async (typeName: string) => {
@@ -116,6 +122,7 @@ const ResourceModal: React.FC<Props> = ({ open, initial, existing, resourceTypes
 			fileLink: fileLink,
 			resourceTypeId: Number(resourceTypeId),
 			iconFile,
+			removeIcon,
 		});
 	};
 
@@ -179,21 +186,22 @@ const ResourceModal: React.FC<Props> = ({ open, initial, existing, resourceTypes
 					<div style={{ marginBottom: 8 }}>
 						<div style={{ fontSize: 13, marginBottom: 4, opacity: 0.9 }}>Icono (imagen)</div>
 						<div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-							<div
-								className="metallic-border metallic-border-square"
-								style={{
-									width: 64,
-									height: 64,
-									minWidth: 64,
-									display: 'flex',
-									alignItems: 'stretch',
-									justifyContent: 'stretch',
-									backgroundImage: 'none',
-								}}
-							>
-								{currentIconUrl ? (
-									<img src={currentIconUrl} alt="" aria-hidden="true" style={{ width: 64, height: 64, objectFit: 'cover', display: 'block' }} />
+							<div style={{ position: 'relative' }} className="preview-container">
+								{initial?.id && initial?.icon && !iconFile && !removeIcon ? (
+									<button
+										type="button"
+										className="preview-remove-btn top-right"
+										data-tooltip="Eliminar icono"
+										aria-label="Eliminar icono"
+										onClick={() => {
+											setIconFile(null);
+											setRemoveIcon(true);
+										}}
+										>
+											<FaTimes size={14} />
+										</button>
 								) : null}
+								<CpImage src={currentIconUrl || undefined} width={64} height={64} fit="cover" />
 							</div>
 							<div style={{ minWidth: 0, flex: 1 }}>
 								<input ref={iconInputRef} type="file" accept="image/*" onChange={handleIconChange} />
@@ -202,6 +210,7 @@ const ResourceModal: React.FC<Props> = ({ open, initial, existing, resourceTypes
 								) : null}
 							</div>
 						</div>
+						{removeIcon ? <div style={{ marginTop: 8, fontSize: 12, opacity: 0.9 }}>Se eliminará al guardar.</div> : null}
 						{initial?.icon && !iconFile && currentIconUrl ? (
 							<div style={{ fontSize: 12, marginTop: 4, opacity: 0.85 }}>Icono actual cargado.</div>
 						) : null}
@@ -216,7 +225,7 @@ const ResourceModal: React.FC<Props> = ({ open, initial, existing, resourceTypes
 					/>
 
 					<div className="actions">
-						<button type="submit" className="confirm" disabled={isDuplicateName}>{initial?.id ? 'Actualizar' : 'Crear'}</button>
+						<button type="submit" className="confirm" disabled={isDuplicateName}>Confirmar</button>
 						<button type="button" className="cancel" onClick={onClose}>Cancelar</button>
 					</div>
 
@@ -227,7 +236,7 @@ const ResourceModal: React.FC<Props> = ({ open, initial, existing, resourceTypes
 			<NameModal
 				open={createTypeModalOpen}
 				title="Nuevo tipo de recurso"
-				confirmText="Crear"
+				confirmText="Confirmar"
 				placeholder="Nombre del tipo"
 				helperText="Ejemplos: “Piedra”, “Madera”, “Oro”."
 				errorText={createTypeError}

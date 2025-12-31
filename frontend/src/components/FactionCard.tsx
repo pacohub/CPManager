@@ -1,8 +1,10 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { FaEdit, FaTrash, FaExclamationTriangle } from 'react-icons/fa';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { FaChevronDown, FaChevronUp, FaExclamation } from 'react-icons/fa';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 import { ClassItem } from '../interfaces/class';
 import { FactionItem } from '../interfaces/faction';
 import { ProfessionItem } from '../interfaces/profession';
+import CpImage from './CpImage';
 
 interface Props {
 	faction: FactionItem;
@@ -21,29 +23,29 @@ const toBackendUrl = (path?: string) => {
 };
 
 const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRemoveCrest, professions, classes }) => {
-	// "Imagen" (iconImage) es el fondo de la tarjeta
-	const [bgExists, setBgExists] = useState(true);
-	const bgUrl = useMemo(() => toBackendUrl(faction.iconImage), [faction.iconImage]);
+	// "Imagen" (iconImage) se usa como fondo de la tarjeta
+	const [iconExists, setIconExists] = useState(true);
+	const iconUrl = useMemo(() => toBackendUrl(faction.iconImage), [faction.iconImage]);
 
-	// "Escudo" (crestImage) va a la izquierda del nombre
-	const [crestExists, setCrestExists] = useState(true);
+	// "Escudo" (crestImage) se muestra como icono antes del nombre
+	const [crestExists, setCrestExists] = useState(false);
 	const crestUrl = useMemo(() => toBackendUrl(faction.crestImage), [faction.crestImage]);
 
 	useEffect(() => {
-		if (!bgUrl) return setBgExists(true);
-		fetch(bgUrl, { method: 'HEAD' })
-			.then((res) => setBgExists(res.ok))
-			.catch(() => setBgExists(false));
-	}, [bgUrl]);
+		if (!iconUrl) return setIconExists(true);
+		fetch(iconUrl, { method: 'HEAD' })
+			.then((res) => setIconExists(res.ok))
+			.catch(() => setIconExists(false));
+	}, [iconUrl]);
 
 	useEffect(() => {
-		if (!crestUrl) return setCrestExists(true);
+		if (!crestUrl) return setCrestExists(false);
 		fetch(crestUrl, { method: 'HEAD' })
 			.then((res) => setCrestExists(res.ok))
 			.catch(() => setCrestExists(false));
 	}, [crestUrl]);
 
-	const bg = bgUrl && bgExists ? `url("${bgUrl}")` : undefined;
+	const iconOk = iconUrl && iconExists;
 
 	const swatches = [faction.primaryColor, faction.secondaryColor, faction.tertiaryColor].filter(Boolean) as string[];
 
@@ -88,10 +90,37 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRem
 	const showWarning = missing.length > 0;
 	const warningText = `Falta: ${missing.join(', ')}.`;
 
+	// Always apply the background image if an icon URL is provided
+	const backgroundStyle: React.CSSProperties = iconUrl
+		? { backgroundImage: `url(${iconUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
+		: { backgroundImage: 'none' };
+
+	const [showFullDesc, setShowFullDesc] = useState(false);
+	const [needsToggle, setNeedsToggle] = useState(false);
+	const descRef = useRef<HTMLDivElement | null>(null);
+
+	useEffect(() => {
+		const el = descRef.current;
+		if (!el) {
+			// fallback to length-based check
+			setNeedsToggle(Boolean(faction.description && faction.description.length > 160));
+			return;
+		}
+		// run after paint
+		const check = () => {
+			const content = el;
+			setNeedsToggle(content.scrollHeight > content.clientHeight + 2);
+		};
+		check();
+		// also re-check on window resize
+		window.addEventListener('resize', check);
+		return () => window.removeEventListener('resize', check);
+	}, [faction.description, showFullDesc]);
+
 	return (
 		<div
-			className="campaign-card metallic-border"
-			style={{ backgroundImage: bg, width: '100%', height: 'auto', aspectRatio: '4 / 3' }}
+			className={`campaign-card metallic-border${crestExists ? ' has-crest' : ''}`}
+			style={{ ...backgroundStyle, width: '100%', height: 'auto', aspectRatio: '4 / 3' }}
 			tabIndex={0}
 			aria-label={faction.name}
 			role={onOpen ? 'button' : undefined}
@@ -112,62 +141,42 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRem
 					onClick={(e) => e.stopPropagation()}
 					onPointerDown={(e) => e.stopPropagation()}
 				>
-					<FaExclamationTriangle size={14} />
+					<FaExclamation size={14} />
 				</span>
 			) : null}
-			<div className="campaign-title">
-				<div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-					{crestUrl && crestExists ? (
-						<img
-							src={crestUrl}
-							alt=""
-							aria-hidden="true"
-							style={{ width: 22, height: 22, borderRadius: 6, objectFit: 'cover', flex: '0 0 auto' }}
-						/>
-					) : null}
-					<div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{faction.name}</div>
+			{crestUrl && crestExists ? (
+				<div className="faction-crest-center" aria-hidden="true">
+					<CpImage
+						src={crestUrl}
+						width={120}
+						height={120}
+						fit="cover"
+						showFrame={false}
+						imgStyle={{ borderRadius: 8, width: '100%', height: '100%' }}
+					/>
+				</div>
+			) : null}
+			{/* swatches moved to footer under the name */}
+			<div className="faction-footer">
+				<div className="faction-name-row">
 					{swatches.length ? (
-						<div style={{ display: 'inline-flex', gap: 6 }}>
+						<div className="faction-swatches-row" aria-hidden="true">
 							{swatches.slice(0, 3).map((hex) => (
 								<span
 									key={hex}
 									aria-label={hex}
 									title={hex}
-									style={{
-										width: 12,
-										height: 12,
-										borderRadius: 999,
-										background: hex,
-										border: '1px solid rgba(0,0,0,0.35)',
-									}}
+									style={{ background: hex }}
 								/>
 							))}
 						</div>
 					) : null}
+					<div className="faction-top-row"></div>	
+					<div className="faction-name">{faction.name}</div>
 				</div>
-				{professionNames.length ? (
-					<div className="campaign-subtitle" title={professionNames.join(', ')}>
-						{professionSummary}
-					</div>
-				) : null}
 			</div>
 
 			<div className="campaign-actions">
-				{crestUrl && crestExists && onRemoveCrest ? (
-					<button
-						className="option"
-						tabIndex={-1}
-						aria-label="Eliminar escudo"
-						onClick={(e) => {
-							e.stopPropagation();
-							onRemoveCrest();
-						}}
-						onPointerDown={(e) => e.stopPropagation()}
-						style={{ fontSize: 12, padding: '0 6px' }}
-					>
-						Eliminar escudo
-					</button>
-				) : null}
 				<button
 					className="icon option"
 					title="Editar"
@@ -194,7 +203,24 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRem
 				</button>
 			</div>
 
-			<div className="campaign-desc">{faction.description}</div>
+			<div className="campaign-desc" onClick={(e)=>e.stopPropagation()}>
+				<div ref={descRef} className={`campaign-desc-content ${showFullDesc ? 'expanded' : ''}`}>{faction.description}</div>
+				{professionNames.length ? (
+					<div className="campaign-subtitle" title={professionNames.join(', ')} style={{ marginTop: 8 }}>
+						{professionSummary}
+					</div>
+				) : null}
+				{(needsToggle || (faction.description && faction.description.length > 160)) ? (
+					<button
+						className="desc-toggle"
+						onClick={(e) => { e.stopPropagation(); setShowFullDesc((s) => !s); }}
+						aria-expanded={showFullDesc}
+						aria-label={showFullDesc ? 'Mostrar menos descripción' : 'Mostrar más descripción'}
+					>
+						{showFullDesc ? <FaChevronUp size={14} /> : <FaChevronDown size={14} />}
+					</button>
+				) : null}
+			</div>
 		</div>
 	);
 };

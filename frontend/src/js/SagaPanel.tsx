@@ -7,9 +7,11 @@ import CampaignCard from '../components/CampaignCard';
 import CampaignModal from '../components/CampaignModal';
 import { getCampaignsBySaga, createCampaign, updateCampaign, deleteCampaign } from './campaignApi';
 import { getAllChapters } from './chapterApi';
-import { FaBookOpen, FaCubes, FaEdit, FaTrash, FaTimes, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamationTriangle, FaCompass, FaCogs, FaMountain, FaFlag, FaUser, FaPaw, FaVolumeUp, FaRunning } from 'react-icons/fa';
-import { GiChest, GiCrossedSwords, GiWarPick } from 'react-icons/gi';
+import { FaBookOpen, FaCampground, FaLockOpen, FaLock, FaChevronRight, FaChevronDown, FaExclamation } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
+import ClearableSearchInput from '../components/ClearableSearchInput';
 
 const EXPANDED_SAGAS_STORAGE_KEY = 'cpmanager:sagas:expanded';
 
@@ -155,21 +157,9 @@ const DraggableCampaign: React.FC<DraggableCampaignProps> = ({ campaign, enabled
 
 interface SagaPanelProps {
   onOpenCampaign?: (campaignId: number) => void;
-  onOpenMaps?: () => void;
-  onOpenMechanics?: () => void;
-  onOpenFactions?: () => void;
-	onOpenClasses?: () => void;
-	onOpenCharacters?: () => void;
-	onOpenRaces?: () => void;
-	onOpenSounds?: () => void;
-  onOpenProfessions?: () => void;
-  onOpenObjects?: () => void;
-	onOpenComponents?: () => void;
-  onOpenAnimations?: () => void;
-	onOpenResources?: () => void;
 }
 
-const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpenMechanics, onOpenFactions, onOpenClasses, onOpenCharacters, onOpenRaces, onOpenSounds, onOpenProfessions, onOpenObjects, onOpenComponents, onOpenAnimations, onOpenResources }) => {
+const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
   // Campañas por saga
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -512,111 +502,14 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
 			>
 				<FaBookOpen size={28} color="#FFD700" />
 			</button>
-            <button
-              className="icon"
-              aria-label="Mapas"
-              data-tooltip="Mapas"
-              onClick={() => onOpenMaps?.()}
-            >
-              <FaCompass size={26} color="#FFD700" />
-            </button>
-            <button
-              className="icon"
-              aria-label="Componentes"
-              data-tooltip="Componentes"
-              onClick={() => onOpenComponents?.()}
-            >
-              <FaCubes size={26} color="#FFD700" />
-            </button>
-            <button
-              className="icon"
-              aria-label="Mecánicas"
-              data-tooltip="Mecánicas"
-              onClick={() => onOpenMechanics?.()}
-            >
-              <FaCogs size={26} color="#FFD700" />
-            </button>
-            <button
-              className="icon"
-              aria-label="Profesiones"
-              data-tooltip="Profesiones"
-              onClick={() => onOpenProfessions?.()}
-            >
-              <GiWarPick size={26} color="#FFD700" />
-            </button>
-            <button
-              className="icon"
-              aria-label="Recursos"
-              data-tooltip="Recursos"
-              onClick={() => onOpenResources?.()}
-            >
-              <FaMountain size={26} color="#FFD700" />
-            </button>
-            <button
-              className="icon"
-              aria-label="Objetos"
-              data-tooltip="Objetos"
-              onClick={() => onOpenObjects?.()}
-            >
-              <GiChest size={26} color="#FFD700" />
-            </button>
-            <button
-              className="icon"
-              aria-label="Facciones"
-              data-tooltip="Facciones"
-              onClick={() => onOpenFactions?.()}
-            >
-              <FaFlag size={26} color="#FFD700" />
-            </button>
-            <button
-              className="icon"
-              aria-label="Personajes"
-              data-tooltip="Personajes"
-              onClick={() => onOpenCharacters?.()}
-            >
-              <FaUser size={26} color="#FFD700" />
-            </button>
-			<button
-			  className="icon"
-			  aria-label="Clases"
-        data-tooltip="Clases"
-			  onClick={() => onOpenClasses?.()}
-			>
-			  <GiCrossedSwords size={26} color="#FFD700" />
-			</button>
-			<button
-			  className="icon"
-			  aria-label="Razas"
-        data-tooltip="Razas"
-			  onClick={() => onOpenRaces?.()}
-			>
-			  <FaPaw size={26} color="#FFD700" />
-			</button>
-      <button
-        className="icon"
-        aria-label="Animaciones"
-        data-tooltip="Animaciones"
-        onClick={() => onOpenAnimations?.()}
-      >
-        <FaRunning size={26} color="#FFD700" />
-      </button>
-			<button
-			  className="icon"
-			  aria-label="Sonidos"
-        data-tooltip="Sonidos"
-			  onClick={() => onOpenSounds?.()}
-			>
-			  <FaVolumeUp size={26} color="#FFD700" />
-            </button>
           </div>
         </div>
         <div className="filters-row" style={{ marginBottom: 16 }}>
-          <input
-          type="text"
-          placeholder="Buscar saga..."
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="filters-input"
+          <ClearableSearchInput
+            value={search}
+            onChange={(v) => setSearch(v)}
+            placeholder="Buscar saga..."
+            className="filters-input"
           />
           <button
             className="icon"
@@ -713,7 +606,7 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
                             onPointerDown={(e) => e.stopPropagation()}
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <FaExclamationTriangle size={16} />
+                            <FaExclamation size={16} />
                           </span>
                         ) : null}
                       </span>
@@ -834,6 +727,7 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
       )}
       <ConfirmModal
         open={confirmOpen}
+        requireText="eliminar"
         message={"¿Estás seguro de que deseas eliminar esta saga?"}
         onConfirm={() => {
           if (pendingDeleteId !== null) {
@@ -850,6 +744,7 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
 
       <ConfirmModal
         open={confirmCampaignOpen}
+        requireText="eliminar"
         message={"¿Estás seguro de que deseas eliminar esta campaña?"}
         onConfirm={async () => {
           if (!pendingDeleteCampaign?.id) {
@@ -876,7 +771,7 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
       {showModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <button className="icon option" onClick={() => setShowModal(false)} title="Cerrar">
+            <button className="icon option" onClick={() => setShowModal(false)} title="Cerrar" style={{ position: 'absolute', top: 12, right: 12 }}>
               <FaTimes size={18} />
             </button>
             <h2 className="modal-title">
@@ -900,7 +795,7 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign, onOpenMaps, onOpe
               />
               <div className="actions">
                 <button type="submit" className='confirm'>
-                  {editingId ? 'Actualizar' : 'Crear'}
+                  Confirmar
                 </button>
                 <button
                   type="button"

@@ -3,7 +3,11 @@ import { Chapter } from './chapter.entity';
 import { Map } from './map.entity';
 
 export enum EventType {
+	EVENT = 'EVENT',
 	MISSION = 'MISSION',
+	SECONDARY_MISSION = 'SECONDARY_MISSION',
+	DAILY_MISSION = 'DAILY_MISSION',
+	WEEKLY_MISSION = 'WEEKLY_MISSION',
 	CINEMATIC = 'CINEMATIC',
 	MOBA = 'MOBA',
 }
@@ -13,6 +17,12 @@ export enum EventDifficulty {
 	NORMAL = 'NORMAL',
 	HARD = 'HARD',
 }
+
+export type MobaTeam = { name: string; factionIds: number[] };
+export type MobaConfig = { teams: MobaTeam[] };
+
+export type DialogueLine = { speaker?: string; text: string };
+export type DialogueConfig = { lines: DialogueLine[] };
 
 @Entity()
 export class Event {
@@ -38,7 +48,10 @@ export class Event {
 	file: string;
 
 	@Column({ type: 'simple-json', nullable: true })
-	moba: { teamAIds: number[]; teamBIds: number[] } | null;
+	moba: MobaConfig | null;
+
+	@Column({ type: 'simple-json', nullable: true })
+	dialogue: DialogueConfig | null;
 
 	@ManyToOne(() => Chapter, { eager: true, onDelete: 'CASCADE' })
 	chapter: Chapter;

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Resource } from '../Entities/resource.entity';
@@ -77,6 +77,35 @@ export class ResourceService {
 	}
 
 	async remove(id: number): Promise<void> {
-		await this.resourceRepository.delete(id);
+		if (!Number.isFinite(id) || id <= 0) throw new BadRequestException('id inválido');
+
+		// Ensure the resource exists and detach any join-table relations before deleting.
+		try {
+			await this.resourceRepository.manager.transaction(async (manager) => {
+				const repo = manager.getRepository(Resource);
+				const existing = await repo.findOne({ where: { id }, relations: { chapters: true } as any });
+				if (!existing) throw new NotFoundException('Recurso no encontrado');
+
+				const chapterIds = (existing.chapters ?? [])
+					.map((c: any) => Number(c?.id))
+					.filter((n: number) => Number.isFinite(n) && n > 0);
+				if (chapterIds.length) {
+					await manager
+						.createQueryBuilder()
+						.relation(Resource, 'chapters')
+						.of(id)
+						.remove(chapterIds);
+				}
+
+				await repo.delete(id);
+			});
+		} catch (err: any) {
+			// SQLite FK errors surface as SQLITE_CONSTRAINT / FOREIGN KEY constraint failed
+			const message = String(err?.message ?? '');
+			if (message.includes('FOREIGN KEY constraint failed') || message.includes('SQLITE_CONSTRAINT')) {
+				throw new ConflictException('No se puede eliminar el recurso porque está en uso');
+			}
+			throw err;
+		}
 	}
 }

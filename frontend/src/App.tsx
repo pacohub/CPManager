@@ -65,6 +65,11 @@ function App() {
       currentTarget = target;
       const el = ensureTooltipEl();
       el.textContent = text;
+      // If any modal is open (or the target is inside a modal), keep tooltip below modal overlay
+      const anyModalOpen = Boolean(document.querySelector('.modal-overlay'));
+      const insideModal = Boolean(target.closest('.modal-overlay') || target.closest('.modal-content'));
+      if (anyModalOpen || insideModal) el.style.zIndex = '900';
+      else el.style.zIndex = '10000';
       el.style.display = 'block';
       positionTooltip();
       requestAnimationFrame(() => {

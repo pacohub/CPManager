@@ -60,6 +60,7 @@ export async function createEvent(data: {
 	difficulty: string;
 	file?: string;
 	moba?: any;
+	dialogue?: any;
 	chapterId: number;
 	mapId: number;
 }): Promise<EventItem> {
@@ -81,6 +82,7 @@ export async function updateEvent(
 		difficulty: string;
 		file: string;
 		moba: any;
+		dialogue: any;
 		chapterId: number;
 		mapId: number;
 	}>,

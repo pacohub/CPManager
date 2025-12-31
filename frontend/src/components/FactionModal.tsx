@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { FactionItem } from '../interfaces/faction';
 import { WC3_PLAYER_COLORS } from '../js/wc3PlayerColors';
+import CpImageFill from './CpImageFill';
 
 interface Props {
 	open: boolean;
@@ -204,7 +205,16 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 
 	return (
 		<div className="modal-overlay">
-			<div className="modal-content" style={{ maxWidth: 560, minWidth: 340, maxHeight: '86vh', overflowY: 'auto' }}>
+			<div
+				className="modal-content"
+				style={{
+					maxWidth: 560,
+					minWidth: 340,
+					/* keep modal box corners visible; allow inner area to scroll */
+					overflow: 'visible',
+					boxSizing: 'border-box',
+				}}
+			>
 				<button className="icon option" onClick={onClose} title="Cerrar" style={{ position: 'absolute', top: 12, right: 12 }}>
 					<FaTimes size={18} />
 				</button>
@@ -212,7 +222,9 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 					{initial?.id ? 'Editar Facción' : 'Nueva Facción'}
 				</h2>
 
-				<form onSubmit={handleSubmit} autoComplete="off">
+				{/* scroll only this inner area so modal border-radius stays visible */}
+				<div className="modal-body" style={{ maxHeight: '76vh', overflowY: 'auto', padding: '0 16px 16px' }}>
+					<form onSubmit={handleSubmit} autoComplete="off">
 					<input
 						name="name"
 						placeholder="Nombre"
@@ -251,11 +263,9 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 
 					{crestPreviewUrl ? (
 						<div style={{ marginBottom: 8 }}>
-							<img
-								src={crestPreviewUrl}
-								alt="Escudo"
-								style={{ maxWidth: '100%', maxHeight: 140, borderRadius: 8, border: '1px solid #ccc' }}
-							/>
+							<div style={{ width: '100%', height: 140, borderRadius: 8, border: '1px solid #ccc', overflow: 'hidden' }}>
+								<CpImageFill alt="Escudo" src={crestPreviewUrl} />
+							</div>
 						</div>
 					) : null}
 
@@ -275,33 +285,29 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 								Ruta actual: <span style={{ wordBreak: 'break-all' }}>{initial.iconImage}</span>
 							</div>
 						) : null}
-						{initial?.id && initial?.iconImage && !iconImage ? (
-							<div style={{ marginTop: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-								<button
-									type="button"
-									className="icon option"
-									onClick={() => {
-										setIconImage(null);
-										setRemoveIconImage(true);
-									}}
-									data-tooltip="Eliminar imagen"
-									aria-label="Eliminar imagen"
-									style={{ padding: '2px 8px' }}
-								>
-									Eliminar imagen
-								</button>
-								{removeIconImage ? <span style={{ fontSize: 12, opacity: 0.9 }}>Se eliminará al guardar.</span> : null}
-							</div>
-						) : null}
+						{/** removal handled by overlay button on the preview */}
 					</label>
 
 					{iconPreviewUrl ? (
-						<div style={{ marginBottom: 8 }}>
-							<img
-								src={iconPreviewUrl}
-								alt="Icono"
-								style={{ maxWidth: 140, maxHeight: 140, borderRadius: 8, border: '1px solid #ccc' }}
-							/>
+						<div style={{ marginBottom: 8 }} className="preview-container">
+							<div style={{ width: 140, height: 140, borderRadius: 8, border: '1px solid #ccc', overflow: 'hidden', position: 'relative' }}>
+                                {initial?.id && initial?.iconImage && !iconImage ? (
+											<button
+												type="button"
+												className="preview-remove-btn top-right"
+										data-tooltip="Eliminar imagen"
+										aria-label="Eliminar imagen"
+										onClick={() => {
+											setIconImage(null);
+											setRemoveIconImage(true);
+										}}
+									>
+								  				<FaTimes size={14} />
+						</button>
+								) : null}
+								<CpImageFill alt="Icono" src={iconPreviewUrl} />
+							</div>
+							{removeIconImage ? <div style={{ fontSize: 12, opacity: 0.9, marginTop: 6 }}>Se eliminará al guardar.</div> : null}
 						</div>
 					) : null}
 
@@ -331,7 +337,7 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 
 					<div className="actions">
 						<button type="submit" className="confirm" disabled={isDuplicateName}>
-							{initial?.id ? 'Actualizar' : 'Crear'}
+							Confirmar
 						</button>
 						<button type="button" className="cancel" onClick={onClose}>
 							Cancelar
@@ -339,7 +345,8 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 					</div>
 
 					{error ? <div style={{ color: 'red', marginTop: 8 }}>{error}</div> : null}
-				</form>
+					</form>
+				</div>
 			</div>
 		</div>
 	);

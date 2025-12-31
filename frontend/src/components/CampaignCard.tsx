@@ -1,7 +1,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { createCampaign, updateCampaign } from '../js/campaignApi';
-import { FaEdit, FaTrash, FaDownload, FaUpload, FaExclamationTriangle } from 'react-icons/fa';
+import { FaExclamation } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaDownload, FaUpload } from 'react-icons/fa';
 import { Campaign } from '../interfaces/campaign';
 
 interface Props {
@@ -68,7 +69,7 @@ const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete, onOpen, cha
           onClick={(e) => e.stopPropagation()}
           onPointerDown={(e) => e.stopPropagation()}
         >
-          <FaExclamationTriangle size={14} />
+          <FaExclamation size={14} />
         </span>
       ) : null}
       {/* Overlay hover handled by CSS */}

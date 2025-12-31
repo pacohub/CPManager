@@ -1,8 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaArrowLeft, FaEdit, FaExclamationTriangle, FaTrash } from 'react-icons/fa';
+import { FaExclamation } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 import { GiCrossedSwords } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
 import ClassModal from '../components/ClassModal';
+import CpImage from '../components/CpImage';
+import ClearableSearchInput from '../components/ClearableSearchInput';
 import { AnimationItem } from '../interfaces/animation';
 import { ClassItem } from '../interfaces/class';
 import { getAnimations } from './animationApi';
@@ -68,22 +72,49 @@ const ClassesView: React.FC<Props> = ({ onBack }) => {
 		const selectedSet = new Set(selectedAnimationIds);
 		return (
 			<div className="panel panel-corners-soft block-border block-panel-border">
-				<div className="panel-header">
+				<div className="panel-header" style={{ position: 'relative' }}>
 					<button className="icon" onClick={() => setSelectedClass(null)} title="Volver" aria-label="Volver">
 						<FaArrowLeft size={22} color="#FFD700" />
 					</button>
-					<h1 style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</h1>
+					<div
+						style={{
+							position: 'absolute',
+							zIndex: 30,
+							pointerEvents: 'none',
+							left: '50%',
+							transform: 'translateX(-50%)',
+							top: 0,
+							bottom: 0,
+							display: 'flex',
+							flexDirection: 'column',
+							alignItems: 'center',
+							justifyContent: 'center',
+							textAlign: 'center',
+							maxWidth: 'calc(100% - 160px)',
+							padding: '6px 80px 8px 80px',
+							minWidth: 0,
+						}}
+					>
+						<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Clase</div>
+						<div
+							style={{
+								fontSize: 22,
+								fontWeight: 900,
+								lineHeight: 1.1,
+								minWidth: 0,
+								wordBreak: 'break-word',
+							}}
+						>
+							{(c.name || '').trim() || '—'}
+						</div>
+					</div>
 					<div style={{ width: 40 }} />
 				</div>
 
 				<div style={{ padding: 12 }}>
 					<div className="block-border block-border-soft" style={{ padding: 12 }}>
 						<div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-							{iconUrl ? (
-								<div className="metallic-border metallic-border-square" style={{ width: 96, height: 96, minWidth: 96, backgroundImage: 'none' }}>
-									<img src={iconUrl} alt="" aria-hidden="true" style={{ width: 96, height: 96, objectFit: 'cover', display: 'block' }} />
-								</div>
-							) : null}
+							<CpImage src={iconUrl} width={96} height={96} fit="cover" />
 							<div style={{ flex: '1 1 320px', minWidth: 260 }}>
 								<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
 									<div>
@@ -117,7 +148,7 @@ const ClassesView: React.FC<Props> = ({ onBack }) => {
 									}
 								}}
 							>
-								{savingAnimations ? '...' : 'Guardar'}
+								{savingAnimations ? '...' : 'Confirmar'}
 							</button>
 						</div>
 
@@ -153,11 +184,30 @@ const ClassesView: React.FC<Props> = ({ onBack }) => {
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0 }}>Clases</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 160px)',
+						padding: '6px 80px 8px 80px',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Listado</div>
+					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>Clases</div>
+				</div>
 				<button
 					className="icon"
 					aria-label="Nueva Clase"
@@ -173,11 +223,10 @@ const ClassesView: React.FC<Props> = ({ onBack }) => {
 
 			<div className="filters-bar">
 				<div className="filters-row">
-					<input
-						type="text"
-						placeholder="Buscar clase..."
+					<ClearableSearchInput
 						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						onChange={(v) => setSearch(v)}
+						placeholder="Buscar clase..."
 						className="filters-input"
 					/>
 				</div>
@@ -198,18 +247,20 @@ const ClassesView: React.FC<Props> = ({ onBack }) => {
 						if (!Number.isFinite(c.level as any) || Number(c.level) <= 0) missing.push('nivel');
 						const showWarning = missing.length > 0;
 
-						return (
-							<div
-								key={c.id}
-								className="block-border block-border-soft mechanic-card"
-								style={{ padding: 12, position: 'relative', cursor: 'pointer' }}
-								role="button"
-								tabIndex={0}
-								onClick={() => setSelectedClass(c)}
-								onKeyDown={(e) => {
-									if (e.key === 'Enter' || e.key === ' ') setSelectedClass(c);
-								}}
-							>
+							return (
+								<div
+									key={c.id}
+									className="block-border block-border-soft mechanic-card"
+									style={{ padding: 12, position: 'relative', cursor: 'pointer' }}
+									role="button"
+									tabIndex={0}
+									onClick={() => setSelectedClass(c)}
+									onKeyDown={(e) => {
+										if (e.key === 'Enter' || e.key === ' ') setSelectedClass(c);
+									}}
+									/* show description in tooltip on hover, not inline */
+									title={c.description || undefined}
+								>
 								{showWarning ? (
 									<span
 										className="campaign-warning"
@@ -218,35 +269,20 @@ const ClassesView: React.FC<Props> = ({ onBack }) => {
 										onClick={(e) => e.stopPropagation()}
 										onPointerDown={(e) => e.stopPropagation()}
 									>
-										<FaExclamationTriangle size={14} />
+										<FaExclamation size={14} />
 									</span>
 								) : null}
 
 								<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
 									<div style={{ minWidth: 0 }}>
 										<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-											{iconUrl ? (
-												<div
-													className="metallic-border metallic-border-square"
-													style={{ width: 32, height: 32, minWidth: 32, backgroundImage: 'none', flex: '0 0 auto' }}
-												>
-													<img
-														src={iconUrl}
-														alt=""
-														aria-hidden="true"
-														style={{ width: 32, height: 32, objectFit: 'cover', display: 'block' }}
-													/>
-												</div>
-											) : null}
+											<CpImage src={iconUrl} width={32} height={32} fit="cover" frameStyle={{ flex: '0 0 auto' }} />
 											<div style={{ minWidth: 0 }}>
 												<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{c.name}</div>
-												<div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>Nivel: {Number.isFinite(c.level as any) ? Number(c.level) : 1}</div>
 											</div>
 										</div>
 
-										{c.description ? (
-											<div style={{ marginTop: 6, opacity: 0.9, fontSize: 13, whiteSpace: 'pre-wrap' }}>{c.description}</div>
-										) : null}
+
 									</div>
 
 									<div className="mechanic-actions" style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
@@ -297,7 +333,9 @@ const ClassesView: React.FC<Props> = ({ onBack }) => {
 						const anyData = data as any;
 						const iconFile: File | null | undefined = anyData?.iconFile;
 						let icon = (data.icon || '').trim();
-						if (iconFile) {
+						if ((anyData as any).removeIcon) {
+							icon = '';
+						} else if (iconFile) {
 							const uploaded = await uploadClassIcon(iconFile);
 							if (uploaded) icon = uploaded;
 						}
@@ -316,6 +354,7 @@ const ClassesView: React.FC<Props> = ({ onBack }) => {
 
 			<ConfirmModal
 				open={confirmOpen}
+				requireText="eliminar"
 				message={'¿Estás seguro de que deseas eliminar esta clase?'}
 				onConfirm={async () => {
 					const target = pendingDelete;

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Campaign } from '../interfaces/campaign';
 import { FaTimes } from 'react-icons/fa';
+import CpImageFill from './CpImageFill';
 
 interface Props {
   open: boolean;
@@ -15,6 +16,7 @@ const CampaignModal: React.FC<Props> = ({ open, initial, onSubmit, onClose, camp
   const [name, setName] = useState(initial?.name || '');
   const [description, setDescription] = useState(initial?.description || '');
   const [image, setImage] = useState<File | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
   const [fileLink, setFileLink] = useState(initial?.file || '');
   const [error, setError] = useState<string | null>(null);
 
@@ -44,6 +46,7 @@ const CampaignModal: React.FC<Props> = ({ open, initial, onSubmit, onClose, camp
     formData.append('name', name);
     formData.append('description', description);
     if (image) formData.append('image', image);
+    else if (removeImage) formData.append('image', '');
     formData.append('file', fileLink.trim());
     if (initial?.sagaId) formData.append('sagaId', String(initial.sagaId));
     if (initial?.order !== undefined) formData.append('order', String(initial.order));
@@ -88,20 +91,39 @@ const CampaignModal: React.FC<Props> = ({ open, initial, onSubmit, onClose, camp
               </div>
             )}
           </label>
+          {/* removal handled by overlay button on the preview */}
           {/* Previsualización de imagen */}
-          {(image || initial?.image) && (
-            <div style={{ marginBottom: 8 }}>
-              <img
-                src={image
-                  ? URL.createObjectURL(image)
-                  : initial?.image?.startsWith('http') || initial?.image?.startsWith('data:')
-                    ? initial.image
-                    : `http://localhost:4000/${initial?.image?.replace(/^\/+/, '')}`}
-                alt="Previsualización"
-                style={{ maxWidth: '100%', maxHeight: 120, borderRadius: 8, border: '1px solid #ccc' }}
-              />
+            {(image || initial?.image) && (
+            <div style={{ marginBottom: 8 }} className="preview-container">
+              <div style={{ width: '100%', height: 120, borderRadius: 8, border: '1px solid #ccc', overflow: 'hidden', position: 'relative' }}>
+                {initial?.id && initial?.image && !image ? (
+                  <button
+                    type="button"
+                    className="preview-remove-btn top-right"
+                    data-tooltip="Eliminar imagen"
+                    aria-label="Eliminar imagen"
+                    onClick={() => {
+                      setImage(null);
+                      setRemoveImage(true);
+                    }}
+                  >
+                    <FaTimes size={14} />
+                  </button>
+                ) : null}
+                <CpImageFill
+                  alt="Previsualización"
+                  src={
+                    image
+                      ? URL.createObjectURL(image)
+                      : initial?.image?.startsWith('http') || initial?.image?.startsWith('data:')
+                        ? initial.image
+                        : `http://localhost:4000/${initial?.image?.replace(/^\/+/, '')}`
+                  }
+                />
+              </div>
+              {removeImage ? <div style={{ fontSize: 12, opacity: 0.9, marginTop: 6 }}>Se eliminará al guardar.</div> : null}
             </div>
-          )}
+            )}
           <label style={{ marginBottom: 8, display: 'block' }}>
             Archivo (link):
             <input
@@ -113,7 +135,7 @@ const CampaignModal: React.FC<Props> = ({ open, initial, onSubmit, onClose, camp
             />
           </label>
           <div className="actions">
-            <button type="submit" className="confirm" disabled={isDuplicateName}>{initial?.id ? 'Actualizar' : 'Crear'}</button>
+            <button type="submit" className="confirm" disabled={isDuplicateName}>Confirmar</button>
             <button type="button" className="cancel" onClick={onClose}>Cancelar</button>
           </div>
           {error && <div style={{ color: 'red', marginTop: 8 }}>{error}</div>}

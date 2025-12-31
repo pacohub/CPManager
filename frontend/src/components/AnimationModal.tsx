@@ -63,7 +63,7 @@ const AnimationModal: React.FC<Props> = ({ open, initial, existing, onSubmit, on
 
 					<div className="actions">
 						<button type="submit" className="confirm" disabled={isDuplicateName}>
-							{initial?.id ? 'Actualizar' : 'Crear'}
+							Confirmar
 						</button>
 						<button type="button" className="cancel" onClick={onClose}>
 							Cancelar

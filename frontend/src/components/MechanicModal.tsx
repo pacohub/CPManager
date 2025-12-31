@@ -71,7 +71,7 @@ const MechanicModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onC
 					/>
 
 					<div className="actions">
-						<button type="submit" className="confirm" disabled={isDuplicateName}>{initial?.id ? 'Actualizar' : 'Crear'}</button>
+						<button type="submit" className="confirm" disabled={isDuplicateName}>Confirmar</button>
 						<button type="button" className="cancel" onClick={onClose}>Cancelar</button>
 					</div>
 

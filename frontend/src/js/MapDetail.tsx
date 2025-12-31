@@ -1,8 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { FaArrowLeft, FaEdit, FaExternalLinkAlt, FaLock, FaLockOpen, FaPlus, FaTrash } from 'react-icons/fa';
+import { FaLock, FaLockOpen } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
+import { FaEdit, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import ComponentModal from '../components/ComponentModal';
 import MapModal from '../components/MapModal';
+import CpImageFill from '../components/CpImageFill';
 import { ComponentItem } from '../interfaces/component';
 import { MapItem } from '../interfaces/map';
 import { createComponent, getComponents } from './componentApi';
@@ -126,11 +130,30 @@ const MapDetail: React.FC<Props> = ({ mapId, onBack }) => {
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0 }}>{map?.name || 'Mapa'}</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 200px)',
+						padding: '6px 100px 8px 100px',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Mapa</div>
+					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, minWidth: 0, wordBreak: 'break-word' }}>{map?.name || 'Mapa'}</div>
+				</div>
 				<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
 					<button className="icon" title="Editar" aria-label="Editar" onClick={() => setEditOpen(true)} disabled={!map}>
 						<FaEdit size={18} color="#FFD700" />
@@ -149,7 +172,12 @@ const MapDetail: React.FC<Props> = ({ mapId, onBack }) => {
 					<div style={{ display: 'grid', gridTemplateColumns: 'minmax(240px, 1fr) 1.2fr', gap: 14, alignItems: 'start' }}>
 						<div>
 							{imageUrl ? (
-								<div className="metallic-border metallic-border-square map-card" style={{ width: '100%', height: 'auto', aspectRatio: '4 / 3', backgroundImage: `url("${imageUrl}")` }} />
+								<div
+									className="metallic-border metallic-border-square map-card"
+									style={{ width: '100%', height: 'auto', aspectRatio: '4 / 3', backgroundImage: 'none', overflow: 'hidden' }}
+								>
+									<CpImageFill src={imageUrl} alt={map.name} fit="cover" />
+								</div>
 							) : (
 								<div className="block-border block-border-soft" style={{ padding: 12, opacity: 0.85 }}>
 									Sin imagen.
@@ -275,6 +303,7 @@ const MapDetail: React.FC<Props> = ({ mapId, onBack }) => {
 
 			<ConfirmModal
 				open={confirmOpen}
+				requireText="eliminar"
 				message={'¿Estás seguro de que deseas eliminar este mapa?'}
 				onConfirm={async () => {
 					setConfirmOpen(false);

@@ -1,7 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaArrowLeft, FaEdit, FaExclamationTriangle, FaPaw, FaTrash } from 'react-icons/fa';
+import { FaPaw, FaExclamation } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import RaceModal from '../components/RaceModal';
+import CpImage from '../components/CpImage';
+import ClearableSearchInput from '../components/ClearableSearchInput';
 import { AnimationItem } from '../interfaces/animation';
 import { RaceItem } from '../interfaces/race';
 import { SoundItem } from '../interfaces/sound';
@@ -72,7 +76,8 @@ const RacesView: React.FC<Props> = ({ onBack }) => {
 		const q = search.trim().toLowerCase();
 		const list = q
 			? (races || []).filter((r) => {
-				return (r.name || '').toLowerCase().includes(q) || String(r.armorType || '').toLowerCase().includes(q) || String(r.movementType || '').toLowerCase().includes(q);
+				const defenseName = String(r.armorTypeEntity?.name || r.armorType || '').toLowerCase();
+				return (r.name || '').toLowerCase().includes(q) || defenseName.includes(q) || String(r.movementType || '').toLowerCase().includes(q);
 			})
 			: (races || []);
 		return list.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
@@ -97,27 +102,54 @@ const RacesView: React.FC<Props> = ({ onBack }) => {
 		const selectedSet = new Set(selectedAnimationIds);
 		return (
 			<div className="panel panel-corners-soft block-border block-panel-border">
-				<div className="panel-header">
+				<div className="panel-header" style={{ position: 'relative' }}>
 					<button className="icon" onClick={() => setSelectedRace(null)} title="Volver" aria-label="Volver">
 						<FaArrowLeft size={22} color="#FFD700" />
 					</button>
-					<h1 style={{ margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.name}</h1>
+					<div
+						style={{
+							position: 'absolute',
+							zIndex: 30,
+							pointerEvents: 'none',
+							left: '50%',
+							transform: 'translateX(-50%)',
+							top: 0,
+							bottom: 0,
+							display: 'flex',
+							flexDirection: 'column',
+							alignItems: 'center',
+							justifyContent: 'center',
+							textAlign: 'center',
+							maxWidth: 'calc(100% - 160px)',
+							padding: '6px 80px 8px 80px',
+							minWidth: 0,
+						}}
+					>
+						<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Raza</div>
+						<div
+							style={{
+								fontSize: 22,
+								fontWeight: 900,
+								lineHeight: 1.1,
+								minWidth: 0,
+								wordBreak: 'break-word',
+							}}
+						>
+							{(r.name || '').trim() || '—'}
+						</div>
+					</div>
 					<div style={{ width: 40 }} />
 				</div>
 
 				<div style={{ padding: 12 }}>
 					<div className="block-border block-border-soft" style={{ padding: 12 }}>
 						<div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-							{iconUrl ? (
-								<div className="metallic-border metallic-border-square" style={{ width: 96, height: 96, minWidth: 96, backgroundImage: 'none' }}>
-									<img src={iconUrl} alt="" aria-hidden="true" style={{ width: 96, height: 96, objectFit: 'cover', display: 'block' }} />
-								</div>
-							) : null}
+							<CpImage src={iconUrl} width={96} height={96} fit="cover" />
 							<div style={{ flex: '1 1 320px', minWidth: 260 }}>
 								<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 }}>
 									<div>
 										<div className="chapter-label">Armadura</div>
-										<div>{capitalizeFirst(r.armorType) || '-'}</div>
+										<div>{capitalizeFirst(r.armorTypeEntity?.name || r.armorType || '') || '-'}</div>
 									</div>
 									<div>
 										<div className="chapter-label">Tipo de muerte</div>
@@ -172,7 +204,7 @@ const RacesView: React.FC<Props> = ({ onBack }) => {
 									</div>
 									<div>
 										<div className="chapter-label">Mana inicial</div>
-										<div>{Number.isFinite(r.initialMana as any) ? r.initialMana : '-'}</div>
+																				<div className="chapter-label">Defensa</div>
 									</div>
 									<div>
 										<div className="chapter-label">Tamaño de transporte</div>
@@ -201,7 +233,7 @@ const RacesView: React.FC<Props> = ({ onBack }) => {
 									}
 								}}
 							>
-								{savingAnimations ? '...' : 'Guardar'}
+								{savingAnimations ? '...' : 'Confirmar'}
 							</button>
 						</div>
 
@@ -237,11 +269,30 @@ const RacesView: React.FC<Props> = ({ onBack }) => {
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0 }}>Razas</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 160px)',
+						padding: '6px 80px 8px 80px',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Listado</div>
+					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>Razas</div>
+				</div>
 				<button
 					className="icon"
 					aria-label="Nueva Raza"
@@ -257,11 +308,10 @@ const RacesView: React.FC<Props> = ({ onBack }) => {
 
 			<div className="filters-bar">
 				<div className="filters-row">
-					<input
-						type="text"
-						placeholder="Buscar raza..."
+					<ClearableSearchInput
 						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						onChange={(v) => setSearch(v)}
+						placeholder="Buscar raza..."
 						className="filters-input"
 					/>
 				</div>
@@ -297,20 +347,16 @@ const RacesView: React.FC<Props> = ({ onBack }) => {
 										onClick={(e) => e.stopPropagation()}
 										onPointerDown={(e) => e.stopPropagation()}
 									>
-										<FaExclamationTriangle size={14} />
+										<FaExclamation size={14} />
 									</span>
 								) : null}
 								<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
 									<div style={{ minWidth: 0 }}>
 										<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-											{iconUrl ? (
-												<div className="metallic-border metallic-border-square" style={{ width: 64, height: 64, minWidth: 64, backgroundImage: 'none', flex: '0 0 auto' }}>
-													<img src={iconUrl} alt="" aria-hidden="true" style={{ width: 64, height: 64, objectFit: 'cover', display: 'block' }} />
-												</div>
-											) : null}
+											<CpImage src={iconUrl} width={64} height={64} fit="cover" frameStyle={{ flex: '0 0 auto' }} />
 											<div style={{ minWidth: 0 }}>
 												<div style={{ fontWeight: 900, wordBreak: 'break-word' }}>{r.name}</div>
-												<div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>Armadura: {capitalizeFirst(r.armorType) || '-'}</div>
+												<div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>Armadura: {capitalizeFirst(r.armorTypeEntity?.name || r.armorType || '') || '-'}</div>
 												<div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>Movimiento: {capitalizeFirst(r.movementType) || '-'}</div>
 											</div>
 										</div>
@@ -363,7 +409,9 @@ const RacesView: React.FC<Props> = ({ onBack }) => {
 						const anyData = data as any;
 						const iconFile: File | null | undefined = anyData?.iconFile;
 						let icon = (data.icon || '').trim();
-						if (iconFile) {
+						if ((anyData as any).removeIcon) {
+							icon = '';
+						} else if (iconFile) {
 							const uploaded = await uploadRaceIcon(iconFile);
 							if (uploaded) icon = uploaded;
 						}
@@ -382,6 +430,7 @@ const RacesView: React.FC<Props> = ({ onBack }) => {
 
 			<ConfirmModal
 				open={confirmOpen}
+				requireText="eliminar"
 				message={'¿Estás seguro de que deseas eliminar esta raza?'}
 				onConfirm={async () => {
 					const target = pendingDelete;

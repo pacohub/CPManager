@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaArrowLeft, FaEdit, FaExclamationTriangle, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
+import { FaExclamation } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
+import { FaEdit, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
 import { GiWarPick } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
 import ProfessionModal from '../components/ProfessionModal';
@@ -47,11 +49,30 @@ const ProfessionsView: React.FC<Props> = ({ onBack, onOpenProfession }) => {
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0 }}>Profesiones</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 160px)',
+						padding: '6px 80px 8px 80px',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Listado</div>
+					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>Profesiones</div>
+				</div>
 				<button
 					className="icon"
 					aria-label="Nueva Profesión"
@@ -102,7 +123,7 @@ const ProfessionsView: React.FC<Props> = ({ onBack, onOpenProfession }) => {
 									onClick={(e) => e.stopPropagation()}
 									onPointerDown={(e) => e.stopPropagation()}
 								>
-									<FaExclamationTriangle size={14} />
+									<FaExclamation size={14} />
 								</span>
 							) : null}
 							<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
@@ -182,6 +203,7 @@ const ProfessionsView: React.FC<Props> = ({ onBack, onOpenProfession }) => {
 
 			<ConfirmModal
 				open={confirmOpen}
+				requireText="eliminar"
 				message={'¿Estás seguro de que deseas eliminar esta profesión?'}
 				onConfirm={async () => {
 					const target = pendingDelete;

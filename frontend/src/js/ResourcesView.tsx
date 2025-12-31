@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaArrowLeft, FaEdit, FaExclamationTriangle, FaTrash } from 'react-icons/fa';
-import { FaMountain } from 'react-icons/fa';
+import { FaMountain, FaExclamation } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import ResourceModal from '../components/ResourceModal';
+import CpImage from '../components/CpImage';
+import ClearableSearchInput from '../components/ClearableSearchInput';
 import { ResourceItem } from '../interfaces/resource';
 import { ResourceTypeItem } from '../interfaces/resourceType';
 import { createResource, deleteResource, getResources, updateResource } from './resourceApi';
@@ -63,11 +66,30 @@ const ResourcesView: React.FC<Props> = ({ onBack }) => {
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0 }}>Recursos</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 160px)',
+						padding: '6px 80px 8px 80px',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Listado</div>
+					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>Recursos</div>
+				</div>
 				<button
 					className="icon"
 					aria-label="Nuevo Recurso"
@@ -83,11 +105,10 @@ const ResourcesView: React.FC<Props> = ({ onBack }) => {
 
 			<div className="filters-bar">
 				<div className="filters-row">
-					<input
-						type="text"
-						placeholder="Buscar recurso..."
+					<ClearableSearchInput
 						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						onChange={(v) => setSearch(v)}
+						placeholder="Buscar recurso..."
 						className="filters-input"
 					/>
 				</div>
@@ -118,14 +139,7 @@ const ResourcesView: React.FC<Props> = ({ onBack }) => {
 								<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
 									<div style={{ minWidth: 0 }}>
 										<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-											{iconUrl ? (
-												<div
-													className="metallic-border metallic-border-square"
-													style={{ width: 32, height: 32, minWidth: 32, backgroundImage: 'none', flex: '0 0 auto' }}
-												>
-													<img src={iconUrl} alt="" aria-hidden="true" style={{ width: 32, height: 32, objectFit: 'cover', display: 'block' }} />
-												</div>
-											) : null}
+												<CpImage src={iconUrl} width={32} height={32} fit="cover" frameStyle={{ flex: '0 0 auto' }} />
 											<div style={{ minWidth: 0 }}>
 													<div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
 														<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{r.name}</div>
@@ -135,7 +149,7 @@ const ResourcesView: React.FC<Props> = ({ onBack }) => {
 																title={`Faltan: ${missing.join(', ')}`}
 																style={{ display: 'inline-flex', alignItems: 'center' }}
 															>
-																<FaExclamationTriangle size={14} />
+																<FaExclamation size={14} />
 															</span>
 														) : null}
 													</div>
@@ -215,7 +229,8 @@ const ResourcesView: React.FC<Props> = ({ onBack }) => {
 						fd.set('name', data.name);
 						fd.set('description', data.description ?? '');
 						fd.set('resourceTypeId', String(data.resourceTypeId));
-						if (data.iconFile) fd.set('icon', data.iconFile);
+							if ((data as any).removeIcon) fd.set('icon', '');
+							else if (data.iconFile) fd.set('icon', data.iconFile);
 										fd.set('fileLink', data.fileLink ?? '');
 
 						if (initial?.id) await updateResource(Number(initial.id), fd);
@@ -230,6 +245,7 @@ const ResourcesView: React.FC<Props> = ({ onBack }) => {
 
 			<ConfirmModal
 				open={confirmOpen}
+				requireText="eliminar"
 				message={'¿Estás seguro de que deseas eliminar este recurso?'}
 				onConfirm={async () => {
 					const target = pendingDelete;

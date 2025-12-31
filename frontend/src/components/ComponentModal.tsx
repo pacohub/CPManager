@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { COMPONENT_TYPES, ComponentItem } from '../interfaces/component';
+import CpImageFill from './CpImageFill';
 
 function asImageUrl(raw?: string): string | undefined {
 	const v = (raw || '').trim();
@@ -24,6 +25,7 @@ const ComponentModal: React.FC<Props> = ({ open, initial, existing, onSubmit, on
 	const [type, setType] = useState<string>(initial?.type || COMPONENT_TYPES[0]);
 	const [model, setModel] = useState(initial?.model || '');
 	const [image, setImage] = useState<File | null>(null);
+	const [removeImage, setRemoveImage] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
@@ -33,6 +35,7 @@ const ComponentModal: React.FC<Props> = ({ open, initial, existing, onSubmit, on
 		setType((initial?.type as string) || COMPONENT_TYPES[0]);
 		setModel(initial?.model || '');
 		setImage(null);
+		setRemoveImage(false);
 		setError(null);
 	}, [open, initial?.id, initial?.name, initial?.description, initial?.type, initial?.model]);
 
@@ -58,7 +61,9 @@ const ComponentModal: React.FC<Props> = ({ open, initial, existing, onSubmit, on
 		formData.append('description', description);
 		formData.append('model', model);
 		if (image) formData.append('image', image);
+		else if (removeImage) formData.append('image', '');
 		onSubmit(formData);
+		setRemoveImage(false);
 	};
 
 	const previewUrl = image
@@ -118,13 +123,28 @@ const ComponentModal: React.FC<Props> = ({ open, initial, existing, onSubmit, on
 						) : null}
 					</label>
 
+					{/* removal handled by overlay button on the preview */}
+
 					{previewUrl ? (
-						<div style={{ marginBottom: 8 }}>
-							<img
-								src={previewUrl}
-								alt="Previsualización"
-								style={{ maxWidth: '100%', maxHeight: 140, border: '1px solid #ccc' }}
-							/>
+						<div style={{ marginBottom: 8 }} className="preview-container">
+							<div style={{ width: '100%', height: 140, border: '1px solid #ccc', overflow: 'hidden', position: 'relative' }}>
+								{initial?.id && initial?.image && !image ? (
+									<button
+										type="button"
+										className="preview-remove-btn top-right"
+										data-tooltip="Eliminar imagen"
+										aria-label="Eliminar imagen"
+										onClick={() => {
+											setImage(null);
+											setRemoveImage(true);
+										}}
+										>
+											<FaTimes size={14} />
+										</button>
+								) : null}
+								<CpImageFill alt="Previsualización" src={previewUrl} />
+							</div>
+							{removeImage ? <div style={{ fontSize: 12, opacity: 0.9, marginTop: 6 }}>Se eliminará al guardar.</div> : null}
 						</div>
 					) : null}
 
@@ -137,7 +157,7 @@ const ComponentModal: React.FC<Props> = ({ open, initial, existing, onSubmit, on
 					/>
 
 					<div className="actions">
-						<button type="submit" className="confirm" disabled={isDuplicateName}>{initial?.id ? 'Actualizar' : 'Crear'}</button>
+						<button type="submit" className="confirm" disabled={isDuplicateName}>Confirmar</button>
 						<button type="button" className="cancel" onClick={onClose}>Cancelar</button>
 					</div>
 

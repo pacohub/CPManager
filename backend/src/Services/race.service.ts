@@ -2,7 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Animation } from '../Entities/animation.entity';
-import { Race, RACE_ARMOR_TYPES, RACE_DEATH_TYPES, RACE_MOVEMENT_TYPES } from '../Entities/race.entity';
+import { ArmorType } from '../Entities/armorType.entity';
+import { Race, RACE_DEATH_TYPES, RACE_MOVEMENT_TYPES } from '../Entities/race.entity';
 import { Sound } from '../Entities/sound.entity';
 
 @Injectable()
@@ -10,11 +11,36 @@ export class RaceService {
 	constructor(
 		@InjectRepository(Race)
 		private raceRepository: Repository<Race>,
+		@InjectRepository(ArmorType)
+		private armorTypeRepository: Repository<ArmorType>,
 		@InjectRepository(Sound)
 		private soundRepository: Repository<Sound>,
 		@InjectRepository(Animation)
 		private animationRepository: Repository<Animation>,
 	) {}
+
+	private async resolveArmorTypeId(data: any): Promise<number | null | undefined> {
+		if (data?.armorTypeId !== undefined) {
+			const raw = data.armorTypeId;
+			if (raw === null || raw === '') return null;
+			const n = Number.parseInt(String(raw), 10);
+			if (!Number.isFinite(n) || n <= 0) throw new BadRequestException('armorTypeId inválido');
+			const exists = await this.armorTypeRepository.findOneBy({ id: n });
+			if (!exists) throw new BadRequestException('armorTypeId inválido');
+			return n;
+		}
+
+		// Legacy fallback: armorType string -> ArmorType.name
+		const legacy = String(data?.armorType ?? '').trim();
+		if (!legacy) return undefined;
+		const found = await this.armorTypeRepository
+			.createQueryBuilder('a')
+			.where('LOWER(a.name) = LOWER(:name)', { name: legacy })
+			.getOne();
+		if (found) return found.id;
+		// Do not auto-create armor types from legacy strings.
+		throw new BadRequestException('armorType inválido');
+	}
 
 	private async ensureAnimationsExistByName(names: string[]): Promise<Animation[]> {
 		const unique = Array.from(new Set((names || []).map((x) => String(x || '').trim()).filter(Boolean)));
@@ -41,6 +67,7 @@ export class RaceService {
 			.createQueryBuilder('r')
 			.leftJoinAndSelect('r.movementSound', 'ms')
 			.leftJoinAndSelect('ms.types', 'mst')
+			.leftJoinAndSelect('r.armorTypeEntity', 'at')
 			.leftJoinAndSelect('r.animations', 'a')
 			.orderBy('LOWER(r.name)', 'ASC')
 			.addOrderBy('r.id', 'ASC')
@@ -48,7 +75,10 @@ export class RaceService {
 	}
 
 	async findOne(id: number): Promise<Race | null> {
-		return this.raceRepository.findOne({ where: { id }, relations: { movementSound: { types: true }, animations: true } });
+		return this.raceRepository.findOne({
+			where: { id },
+			relations: { movementSound: { types: true }, armorTypeEntity: true, animations: true },
+		});
 	}
 
 	private coerceIdArray(value: any): number[] {
@@ -84,11 +114,6 @@ export class RaceService {
 				throw new BadRequestException(`movementType inválido. Debe ser uno de: ${RACE_MOVEMENT_TYPES.join(' | ')}`);
 			}
 		}
-		if (data.armorType !== undefined && data.armorType !== null) {
-			if (!RACE_ARMOR_TYPES.includes(data.armorType as any)) {
-				throw new BadRequestException(`armorType inválido. Debe ser uno de: ${RACE_ARMOR_TYPES.join(' | ')}`);
-			}
-		}
 	}
 
 	private coerceNumbers(data: any) {
@@ -104,6 +129,10 @@ export class RaceService {
 			const v = data.movementSoundId;
 			data.movementSoundId = v === null || v === '' ? null : Number.parseInt(String(v), 10);
 		}
+		if (data.armorTypeId !== undefined) {
+			const v = data.armorTypeId;
+			data.armorTypeId = v === null || v === '' ? null : Number.parseInt(String(v), 10);
+		}
 	}
 
 	private async ensureSoundExists(soundId?: number | null) {
@@ -118,7 +147,12 @@ export class RaceService {
 		this.validateEnums(data);
 		if (!data.name) throw new BadRequestException('name es requerido');
 		await this.ensureSoundExists(data.movementSoundId ?? null);
+		const resolvedArmorTypeId = await this.resolveArmorTypeId(data as any);
 		const entity = this.raceRepository.create(data);
+		if (resolvedArmorTypeId !== undefined) {
+			entity.armorTypeId = resolvedArmorTypeId as any;
+			entity.armorTypeEntity = resolvedArmorTypeId ? await this.armorTypeRepository.findOneBy({ id: resolvedArmorTypeId }) : null;
+		}
 		entity.animations = await this.resolveDefaultAnimationsForRace(entity);
 		return this.raceRepository.save(entity);
 	}
@@ -128,11 +162,16 @@ export class RaceService {
 		this.normalize(data);
 		this.validateEnums(data);
 		await this.ensureSoundExists(data.movementSoundId ?? undefined);
+		const resolvedArmorTypeId = await this.resolveArmorTypeId(data as any);
 		const animationIdsRaw = (data as any)?.animationIds;
 		const shouldUpdateAnimations = animationIdsRaw !== undefined;
 		delete (data as any).animationIds;
+		delete (data as any).armorTypeEntity;
 
-		const existing = await this.raceRepository.findOne({ where: { id }, relations: { movementSound: { types: true }, animations: true } });
+		const existing = await this.raceRepository.findOne({
+			where: { id },
+			relations: { movementSound: { types: true }, armorTypeEntity: true, animations: true },
+		});
 		if (!existing) throw new NotFoundException('Raza no encontrada');
 
 		Object.assign(existing, data);
@@ -153,6 +192,18 @@ export class RaceService {
 		if (shouldUpdateAnimations) {
 			const ids = this.coerceIdArray(animationIdsRaw);
 			existing.animations = ids.length ? await this.animationRepository.find({ where: { id: In(ids) } }) : [];
+		}
+
+		if (resolvedArmorTypeId !== undefined) {
+			if (!resolvedArmorTypeId) {
+				existing.armorTypeId = null;
+				existing.armorTypeEntity = null;
+			} else {
+				const at = await this.armorTypeRepository.findOneBy({ id: resolvedArmorTypeId });
+				if (!at) throw new BadRequestException('armorTypeId inválido');
+				existing.armorTypeId = at.id;
+				existing.armorTypeEntity = at;
+			}
 		}
 
 		return this.raceRepository.save(existing);

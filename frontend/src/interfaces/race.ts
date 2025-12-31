@@ -1,5 +1,6 @@
 import { SoundItem } from './sound';
 import { AnimationItem } from './animation';
+import { ArmorTypeItem } from './armorType';
 
 export interface RaceItem {
 	id: number;
@@ -17,6 +18,10 @@ export interface RaceItem {
 	baseManaRegen: number;
 	initialMana: number;
 	transportSize: number;
+	// Legacy string field (kept for backward compatibility)
 	armorType?: string;
+	// New relation field
+	armorTypeId?: number | null;
+	armorTypeEntity?: ArmorTypeItem | null;
 	animations?: AnimationItem[];
 }

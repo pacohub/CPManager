@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import CpImage from './CpImage';
 
 export type IconSelectItem = {
 	value: number;
@@ -55,14 +56,14 @@ const IconSelect: React.FC<IconSelectProps> = ({ value, placeholder, items, disa
 				}}
 			>
 				<span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: '1 1 auto' }}>
-					{selected?.iconUrl ? (
-						<img
-							src={selected.iconUrl}
-							alt=""
-							aria-hidden="true"
-							style={{ width: 16, height: 16, objectFit: 'contain', flex: '0 0 auto' }}
-						/>
-					) : null}
+					<CpImage
+						src={selected?.iconUrl || undefined}
+						width={16}
+						height={16}
+						fit="contain"
+						showFrame={false}
+						imgStyle={{ flex: '0 0 auto' }}
+					/>
 					<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
 						{selected ? selected.label : placeholder}
 					</span>
@@ -112,11 +113,7 @@ const IconSelect: React.FC<IconSelectProps> = ({ value, placeholder, items, disa
 								cursor: 'pointer',
 							}}
 						>
-							{it.iconUrl ? (
-								<img src={it.iconUrl} alt="" aria-hidden="true" style={{ width: 16, height: 16, objectFit: 'contain' }} />
-							) : (
-								<div style={{ width: 16, height: 16 }} />
-							)}
+							<CpImage src={it.iconUrl || undefined} width={16} height={16} fit="contain" showFrame={false} />
 							<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</span>
 						</button>
 					))}

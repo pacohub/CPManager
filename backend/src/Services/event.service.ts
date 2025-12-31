@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Chapter, ChapterSpecialType } from '../Entities/chapter.entity';
-import { Event, EventDifficulty, EventType } from '../Entities/event.entity';
+import { DialogueConfig, DialogueLine, Event, EventDifficulty, EventType, MobaConfig, MobaTeam } from '../Entities/event.entity';
 import { Map } from '../Entities/map.entity';
 
 type EventFilters = { chapterId?: number; mapId?: number };
@@ -55,10 +55,60 @@ export class EventService {
 		return out;
 	}
 
-	private normalizeMoba(value: any): { teamAIds: number[]; teamBIds: number[] } {
+	private normalizeMoba(value: any): MobaConfig {
+		const normalizeTeamName = (raw: any, fallback: string) => {
+			const t = String(raw ?? '').trim();
+			return t || fallback;
+		};
+
+		// New format: { teams: [{ name, factionIds }] }
+		if (Array.isArray(value?.teams)) {
+			const teams: MobaTeam[] = [];
+			for (let i = 0; i < value.teams.length; i++) {
+				const t = value.teams[i];
+				if (!t || typeof t !== 'object') continue;
+				const name = normalizeTeamName((t as any).name, `Equipo ${teams.length + 1}`);
+				const factionIds = this.coerceIdArray((t as any).factionIds ?? (t as any).ids ?? []);
+				teams.push({ name, factionIds });
+			}
+
+			// Ensure at least 2 teams for UI consistency
+			if (teams.length === 0) {
+				teams.push({ name: 'Equipo A', factionIds: [] }, { name: 'Equipo B', factionIds: [] });
+			} else if (teams.length === 1) {
+				teams.push({ name: 'Equipo B', factionIds: [] });
+			}
+			return { teams };
+		}
+
+		// Legacy format: { teamAIds, teamBIds }
 		const teamAIds = this.coerceIdArray(value?.teamAIds ?? value?.teamA ?? value?.a ?? []);
 		const teamBIds = this.coerceIdArray(value?.teamBIds ?? value?.teamB ?? value?.b ?? []);
-		return { teamAIds, teamBIds };
+		return {
+			teams: [
+				{ name: 'Equipo A', factionIds: teamAIds },
+				{ name: 'Equipo B', factionIds: teamBIds },
+			],
+		};
+	}
+
+	private normalizeDialogue(value: any): DialogueConfig {
+		const rawLines = Array.isArray(value?.lines)
+			? value.lines
+			: Array.isArray(value)
+				? value
+				: [];
+
+		const lines: DialogueLine[] = [];
+		for (const raw of rawLines) {
+			if (!raw || typeof raw !== 'object') continue;
+			const speaker = this.normalizeText((raw as any).speaker) ?? '';
+			const text = this.normalizeText((raw as any).text) ?? '';
+			if (!speaker && !text) continue;
+			lines.push({ speaker: speaker || undefined, text });
+		}
+
+		return { lines };
 	}
 
 	private isCreditsChapter(chapter: Chapter): boolean {
@@ -143,6 +193,7 @@ export class EventService {
 			difficulty: (difficulty as EventDifficulty) ?? EventDifficulty.NORMAL,
 			file: this.normalizeText(data?.file) ?? '',
 			moba: resolvedType === EventType.MOBA ? this.normalizeMoba(data?.moba) : null,
+			dialogue: data?.dialogue === undefined ? null : data?.dialogue === null ? null : this.normalizeDialogue(data?.dialogue),
 			chapter,
 			map,
 		});
@@ -203,6 +254,10 @@ export class EventService {
 			existing.moba = null;
 		}
 
+		if (data?.dialogue !== undefined) {
+			existing.dialogue = data.dialogue === null ? null : this.normalizeDialogue(data.dialogue);
+		}
+
 		if (data?.mapId !== undefined) {
 			const mapId = Number(data.mapId);
 			if (!Number.isFinite(mapId)) throw new BadRequestException('mapId inválido');
@@ -226,7 +281,10 @@ export class EventService {
 			.leftJoin('event.chapter', 'chapter')
 			.select('chapter.id', 'chapterId')
 			.addSelect('COUNT(event.id)', 'count')
-			.addSelect("SUM(CASE WHEN event.type IN ('MISSION','MOBA') THEN 1 ELSE 0 END)", 'missionCount')
+			.addSelect(
+				"SUM(CASE WHEN event.type IN ('MISSION','SECONDARY_MISSION','DAILY_MISSION','WEEKLY_MISSION','MOBA') THEN 1 ELSE 0 END)",
+				'missionCount',
+			)
 			.addSelect("SUM(CASE WHEN event.type = 'CINEMATIC' THEN 1 ELSE 0 END)", 'cinematicCount')
 			.addSelect(
 				"SUM(CASE WHEN event.description IS NULL OR TRIM(event.description) = '' THEN 1 ELSE 0 END)",

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { FaTimes } from 'react-icons/fa';
 
 interface NameModalProps {
 	open: boolean;
@@ -16,7 +17,7 @@ interface NameModalProps {
 const NameModal: React.FC<NameModalProps> = ({
 	open,
 	title,
-	confirmText = 'Crear',
+	confirmText = 'Confirmar',
 	cancelText = 'Cancelar',
 	initialValue = '',
 	placeholder = 'Nombre',
@@ -43,6 +44,9 @@ const NameModal: React.FC<NameModalProps> = ({
 				role="dialog"
 				aria-modal="true"
 			>
+				<button className="icon option" onClick={onCancel} title="Cerrar" aria-label="Cerrar" style={{ position: 'absolute', top: 12, right: 12 }}>
+					<FaTimes size={18} />
+				</button>
 				<h2 className="modal-title">{title}</h2>
 				<div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
 					<input

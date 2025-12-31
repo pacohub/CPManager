@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FaPlus, FaTimes } from 'react-icons/fa';
+import { FaExclamation, FaUser, FaFlag } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
+import { FaTimes } from 'react-icons/fa';
 import { EventDifficulty, EventItem, EventType } from '../interfaces/event';
 import { MapItem } from '../interfaces/map';
 import MapModal from './MapModal';
@@ -41,7 +43,79 @@ const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, 
 	const [error, setError] = useState<string | null>(null);
 	const [submitting, setSubmitting] = useState(false);
 
-	const showDifficulty = type === 'MISSION' || type === 'MOBA';
+	const showDifficulty = type !== 'CINEMATIC';
+
+	const typeLabel = (t: EventType) => {
+		switch (t) {
+			case 'EVENT':
+				return 'Evento';
+			case 'MISSION':
+				return 'Misión';
+			case 'SECONDARY_MISSION':
+				return 'Misión secundaria';
+			case 'DAILY_MISSION':
+				return 'Misión diaria';
+			case 'WEEKLY_MISSION':
+				return 'Misión semanal';
+			case 'MOBA':
+				return 'MOBA';
+			case 'CINEMATIC':
+				return 'Cinemática';
+			default:
+				return String(t);
+		}
+	};
+
+	const EventTypeIcon: React.FC<{ t: EventType; size?: number }> = ({ t, size = 16 }) => {
+		const dailyBlue = '#1E90FF';
+		const gold = '#FFD700';
+		switch (t) {
+			case 'SECONDARY_MISSION':
+				return <FaExclamation size={size} color="#FFFFFF" />;
+			case 'EVENT':
+				return <FaFlag size={size} color={gold} />;
+			case 'DAILY_MISSION':
+				return <FaExclamation size={size} color={dailyBlue} />;
+			case 'WEEKLY_MISSION':
+				return (
+					<span
+						style={{
+							display: 'inline-flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							border: `1px solid ${dailyBlue}`,
+							borderRadius: 999,
+							width: 22,
+							height: 22,
+							marginLeft: -3,
+							marginRight: -3,
+						}}
+					>
+						<FaExclamation size={14} color={dailyBlue} />
+					</span>
+				);
+			case 'MISSION':
+				return <FaExclamation size={size} color={gold} />;
+			case 'MOBA':
+				return <FaUser size={size} color={gold} />;
+			case 'CINEMATIC':
+				return <FaExclamation size={size} color={gold} />;
+			default:
+				return null;
+		}
+	};
+
+	const EVENT_TYPES: EventType[] = [
+		'EVENT',
+		'MISSION',
+		'SECONDARY_MISSION',
+		'DAILY_MISSION',
+		'WEEKLY_MISSION',
+		'MOBA',
+		'CINEMATIC',
+	];
+
+	const [typeOpen, setTypeOpen] = useState(false);
 
 	useEffect(() => {
 		if (type === 'CINEMATIC') {
@@ -57,7 +131,7 @@ const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, 
 		setName(initial?.name || '');
 		setDescription(initial?.description || '');
 		setType(nextType);
-		setDifficulty((initial?.difficulty as EventDifficulty) || ((nextType === 'MISSION' || nextType === 'MOBA') && !nextIsEditing ? 'EASY' : 'NORMAL'));
+		setDifficulty((initial?.difficulty as EventDifficulty) || ((nextType !== 'CINEMATIC') && !nextIsEditing ? 'EASY' : 'NORMAL'));
 		setFile(initial?.file || '');
 		setMapId(Number(initialMapId) || 0);
 		setError(null);
@@ -150,22 +224,85 @@ const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, 
 
 					<label style={{ marginBottom: 8, display: 'block' }}>
 						Tipo:
-						<select
-							value={type}
-							onChange={(e) => setType(e.target.value as EventType)}
-							disabled={Boolean(fixedType)}
-							style={{ display: 'block', marginTop: 4 }}
-						>
-							{fixedType ? (
-								<option value={fixedType}>{fixedType === 'MISSION' ? 'Misión' : fixedType === 'MOBA' ? 'MOBA' : 'Cinemática'}</option>
-							) : (
-								<>
-									<option value="MISSION">Misión</option>
-									<option value="MOBA">MOBA</option>
-									<option value="CINEMATIC">Cinemática</option>
-								</>
-							)}
-						</select>
+						{fixedType ? (
+							<div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+								<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><EventTypeIcon t={fixedType} /><span style={{ fontWeight: 700 }}>{typeLabel(fixedType)}</span></span>
+							</div>
+						) : (
+							<div style={{ display: 'flex', gap: 8, marginTop: 4, alignItems: 'center' }}>
+								<div style={{ position: 'relative', flex: 1, minWidth: 0 }}>
+									<button
+										type="button"
+										onClick={() => setTypeOpen((v) => !v)}
+										style={{
+											width: '100%',
+											display: 'flex',
+											alignItems: 'center',
+											gap: 8,
+											justifyContent: 'space-between',
+											background: 'rgba(0,0,0,0.35)',
+											border: '1px solid rgba(255,215,0,0.35)',
+											color: '#e2d9b7',
+											padding: '6px 8px',
+											borderRadius: 6,
+											cursor: 'pointer',
+										}}
+									>
+										<span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: '1 1 auto' }}>
+											<span style={{ flex: '0 0 auto' }}><EventTypeIcon t={type} /></span>
+											<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{typeLabel(type)}</span>
+										</span>
+										<span style={{ opacity: 0.9, flex: '0 0 auto' }}>▾</span>
+									</button>
+
+									{typeOpen ? (
+										<div
+											style={{
+												position: 'absolute',
+												top: 'calc(100% + 6px)',
+												left: 0,
+												right: 0,
+												zIndex: 60,
+												maxHeight: 260,
+												overflowY: 'auto',
+												background: 'rgba(0,0,0,0.92)',
+												border: '1px solid rgba(255,215,0,0.35)',
+												borderRadius: 8,
+												padding: 6,
+											}}
+											role="listbox"
+										>
+											{EVENT_TYPES.map((et) => (
+												<button
+													key={et}
+													type="button"
+													onClick={() => {
+														setType(et);
+														setTypeOpen(false);
+													}}
+													style={{
+														width: '100%',
+														textAlign: 'left',
+														display: 'flex',
+														alignItems: 'center',
+														gap: 8,
+														padding: '8px 8px',
+														borderRadius: 6,
+														border: '1px solid rgba(255,215,0,0.12)',
+														background: 'rgba(0,0,0,0.35)',
+														color: '#e2d9b7',
+														cursor: 'pointer',
+													}}
+												>
+													<span style={{ width: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><EventTypeIcon t={et} /></span>
+													<span>{typeLabel(et)}</span>
+												</button>
+											))}
+										</div>
+									) : null}
+								</div>
+							</div>
+						)}
 					</label>
 
 					{showDifficulty ? (
@@ -214,8 +351,10 @@ const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, 
 						/>
 					</label>
 
+
+
 					<div className="actions">
-						<button type="submit" className="confirm" disabled={submitting}>{initial?.id ? 'Actualizar' : 'Crear'}</button>
+						<button type="submit" className="confirm" disabled={submitting}>Confirmar</button>
 						<button type="button" className="cancel" onClick={onClose} disabled={submitting}>Cancelar</button>
 					</div>
 					{error ? <div style={{ color: 'red', marginTop: 8 }}>{error}</div> : null}

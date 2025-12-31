@@ -1,8 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaArrowLeft, FaEdit, FaExclamationTriangle, FaPlus, FaTrash } from 'react-icons/fa';
+import { FaExclamation } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
+import { FaEdit, FaTrash } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import CharacterModal from '../components/CharacterModal';
 import AnimationModal from '../components/AnimationModal';
+import CpImage from '../components/CpImage';
+import CpImageFill from '../components/CpImageFill';
 import { AnimationItem } from '../interfaces/animation';
 import { CharacterItem } from '../interfaces/character';
 import { ClassItem } from '../interfaces/class';
@@ -194,11 +199,30 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 	if (loading) {
 		return (
 			<div className="panel panel-corners-soft block-border block-panel-border">
-				<div className="panel-header">
+				<div className="panel-header" style={{ position: 'relative' }}>
 					<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 						<FaArrowLeft size={22} color="#FFD700" />
 					</button>
-					<h1 style={{ margin: 0 }}>Personaje</h1>
+					<div
+						style={{
+							position: 'absolute',
+							left: '50%',
+							transform: 'translateX(-50%)',
+							top: 0,
+							bottom: 0,
+							display: 'flex',
+							flexDirection: 'column',
+							alignItems: 'center',
+							justifyContent: 'center',
+							textAlign: 'center',
+							maxWidth: 'calc(100% - 140px)',
+							padding: '6px 70px 8px 70px',
+							minWidth: 0,
+						}}
+					>
+						<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Personaje</div>
+						<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, minWidth: 0, wordBreak: 'break-word' }}>Cargando...</div>
+					</div>
 					<div style={{ width: 32 }} />
 				</div>
 				<div style={{ padding: 12, opacity: 0.9 }}>Cargando...</div>
@@ -209,11 +233,30 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 	if (error || !character) {
 		return (
 			<div className="panel panel-corners-soft block-border block-panel-border">
-				<div className="panel-header">
+				<div className="panel-header" style={{ position: 'relative' }}>
 					<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 						<FaArrowLeft size={22} color="#FFD700" />
 					</button>
-					<h1 style={{ margin: 0 }}>Personaje</h1>
+					<div
+						style={{
+							position: 'absolute',
+							left: '50%',
+							transform: 'translateX(-50%)',
+							top: 0,
+							bottom: 0,
+							display: 'flex',
+							flexDirection: 'column',
+							alignItems: 'center',
+							justifyContent: 'center',
+							textAlign: 'center',
+							maxWidth: 'calc(100% - 140px)',
+							padding: '6px 70px 8px 70px',
+							minWidth: 0,
+						}}
+					>
+						<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Personaje</div>
+						<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, minWidth: 0, wordBreak: 'break-word' }}>—</div>
+					</div>
 					<div style={{ width: 32 }} />
 				</div>
 				<div style={{ padding: 12, color: '#e2d9b7', opacity: 0.95 }}>{error || 'No se pudo cargar el personaje.'}</div>
@@ -223,11 +266,30 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0 }}>Personaje</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 140px)',
+						padding: '6px 70px 8px 70px',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Personaje</div>
+					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, minWidth: 0, wordBreak: 'break-word' }}>{character.name}</div>
+				</div>
 				<div style={{ width: 32 }} />
 			</div>
 
@@ -245,11 +307,7 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 					<div style={{ flex: '1 1 360px', minWidth: 320, display: 'flex', flexDirection: 'column', gap: 12 }}>
 						<div className="block-border block-border-soft" style={{ padding: 12 }}>
 							<div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-								{iconUrl ? (
-									<div className="metallic-border metallic-border-square" style={{ width: 64, height: 64, minWidth: 64, backgroundImage: 'none' }}>
-										<img src={iconUrl} alt="" aria-hidden="true" style={{ width: 64, height: 64, objectFit: 'cover', display: 'block' }} />
-									</div>
-								) : null}
+								<CpImage src={iconUrl} width={64} height={64} fit="cover" />
 								<div style={{ minWidth: 0 }}>
 									<div style={{ fontWeight: 900, fontSize: 18, wordBreak: 'break-word' }}>{character.name}</div>
 									<div style={{ marginTop: 2, opacity: 0.9, fontSize: 13 }}>
@@ -366,16 +424,11 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 					</div>
 
 					<div style={{ flex: '2 1 420px', minWidth: 320, alignSelf: 'stretch' }}>
-						{imageUrl ? (
-							<div className="block-border block-border-soft" style={{ padding: 8, height: '100%' }}>
-								<img
-									src={imageUrl}
-									alt=""
-									aria-hidden="true"
-									style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-								/>
+						<div className="block-border block-border-soft" style={{ padding: 8, height: '100%' }}>
+							<div style={{ width: '100%', height: '100%', overflow: 'hidden', borderRadius: 6 }}>
+								<CpImageFill src={imageUrl || undefined} alt="" ariaHidden={true} fit="cover" />
 							</div>
-						) : null}
+						</div>
 					</div>
 				</div>
 
@@ -435,14 +488,12 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 												title={warningText}
 												aria-label={warningText}
 											>
-												<FaExclamationTriangle size={14} />
+												<FaExclamation size={14} />
 											</span>
 										) : null}
 										<div className="campaign-title">
 											<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%' }}>
-												{instIconUrl ? (
-													<img src={instIconUrl} alt="" aria-hidden="true" style={{ width: 18, height: 18, objectFit: 'cover', display: 'block', flex: '0 0 auto' }} />
-												) : null}
+												<CpImage src={instIconUrl} width={18} height={18} fit="cover" showFrame={false} imgStyle={{ flex: '0 0 auto' }} />
 												<div style={{ wordBreak: 'break-word' }}>{displayName}</div>
 											</div>
 											{instClassName ? <div className="campaign-subtitle">Clase: {instClassName}</div> : null}
@@ -491,6 +542,7 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 
 			<ConfirmModal
 				open={confirmOpen}
+				requireText="eliminar"
 				message={'¿Estás seguro de que deseas eliminar esta instancia?'}
 				onConfirm={async () => {
 					const target = pendingDelete;

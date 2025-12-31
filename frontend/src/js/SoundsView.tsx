@@ -1,7 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaArrowLeft, FaEdit, FaExclamationTriangle, FaTrash, FaVolumeUp } from 'react-icons/fa';
+import { FaExclamation } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaVolumeUp } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import SoundModal from '../components/SoundModal';
+import ClearableSearchInput from '../components/ClearableSearchInput';
 import { SoundItem } from '../interfaces/sound';
 import { SoundTypeItem } from '../interfaces/soundType';
 import { createSound, deleteSound, getSounds, updateSound } from './soundApi';
@@ -68,11 +71,30 @@ const SoundsView: React.FC<Props> = ({ onBack }) => {
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0 }}>Sonidos</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 160px)',
+						padding: '6px 80px 8px 80px',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Listado</div>
+					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>Sonidos</div>
+				</div>
 				<button
 					className="icon"
 					aria-label="Nuevo Sonido"
@@ -88,11 +110,10 @@ const SoundsView: React.FC<Props> = ({ onBack }) => {
 
 			<div className="filters-bar">
 				<div className="filters-row">
-					<input
-						type="text"
-						placeholder="Buscar sonido..."
+					<ClearableSearchInput
 						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						onChange={(v) => setSearch(v)}
+						placeholder="Buscar sonido..."
 						className="filters-input"
 					/>
 				</div>
@@ -150,7 +171,7 @@ const SoundsView: React.FC<Props> = ({ onBack }) => {
 							<div key={s.id} className="block-border block-border-soft mechanic-card" style={{ padding: 12, position: 'relative' }}>
 								{showWarning ? (
 									<span className="campaign-warning" title={warningText} aria-label={warningText}>
-										<FaExclamationTriangle size={14} />
+										<FaExclamation size={14} />
 									</span>
 								) : null}
 								<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
@@ -217,7 +238,8 @@ const SoundsView: React.FC<Props> = ({ onBack }) => {
 						const formData = new FormData();
 						formData.append('name', data.name);
 						formData.append('typeIds', JSON.stringify(data.typeIds || []));
-						if (data.file) formData.append('file', data.file);
+						if ((data as any).removeFile) formData.append('file', '');
+						else if (data.file) formData.append('file', data.file);
 						if (initial?.id) await updateSound(initial.id as number, formData);
 						else await createSound(formData);
 						await refresh();
@@ -229,6 +251,7 @@ const SoundsView: React.FC<Props> = ({ onBack }) => {
 
 			<ConfirmModal
 				open={confirmOpen}
+				requireText="eliminar"
 				message={'¿Estás seguro de que deseas eliminar este sonido?'}
 				onConfirm={async () => {
 					const target = pendingDelete;

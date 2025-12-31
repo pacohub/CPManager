@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaArrowLeft, FaCogs, FaEdit, FaTrash } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
+import { FaCogs, FaEdit, FaTrash } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import MechanicModal from '../components/MechanicModal';
+import ClearableSearchInput from '../components/ClearableSearchInput';
 import { MechanicItem } from '../interfaces/mechanic';
 import { createMechanic, deleteMechanic, getMechanics, updateMechanic } from './mechanicApi';
 
@@ -38,11 +40,30 @@ const MechanicsView: React.FC<Props> = ({ onBack }) => {
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
-			<div className="panel-header">
+			<div className="panel-header" style={{ position: 'relative' }}>
 				<button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
 					<FaArrowLeft size={22} color="#FFD700" />
 				</button>
-				<h1 style={{ margin: 0 }}>Mecánicas</h1>
+				<div
+					style={{
+						position: 'absolute',
+						left: '50%',
+						transform: 'translateX(-50%)',
+						top: 0,
+						bottom: 0,
+						display: 'flex',
+						flexDirection: 'column',
+						alignItems: 'center',
+						justifyContent: 'center',
+						textAlign: 'center',
+						maxWidth: 'calc(100% - 160px)',
+						padding: '6px 80px 8px 80px',
+						minWidth: 0,
+					}}
+				>
+					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Listado</div>
+					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1 }}>Mecánicas</div>
+				</div>
 				<button
 					className="icon"
 					aria-label="Nueva Mecánica"
@@ -58,11 +79,10 @@ const MechanicsView: React.FC<Props> = ({ onBack }) => {
 
 			<div className="filters-bar">
 				<div className="filters-row">
-					<input
-						type="text"
-						placeholder="Buscar mecánica..."
+					<ClearableSearchInput
 						value={search}
-						onChange={(e) => setSearch(e.target.value)}
+						onChange={(v) => setSearch(v)}
+						placeholder="Buscar mecánica..."
 						className="filters-input"
 					/>
 				</div>
@@ -137,6 +157,7 @@ const MechanicsView: React.FC<Props> = ({ onBack }) => {
 
 			<ConfirmModal
 				open={confirmOpen}
+				requireText="eliminar"
 				message={'¿Estás seguro de que deseas eliminar esta mecánica?'}
 				onConfirm={async () => {
 					const target = pendingDelete;

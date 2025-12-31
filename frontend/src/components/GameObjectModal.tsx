@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import { GameObjectItem } from '../interfaces/gameObject';
+import CpImage from './CpImage';
 
 function asImageUrl(raw?: string): string | undefined {
 	const v = (raw || '').trim();
@@ -14,7 +15,7 @@ interface Props {
 	open: boolean;
 	initial?: Partial<GameObjectItem>;
 	existing: GameObjectItem[];
-	onSubmit: (data: { name: string; icon?: string; iconFile?: File | null; description?: string; fileLink?: string }) => void;
+	onSubmit: (data: { name: string; icon?: string; iconFile?: File | null; removeIcon?: boolean; description?: string; fileLink?: string }) => void;
 	onClose: () => void;
 }
 
@@ -23,6 +24,7 @@ const GameObjectModal: React.FC<Props> = ({ open, initial, existing, onSubmit, o
 	const [icon, setIcon] = useState(initial?.icon || '');
 	const [iconFile, setIconFile] = useState<File | null>(null);
 	const [iconPreviewUrl, setIconPreviewUrl] = useState<string>('');
+	const [removeIcon, setRemoveIcon] = useState(false);
 	const [description, setDescription] = useState(initial?.description || '');
 	const [fileLink, setFileLink] = useState(initial?.fileLink || '');
 	const [error, setError] = useState<string | null>(null);
@@ -33,6 +35,7 @@ const GameObjectModal: React.FC<Props> = ({ open, initial, existing, onSubmit, o
 		setName(initial?.name || '');
 		setIcon(initial?.icon || '');
 		setIconFile(null);
+		setRemoveIcon(false);
 		setIconPreviewUrl('');
 		setDescription(initial?.description || '');
 		setFileLink(initial?.fileLink || '');
@@ -74,6 +77,7 @@ const GameObjectModal: React.FC<Props> = ({ open, initial, existing, onSubmit, o
 		const objectUrl = URL.createObjectURL(file);
 		setError(null);
 		setIconFile(file);
+		setRemoveIcon(false);
 		if (iconPreviewUrl) URL.revokeObjectURL(iconPreviewUrl);
 		setIconPreviewUrl(objectUrl);
 	};
@@ -89,6 +93,7 @@ const GameObjectModal: React.FC<Props> = ({ open, initial, existing, onSubmit, o
 			name: name.trim(),
 			icon,
 			iconFile,
+			removeIcon,
 			description,
 			fileLink,
 		});
@@ -119,26 +124,22 @@ const GameObjectModal: React.FC<Props> = ({ open, initial, existing, onSubmit, o
 					<div style={{ marginBottom: 8 }}>
 						<div style={{ fontSize: 13, marginBottom: 4, opacity: 0.9 }}>Icono (imagen)</div>
 						<div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-							<div
-								className="metallic-border metallic-border-square"
-								style={{
-									width: 64,
-									height: 64,
-									minWidth: 64,
-									display: 'flex',
-									alignItems: 'stretch',
-									justifyContent: 'stretch',
-									backgroundImage: 'none',
-								}}
-							>
-								{currentIconUrl ? (
-									<img
-										src={currentIconUrl}
-										alt=""
-										aria-hidden="true"
-										style={{ width: 64, height: 64, objectFit: 'cover', display: 'block' }}
-									/>
+							<div style={{ position: 'relative' }} className="preview-container">
+								{initial?.id && initial?.icon && !iconFile ? (
+									<button
+										type="button"
+										className="preview-remove-btn top-right"
+										data-tooltip="Eliminar icono"
+										aria-label="Eliminar icono"
+										onClick={() => {
+											setIconFile(null);
+											setRemoveIcon(true);
+										}}
+										>
+											<FaTimes size={14} />
+										</button>
 								) : null}
+								<CpImage src={currentIconUrl || undefined} width={64} height={64} fit="cover" />
 							</div>
 							<div style={{ minWidth: 0, flex: 1 }}>
 								<input
@@ -155,6 +156,7 @@ const GameObjectModal: React.FC<Props> = ({ open, initial, existing, onSubmit, o
 						{initial?.icon && !iconFile && currentIconUrl ? (
 							<div style={{ fontSize: 12, marginTop: 4, opacity: 0.85 }}>Icono actual cargado.</div>
 						) : null}
+						{removeIcon ? <div style={{ marginTop: 8, fontSize: 12, opacity: 0.9 }}>Se eliminará al guardar.</div> : null}
 					</div>
 
 					<textarea
@@ -174,7 +176,7 @@ const GameObjectModal: React.FC<Props> = ({ open, initial, existing, onSubmit, o
 					/>
 
 					<div className="actions">
-						<button type="submit" className="confirm" disabled={isDuplicateName}>{initial?.id ? 'Actualizar' : 'Crear'}</button>
+						<button type="submit" className="confirm" disabled={isDuplicateName}>Confirmar</button>
 						<button type="button" className="cancel" onClick={onClose}>Cancelar</button>
 					</div>
 

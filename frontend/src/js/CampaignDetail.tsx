@@ -2,7 +2,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { FaArrowLeft, FaEdit, FaTrash, FaBookmark, FaDownload, FaUpload, FaLock, FaLockOpen, FaExclamationTriangle } from 'react-icons/fa';
+import { FaBookmark, FaLock, FaLockOpen, FaExclamation } from 'react-icons/fa';
+import { FaArrowLeft } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaDownload, FaUpload } from 'react-icons/fa';
 import { Campaign } from '../interfaces/campaign';
 import { Chapter } from '../interfaces/chapter';
 import { deleteCampaign, getCampaign, updateCampaign } from './campaignApi';
@@ -194,11 +196,30 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
   if (!campaign) {
     return (
       <div className="panel panel-corners-soft block-border block-panel-border">
-        <div className="panel-header">
+        <div className="panel-header" style={{ position: 'relative' }}>
           <button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
             <FaArrowLeft size={22} color="#FFD700" />
           </button>
-          <h1 style={{ margin: 0 }}>Campaña</h1>
+          <div
+            style={{
+              position: 'absolute',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              top: 0,
+              bottom: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              textAlign: 'center',
+              maxWidth: 'calc(100% - 160px)',
+              padding: '6px 6% 8px 6%',
+              minWidth: 0,
+            }}
+          >
+            <div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Campaña</div>
+            <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, minWidth: 0, wordBreak: 'break-word' }}>Cargando...</div>
+          </div>
           <div style={{ width: 34 }} />
         </div>
         <div style={{ padding: 12 }}>Cargando...</div>
@@ -208,11 +229,30 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
 
   return (
     <div className="panel panel-corners-soft block-border block-panel-border">
-      <div className="panel-header">
+      <div className="panel-header" style={{ position: 'relative' }}>
         <button className="icon" onClick={onBack} title="Volver" aria-label="Volver">
           <FaArrowLeft size={22} color="#FFD700" />
         </button>
-        <h1 style={{ margin: 0, minWidth: 0, wordBreak: 'break-word' }}>{campaign.name}</h1>
+        <div
+          style={{
+            position: 'absolute',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            top: 0,
+            bottom: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            maxWidth: 'calc(100% - 200px)',
+            padding: '6px 6% 8px 6%',
+            minWidth: 0,
+          }}
+        >
+          <div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Campaña</div>
+          <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, minWidth: 0, wordBreak: 'break-word' }}>{campaign.name}</div>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <button
             className="icon option"
@@ -449,7 +489,7 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
                                   onPointerDown={(e) => e.stopPropagation()}
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  <FaExclamationTriangle size={16} />
+                                  <FaExclamation size={16} />
                                 </span>
                               );
                             })()}
@@ -537,6 +577,7 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
 
     <ConfirmModal
       open={confirmCampaignOpen}
+      requireText="eliminar"
       message={
         <span>
           ¿Estás seguro de que deseas eliminar la campaña <strong>{campaign.name}</strong>?
@@ -552,6 +593,7 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
 
       <ConfirmModal
         open={confirmOpen}
+        requireText="eliminar"
         message={'¿Estás seguro de que deseas eliminar este capítulo?'}
         onConfirm={async () => {
           const target = pendingDelete;
