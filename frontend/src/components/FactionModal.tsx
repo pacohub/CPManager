@@ -346,8 +346,8 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 
 					{error ? <div style={{ color: 'red', marginTop: 8 }}>{error}</div> : null}
 					</form>
-				</div>
 			</div>
+		</div>
 		</div>
 	);
 };

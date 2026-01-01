@@ -324,7 +324,8 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 						return (
 						<div
 							className="card-hover-preview"
-							style={{ position: 'fixed', left: rect.left, top: rect.top, width: rect.width, zIndex: 11000, transform: 'none' }}
+							style={{ position: 'fixed', left: rect.left, top: rect.top, width: rect.width, zIndex: 11000, transform: 'none', pointerEvents: 'auto', cursor: onOpenCharacter ? 'pointer' : 'default' }}
+							onClick={() => onOpenCharacter?.(target.id)}
 							onMouseEnter={() => {
 								if (hideTimerRef.current) {
 									window.clearTimeout(hideTimerRef.current);

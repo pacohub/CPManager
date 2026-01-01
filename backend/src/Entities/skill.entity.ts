@@ -23,13 +23,13 @@ export class Skill {
   file: string;
 
   @ManyToOne(() => VisualEffect, { eager: true, nullable: true, onDelete: 'SET NULL' })
-  visualCaster: VisualEffect | null;
+  casterVisual: VisualEffect | null;
 
   @ManyToOne(() => VisualEffect, { eager: true, nullable: true, onDelete: 'SET NULL' })
-  visualMissile: VisualEffect | null;
+  missileVisual: VisualEffect | null;
 
   @ManyToOne(() => VisualEffect, { eager: true, nullable: true, onDelete: 'SET NULL' })
-  visualTarget: VisualEffect | null;
+  targetVisual: VisualEffect | null;
 
   @OneToMany(() => SkillEffect, (se) => se.skill)
   effects: SkillEffect[];

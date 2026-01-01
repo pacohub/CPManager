@@ -37,6 +37,8 @@ declare module 'react-icons/fa' {
   export const FaCompass: React.ComponentType<any>;
   export const FaMountain: React.ComponentType<any>;
   export const FaBook: React.ComponentType<any>;
+  export const FaStar: React.ComponentType<any>;
+  export const FaHandPaper: React.ComponentType<any>;
   const _default: { [key: string]: React.ComponentType<any> };
   export default _default;
 }

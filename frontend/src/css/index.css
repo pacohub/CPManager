@@ -77,6 +77,17 @@
     z-index: 5;
 }
 
+/* hide spinner arrows on number inputs with class no-spin */
+.no-spin::-webkit-outer-spin-button,
+.no-spin::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.no-spin {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
 .campaign-card {
     background-size: cover;
     background-position: center;
@@ -610,10 +621,22 @@ body {
 
 .saga-actions-top {
     position: absolute;
-    top: 20px;
+    top: 50%;
     right: 20px;
+    transform: translateY(-50%);
     display: flex;
     gap: 10px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.16s ease-in-out;
+}
+
+/* Show saga action buttons only on hover/focus */
+.saga-card-header:hover .saga-actions-top,
+.saga-card-header:focus-within .saga-actions-top,
+.saga-card:hover .saga-actions-top {
+    opacity: 1;
+    pointer-events: auto;
 }
 
 /* CampaignDetail chapters */
@@ -870,6 +893,14 @@ body {
     cursor: pointer;
     box-shadow: none;
     color: #e2d9b7;
+}
+
+/* Spinning icon for refresh actions */
+.rotating {
+    animation: spin 1s linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 input,

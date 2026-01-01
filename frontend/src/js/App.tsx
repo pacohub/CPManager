@@ -19,6 +19,12 @@ import ClassesView from './ClassesView';
 import CharactersView from './CharactersView';
 import CharacterDetail from './CharacterDetail';
 import SoundsView from './SoundsView';
+import VisualEffectsView from './VisualEffectsView';
+import EffectsView from './EffectsView';
+import EffectDetail from './EffectDetail';
+import SkillsView from './SkillsView';
+import SkillDetail from './SkillDetail';
+import SkillEffectsView from './SkillEffectsView';
 import RacesView from './RacesView';
 import ArmorTypesView from './ArmorTypesView';
 import DefenseTypesView from './DefenseTypesView';
@@ -123,6 +129,42 @@ function ResourcesRoute() {
 function SoundsRoute() {
 	const navigate = useNavigate();
 	return <SoundsView onBack={() => navigate('/')} />;
+}
+
+function VisualEffectsRoute() {
+	const navigate = useNavigate();
+	return <VisualEffectsView onBack={() => navigate('/')} />;
+}
+
+function EffectsRoute() {
+	const navigate = useNavigate();
+	return <EffectsView onBack={() => navigate('/')} onOpenEffect={(id) => navigate(`/effects/${id}`)} />;
+}
+
+function SkillsRoute() {
+	const navigate = useNavigate();
+	return <SkillsView onBack={() => navigate('/')} onOpenSkill={(id) => navigate(`/skills/${id}`)} />;
+}
+
+function EffectDetailRoute() {
+	const navigate = useNavigate();
+	const params = useParams();
+	const id = Number(params.id);
+	if (!Number.isFinite(id) || id <= 0) return <Navigate to="/effects" />;
+	return <EffectDetail effectId={id} onBack={() => navigate('/effects')} />;
+}
+
+function SkillDetailRoute() {
+	const navigate = useNavigate();
+	const params = useParams();
+	const id = Number(params.id);
+	if (!Number.isFinite(id) || id <= 0) return <Navigate to="/skills" />;
+	return <SkillDetail skillId={id} onBack={() => navigate('/skills')} />;
+}
+
+function SkillEffectsRoute() {
+	const navigate = useNavigate();
+	return <SkillEffectsView onBack={() => navigate('/')} />;
 }
 
 function RacesRoute() {
@@ -457,6 +499,12 @@ function App() {
 				<Route path="/animations" element={<AnimationsRoute />} />
 				<Route path="/resources" element={<ResourcesRoute />} />
 				<Route path="/sounds" element={<SoundsRoute />} />
+				<Route path="/visual-effects" element={<VisualEffectsRoute />} />
+				<Route path="/effects" element={<EffectsRoute />} />
+				<Route path="/effects/:id" element={<EffectDetailRoute />} />
+				<Route path="/skills" element={<SkillsRoute />} />
+				<Route path="/skills/:id" element={<SkillDetailRoute />} />
+				<Route path="/skill-effects" element={<SkillEffectsRoute />} />
 				<Route path="/races" element={<RacesRoute />} />
 				<Route path="/armor-types" element={<ArmorTypesRoute />} />
 				<Route path="/defense-types" element={<DefenseTypesRoute />} />

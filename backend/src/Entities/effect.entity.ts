@@ -1,6 +1,5 @@
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { VisualEffect } from './visualEffect.entity';
-import { SkillEffect } from './skillEffect.entity';
 
 @Entity()
 export class Effect {
@@ -20,14 +19,8 @@ export class Effect {
   benefit: string;
 
   @Column({ type: 'text', nullable: true })
-  precondition: string;
-
-  @Column({ type: 'text', nullable: true })
   file: string;
 
   @ManyToOne(() => VisualEffect, { eager: true, nullable: true, onDelete: 'SET NULL' })
   visualEffect: VisualEffect | null;
-
-  @OneToMany(() => SkillEffect, (se) => se.effect)
-  skillAssociations: SkillEffect[];
 }
