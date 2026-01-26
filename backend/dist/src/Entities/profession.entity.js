@@ -12,12 +12,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Profession = void 0;
 const typeorm_1 = require("typeorm");
 const faction_entity_1 = require("./faction.entity");
+const talentTree_entity_1 = require("./talentTree.entity");
 let Profession = class Profession {
     id;
     name;
     description;
     link;
     factions;
+    talentTrees;
 };
 exports.Profession = Profession;
 __decorate([
@@ -40,6 +42,11 @@ __decorate([
     (0, typeorm_1.ManyToMany)(() => faction_entity_1.Faction, (f) => f.professions),
     __metadata("design:type", Array)
 ], Profession.prototype, "factions", void 0);
+__decorate([
+    (0, typeorm_1.ManyToMany)(() => talentTree_entity_1.TalentTree),
+    (0, typeorm_1.JoinTable)({ name: 'profession_talent_trees' }),
+    __metadata("design:type", Array)
+], Profession.prototype, "talentTrees", void 0);
 exports.Profession = Profession = __decorate([
     (0, typeorm_1.Entity)()
 ], Profession);

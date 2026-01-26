@@ -13,6 +13,7 @@ exports.Objective = void 0;
 const typeorm_1 = require("typeorm");
 const event_entity_1 = require("./event.entity");
 const mechanic_entity_1 = require("./mechanic.entity");
+const gameObject_entity_1 = require("./gameObject.entity");
 let Objective = class Objective {
     id;
     position;
@@ -24,6 +25,7 @@ let Objective = class Objective {
     difficultyIncrement;
     event;
     mechanic;
+    objects;
 };
 exports.Objective = Objective;
 __decorate([
@@ -66,6 +68,11 @@ __decorate([
     (0, typeorm_1.ManyToOne)(() => mechanic_entity_1.Mechanic, { eager: true, onDelete: 'CASCADE' }),
     __metadata("design:type", mechanic_entity_1.Mechanic)
 ], Objective.prototype, "mechanic", void 0);
+__decorate([
+    (0, typeorm_1.ManyToMany)(() => gameObject_entity_1.GameObject, { eager: true }),
+    (0, typeorm_1.JoinTable)(),
+    __metadata("design:type", Array)
+], Objective.prototype, "objects", void 0);
 exports.Objective = Objective = __decorate([
     (0, typeorm_1.Entity)()
 ], Objective);

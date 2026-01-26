@@ -26,16 +26,29 @@ export async function getDefenseTypes(): Promise<DefenseTypeItem[]> {
 	return ensureOk<DefenseTypeItem[]>(res);
 }
 
-export async function createDefenseType(data: { name: string }): Promise<DefenseTypeItem> {
+export async function createDefenseType(data: { name: string; icon?: string | null }): Promise<DefenseTypeItem> {
 	const res = await fetch(API_URL, {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ name: data.name }),
+		body: JSON.stringify({ name: data.name, icon: data.icon ?? null }),
 	});
 	return ensureOk<DefenseTypeItem>(res);
 }
 
-export async function updateDefenseType(id: number, data: { name?: string }): Promise<DefenseTypeItem> {
+export async function uploadDefenseTypeIcon(file: File): Promise<string> {
+	const fd = new FormData();
+	fd.append('iconImage', file);
+
+ 	const res = await fetch(`${API_URL}/upload-icon`, {
+		method: 'POST',
+		body: fd,
+	});
+
+	const payload = await ensureOk<{ icon: string }>(res);
+	return payload.icon;
+}
+
+export async function updateDefenseType(id: number, data: { name?: string; icon?: string | null }): Promise<DefenseTypeItem> {
 	const res = await fetch(`${API_URL}/${id}`, {
 		method: 'PUT',
 		headers: { 'Content-Type': 'application/json' },

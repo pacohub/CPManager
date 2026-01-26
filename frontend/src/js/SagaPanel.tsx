@@ -1,3 +1,4 @@
+import WarningIcon from '../components/WarningIcon';
 import React, { useEffect, useState } from 'react';
 import { DndContext, closestCenter, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
@@ -169,6 +170,7 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
   const [pendingDeleteCampaign, setPendingDeleteCampaign] = useState<Campaign | null>(null);
   const [sagas, setSagas] = useState<SagaType[]>([]);
   const [chaptersByCampaignId, setChaptersByCampaignId] = useState<Record<number, number>>({});
+  const [chapterWarningsByCampaignId, setChapterWarningsByCampaignId] = useState<Record<number, number>>({});
   const [form, setForm] = useState<Partial<SagaType>>({ name: '', description: '' });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -326,6 +328,12 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
     }
   });
 
+  // Guardar el estado expandido/replegado en localStorage cada vez que cambia
+  useEffect(() => {
+    const arr = Array.from(expandedSagaIds);
+    window.localStorage.setItem(EXPANDED_SAGAS_STORAGE_KEY, JSON.stringify(arr));
+  }, [expandedSagaIds]);
+
   async function fetchSagas() {
     try {
       const res = await fetch(API_URL);
@@ -335,38 +343,19 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
       console.error('Error fetching sagas', err);
     }
   }
-
   useEffect(() => {
     fetchSagas();
   }, []);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(EXPANDED_SAGAS_STORAGE_KEY, JSON.stringify(Array.from(expandedSagaIds.values())));
-    } catch {
-      // ignore
-    }
-  }, [expandedSagaIds]);
-
-  useEffect(() => {
-    if (!sagas.length) return;
-    setExpandedSagaIds((prev) => {
-      const allowed = new Set((sagas || []).map((s) => s.id));
-      const next = new Set<number>();
-      for (const id of Array.from(prev.values())) {
-        if (allowed.has(id)) next.add(id);
-      }
-      return next;
-    });
-  }, [sagas]);
-
-  // Cargar campañas de todas las sagas
   useEffect(() => {
     async function fetchAllCampaigns() {
       let all: Campaign[] = [];
       for (const saga of sagas) {
-        const c = await getCampaignsBySaga(saga.id);
-        all = all.concat(c);
+        try {
+          const c = await getCampaignsBySaga(saga.id);
+          all = all.concat(c || []);
+        } catch (err) {
+          console.error('Error cargando campañas de saga', err);
+        }
       }
       setCampaigns(all);
     }
@@ -486,25 +475,9 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
     <>
     <div className="panel panel-corners-soft block-border block-panel-border">
       {/* Esquinas decorativas */}
-      <div className="panel-sticky-header">
-        <div className="panel-header">
-          <h1>CPManager</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-			<button
-				className="icon"
-				aria-label="Nueva Saga"
-        data-tooltip="Nueva Saga"
-				onClick={() => {
-					setShowModal(true);
-					setEditingId(null);
-					setForm({ name: '', description: '' });
-				}}
-			>
-				<FaBookOpen size={28} color="#FFD700" />
-			</button>
-          </div>
-        </div>
-        <div className="filters-row" style={{ marginBottom: 16 }}>
+      <div>
+        <div className="filters-row" style={{ marginBottom: 16, alignItems: 'center' }}>
+          <h1 style={{ margin: 0, fontSize: 20, marginRight: 12 }}>Saga</h1>
           <ClearableSearchInput
             value={search}
             onChange={(v) => setSearch(v)}
@@ -520,6 +493,19 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
             style={{ marginLeft: 8, background: 'none', border: 'none', cursor: 'pointer' }}
           >
             {dndEnabled ? <FaLockOpen size={22} color="#FFD700" /> : <FaLock size={22} color="#FFD700" />}
+          </button>
+          <button
+            className="icon"
+            aria-label="Nueva Saga"
+            data-tooltip="Nueva Saga"
+            onClick={() => {
+                setShowModal(true);
+                setEditingId(null);
+                setForm({ name: '', description: '' });
+            }}
+            style={{ marginLeft: 8 }}
+          >
+            <FaBookOpen size={28} color="#FFD700" />
           </button>
         </div>
         {search.trim() ? (
@@ -551,19 +537,20 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
                 const hasCImage = Boolean(c.image);
                 const hasCFile = Boolean(c.file);
                 const hasCChapters = chapterCount > 0;
-                return !hasCDescription || !hasCImage || !hasCFile || !hasCChapters;
+                const chapterWarnings = (chapterWarningsByCampaignId[c.id] ?? 0) > 0;
+                return !hasCDescription || !hasCImage || !hasCFile || !hasCChapters || chapterWarnings;
               });
 
+
+              const hasImage = Boolean((saga as any).image);
               const missing: string[] = [];
               if (!hasDescription) missing.push('descripción');
               if (!hasCampaigns) missing.push('campañas');
               if (hasIncompleteCampaigns) missing.push('campañas incompletas');
 
-              const showWarning = missing.length > 0;
-              const warningText =
-                missing.length === 1 && missing[0] === 'campañas incompletas'
-                  ? 'Esta saga tiene campañas incompletas.'
-                  : `Falta: ${missing.join(', ')}.`;
+              // Mostrar warning icon solo si falta descripción
+              const showSagaWarningIcon = !hasDescription;
+              const warningSagaTooltip = 'Falta descripción';
 
               return (
                 <SortableSagaCard
@@ -596,19 +583,12 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
                     </button>
                     <h3 className="saga-name" style={{ textAlign: 'left', flex: 1, margin: 0, minWidth: 0 }}>
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                        {showSagaWarningIcon && (
+                          <WarningIcon tooltip={warningSagaTooltip} size={15} style={{ marginRight: 4 }} />
+                        )}
                         <span style={{ opacity: 0.95, whiteSpace: 'nowrap', flex: '0 0 auto' }}>{toRoman(sagaIndex + 1)}.</span>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{saga.name}</span>
-                        {showWarning ? (
-                          <span
-                            className="saga-warning"
-                            title={warningText}
-                            aria-label={warningText}
-                            onPointerDown={(e) => e.stopPropagation()}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <FaExclamation size={16} />
-                          </span>
-                        ) : null}
+                        {/* ...eliminado warning visual... */}
                       </span>
                     </h3>
                     <div className="saga-actions-top">
@@ -666,6 +646,7 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
                                   <CampaignCard
                                     campaign={cellCampaign}
                                     chapterCount={chaptersByCampaignId[cellCampaign.id] ?? 0}
+                                    chapterWarningCount={chapterWarningsByCampaignId[cellCampaign.id] ?? 0}
                                     onOpen={() => {
                                       if (shouldSuppressCampaignOpen()) return;
                                       onOpenCampaign?.(cellCampaign.id);

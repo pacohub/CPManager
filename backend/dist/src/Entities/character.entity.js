@@ -14,6 +14,8 @@ const typeorm_1 = require("typeorm");
 const animation_entity_1 = require("./animation.entity");
 const class_entity_1 = require("./class.entity");
 const race_entity_1 = require("./race.entity");
+const talentTree_entity_1 = require("./talentTree.entity");
+const characterTalentTree_entity_1 = require("./characterTalentTree.entity");
 let Character = class Character {
     id;
     name;
@@ -28,6 +30,8 @@ let Character = class Character {
     raceId;
     children;
     animations;
+    talentTrees;
+    charTalentTreeFlags;
 };
 exports.Character = Character;
 __decorate([
@@ -86,6 +90,15 @@ __decorate([
     (0, typeorm_1.JoinTable)({ name: 'character_animations' }),
     __metadata("design:type", Array)
 ], Character.prototype, "animations", void 0);
+__decorate([
+    (0, typeorm_1.ManyToMany)(() => talentTree_entity_1.TalentTree),
+    (0, typeorm_1.JoinTable)({ name: 'character_talent_trees' }),
+    __metadata("design:type", Array)
+], Character.prototype, "talentTrees", void 0);
+__decorate([
+    (0, typeorm_1.OneToMany)(() => characterTalentTree_entity_1.CharacterTalentTree, (ctt) => ctt.character, { cascade: true }),
+    __metadata("design:type", Array)
+], Character.prototype, "charTalentTreeFlags", void 0);
 exports.Character = Character = __decorate([
     (0, typeorm_1.Entity)()
 ], Character);

@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FaExclamation } from 'react-icons/fa';
 import { FaArrowLeft } from 'react-icons/fa';
 import { FaPlus } from 'react-icons/fa';
-import { FaEdit, FaTrash } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaRunning } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import CharacterModal from '../components/CharacterModal';
 import AnimationModal from '../components/AnimationModal';
@@ -15,7 +15,7 @@ import { RaceItem } from '../interfaces/race';
 import { SoundItem } from '../interfaces/sound';
 import { createAnimation, getAnimations } from './animationApi';
 import { getClasses } from './classApi';
-import { createCharacterInstance, deleteCharacterInstance, getCharacter, getCharacterInstances, updateCharacter, updateCharacterInstance, uploadCharacterIcon, uploadCharacterImage } from './characterApi';
+import { createCharacterInstance, deleteCharacterInstance, getCharacter, getCharacterInstances, updateCharacter, updateCharacterInstance, uploadCharacterIcon, uploadCharacterImage, getCharacters, deleteCharacter } from './characterApi';
 import { getRaces } from './raceApi';
 import { getSounds } from './soundApi';
 
@@ -58,6 +58,10 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 	const [modalOpen, setModalOpen] = useState(false);
 	const [modalInitial, setModalInitial] = useState<Partial<CharacterItem> | undefined>(undefined);
 
+	const [characterEditOpen, setCharacterEditOpen] = useState(false);
+	const [confirmDeleteCharacterOpen, setConfirmDeleteCharacterOpen] = useState(false);
+	const [allCharacters, setAllCharacters] = useState<CharacterItem[]>([]);
+
 	const [confirmOpen, setConfirmOpen] = useState(false);
 	const [pendingDelete, setPendingDelete] = useState<CharacterItem | null>(null);
 
@@ -65,20 +69,22 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 		setLoading(true);
 		setError(null);
 		try {
-			const [c, inst, klasses, r, s, a] = await Promise.all([
-				getCharacter(characterId),
-				getCharacterInstances(characterId),
-				getClasses(),
-				getRaces(),
-				getSounds(),
-				getAnimations(),
-			]);
+			const [c, inst, klasses, r, s, a, all] = await Promise.all([
+					getCharacter(characterId),
+					getCharacterInstances(characterId),
+					getClasses(),
+					getRaces(),
+					getSounds(),
+					getAnimations(),
+					getCharacters(),
+				]);
 			setCharacter(c);
 			setInstances(inst || []);
 			setClasses(klasses || []);
 			setRaces(r || []);
 			setSounds(s || []);
 			setAnimations(a || []);
+			setAllCharacters(all || []);
 		} catch (e: any) {
 			setError(e?.message || 'Error cargando el personaje');
 		} finally {
@@ -290,10 +296,37 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Personaje</div>
 					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, minWidth: 0, wordBreak: 'break-word' }}>{character.name}</div>
 				</div>
-				<div style={{ width: 32 }} />
+				<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+					<button className="icon" title="Editar" aria-label="Editar" onClick={() => setCharacterEditOpen(true)} disabled={!character}>
+						<FaEdit size={18} style={{ color: 'currentColor' }} />
+					</button>
+					<button className="icon" title="Eliminar" aria-label="Eliminar" onClick={() => setConfirmDeleteCharacterOpen(true)} disabled={!character}>
+						<FaTrash size={18} style={{ color: 'currentColor' }} />
+					</button>
+				</div>
 			</div>
 
 			<div style={{ padding: 12 }}>
+			{characterEditOpen && character ? (
+				<CharacterModal
+					open={characterEditOpen}
+					initial={character}
+					existing={allCharacters}
+					classes={classes}
+					races={races}
+					sounds={sounds}
+					onClose={() => setCharacterEditOpen(false)}
+					onSubmit={async (data) => {
+						try {
+							const updated = await updateCharacter(character.id, data as any);
+							setCharacter(updated);
+							setCharacterEditOpen(false);
+						} catch (e) {
+							console.error('Error updating character', e);
+						}
+					}}
+				/>
+			) : null}
 				<div
 					style={{
 						display: 'flex',
@@ -338,7 +371,7 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 									disabled={savingAnimations}
 									onClick={() => setAddAnimOpen((v) => !v)}
 								>
-									<FaPlus size={16} />
+									<FaRunning size={16} />
 								</button>
 							</div>
 
@@ -394,12 +427,11 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 										const inRace = raceAnimIdSet.has(a.id);
 										const inClass = classAnimIdSet.has(a.id);
 										const inOwn = ownAnimIdSet.has(a.id);
-										const origin = inOwn ? 'Propia' : inRace && inClass ? 'Raza+Clase' : inRace ? 'Raza' : inClass ? 'Clase' : '';
 										return (
 											<div key={a.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
 												<div style={{ minWidth: 0, wordBreak: 'break-word' }}>{a.name}</div>
 												<div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: '0 0 auto' }}>
-													{origin ? <span style={{ opacity: 0.85, fontSize: 12, whiteSpace: 'nowrap' }}>{origin}</span> : null}
+						
 													{inOwn ? (
 														<button
 															className="icon option"
@@ -556,6 +588,24 @@ const CharacterDetail: React.FC<Props> = ({ characterId, onBack }) => {
 					setConfirmOpen(false);
 					setPendingDelete(null);
 				}}
+			/>
+
+			<ConfirmModal
+				open={confirmDeleteCharacterOpen}
+				requireText="eliminar"
+				message={'¿Estás seguro de que deseas eliminar este personaje?'}
+				onConfirm={async () => {
+					setConfirmDeleteCharacterOpen(false);
+					try {
+						if (!character) return;
+						await deleteCharacter(character.id);
+						onBack();
+					} catch (e: any) {
+						console.error('Error deleting character', e);
+						alert(e?.message || 'No se pudo eliminar el personaje');
+					}
+				}}
+				onCancel={() => setConfirmDeleteCharacterOpen(false)}
 			/>
 
 			<AnimationModal

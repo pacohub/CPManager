@@ -109,71 +109,54 @@ const ComponentsView: React.FC<Props> = ({ onBack }) => {
 
 			<div style={{ padding: 12 }}>
 				<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 12 }}>
-					{filtered.map((c) => (
-						<div key={c.id} className="block-border block-border-soft mechanic-card" style={{ padding: 12, position: 'relative' }}>
-							{(() => {
-								const missing: string[] = [];
-								if (!String(c.description ?? '').trim()) missing.push('descripción');
-								if (!String(c.image ?? '').trim()) missing.push('imagen');
-								if (!String(c.model ?? '').trim()) missing.push('modelo');
-								if (missing.length === 0) return null;
-								const warningText = `Falta: ${missing.join(', ')}.`;
-								return (
+					{filtered.map((c) => {
+						const missing: string[] = [];
+						if (!String(c.description ?? '').trim()) missing.push('descripción');
+						if (!String(c.image ?? '').trim()) missing.push('imagen');
+						if (!String(c.model ?? '').trim()) missing.push('modelo');
+						const showWarning = missing.length > 0;
+						const warningText = `Falta: ${missing.join(', ')}.`;
+						return (
+							<div key={c.id} className="block-border block-border-soft mechanic-card" title={c.description ? String(c.description) : undefined} style={{ padding: 12, cursor: 'pointer', position: 'relative' }}>
+								{showWarning ? (
 									<span className="campaign-warning" title={warningText} aria-label={warningText}>
 										<FaExclamation size={14} />
 									</span>
-								);
-							})()}
-							<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-								<div style={{ minWidth: 0 }}>
-									<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-										<CpImage src={asImageUrl(c.image)} width={32} height={32} fit="cover" frameStyle={{ flex: '0 0 auto' }} />
-										<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{c.name}</div>
-									</div>
-									<div style={{ opacity: 0.85, fontSize: 12, marginTop: 2 }}>{c.type}</div>
-									{c.description ? (
-										<div style={{ marginTop: 8, opacity: 0.9, fontSize: 13, whiteSpace: 'pre-wrap' }}>{c.description}</div>
-									) : null}
-									{(c.model || '').trim() ? (
-										<div style={{ marginTop: 8, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-											<FaExternalLinkAlt size={12} />
-											<a
-												href={normalizeLink(c.model || '')}
-												target="_blank"
-												rel="noreferrer"
-												style={{ color: '#e2c044', textDecoration: 'underline', wordBreak: 'break-all' }}
-											>
-												{(c.model || '').trim()}
-											</a>
+								) : null}
+								<div style={{ display: 'flex', justifyContent: 'space-between' }}>
+									<div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+										<CpImage src={asImageUrl(c.image)} width={64} height={64} fit="cover" />
+										<div>
+											<div style={{ fontWeight: 900 }}>{c.name}</div>
+											<div className="meta-small" style={{ marginTop: 4, opacity: 0.9 }}>{c.type}</div>
 										</div>
-									) : null}
-								</div>
-
-								<div className="mechanic-actions" style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-									<button
-										className="icon option"
-										title="Editar"
-										onClick={() => {
-											setInitial(c);
-											setModalOpen(true);
-										}}
-									>
-										<FaEdit size={16} />
-									</button>
-									<button
-										className="icon option"
-										title="Eliminar"
-										onClick={() => {
-											setPendingDelete(c);
-											setConfirmOpen(true);
-										}}
-									>
-										<FaTrash size={16} />
-									</button>
+									</div>
+									<div className="mechanic-actions" style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 8 }}>
+										<button
+											className="icon option"
+											title="Editar"
+											onClick={() => {
+												setInitial(c);
+												setModalOpen(true);
+											}}
+										>
+											<FaEdit size={16} />
+										</button>
+										<button
+											className="icon option"
+											title="Eliminar"
+											onClick={() => {
+												setPendingDelete(c);
+												setConfirmOpen(true);
+											}}
+										>
+											<FaTrash size={16} />
+										</button>
+									</div>
 								</div>
 							</div>
-						</div>
-					))}
+						);
+					})}
 				</div>
 
 				{filtered.length === 0 ? (

@@ -118,6 +118,17 @@ export class SkillService {
       }
     }
 
+    // write last import info
+    try {
+      const root = process.cwd();
+      const backupsDir = path.join(root, 'backups');
+      if (!require('fs').existsSync(backupsDir)) require('fs').mkdirSync(backupsDir, { recursive: true });
+      const info = { ts: Date.now(), inserted, skipped };
+      require('fs').writeFileSync(path.join(backupsDir, 'last-blizzard-import.json'), JSON.stringify(info, null, 2), 'utf8');
+    } catch (e) {
+      // ignore write errors
+    }
+
     return { inserted, skipped };
   }
 }

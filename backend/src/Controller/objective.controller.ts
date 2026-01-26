@@ -26,11 +26,13 @@ export class ObjectiveController {
 
 	@Post()
 	async create(@Body() data: any): Promise<Objective> {
+		console.log('[ObjectiveController] create payload:', { objectIds: data?.objectIds });
 		return this.objectiveService.create(data);
 	}
 
 	@Put(':id')
 	async update(@Param('id') id: string, @Body() data: any): Promise<Objective> {
+		console.log('[ObjectiveController] update payload:', { id: Number(id), objectIds: data?.objectIds });
 		return this.objectiveService.update(Number(id), data);
 	}
 

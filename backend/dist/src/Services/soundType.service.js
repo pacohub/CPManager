@@ -17,10 +17,13 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const soundType_entity_1 = require("../Entities/soundType.entity");
+const sound_entity_1 = require("../Entities/sound.entity");
 let SoundTypeService = class SoundTypeService {
     soundTypeRepository;
-    constructor(soundTypeRepository) {
+    soundRepository;
+    constructor(soundTypeRepository, soundRepository) {
         this.soundTypeRepository = soundTypeRepository;
+        this.soundRepository = soundRepository;
     }
     async findAll() {
         return this.soundTypeRepository
@@ -48,14 +51,49 @@ let SoundTypeService = class SoundTypeService {
         await this.soundTypeRepository.update(id, data);
         return this.findOne(id);
     }
+    async getUsage(id) {
+        const sounds = await this.soundRepository
+            .createQueryBuilder('s')
+            .innerJoin('s.types', 't', 't.id = :id', { id })
+            .select(['s.id'])
+            .getMany();
+        const ids = (sounds || []).map((s) => s.id);
+        return { count: ids.length, soundIds: ids };
+    }
     async remove(id) {
-        await this.soundTypeRepository.delete(id);
+        const usage = await this.getUsage(id);
+        const removedIds = usage.soundIds || [];
+        try {
+            await this.soundTypeRepository.manager.transaction(async (manager) => {
+                const info = await manager.query("PRAGMA table_info('sound_types')");
+                const colNames = (info || []).map((c) => String(c.name));
+                let typeCol = colNames.find((n) => /sound.*type/i.test(n) || /type.*sound/i.test(n));
+                if (!typeCol)
+                    typeCol = colNames.find((n) => /type/i.test(n));
+                if (!typeCol)
+                    typeCol = 'soundTypeId';
+                console.log('[soundType.remove] sound_types columns=', colNames);
+                const sql = `DELETE FROM sound_types WHERE "${typeCol}" = ?`;
+                console.log('[soundType.remove] executing:', sql, 'with id=', id);
+                const res = await manager.query(sql, [id]);
+                console.log('[soundType.remove] delete join result=', res);
+                console.log('[soundType.remove] deleting sound_type id=', id);
+                await manager.delete(soundType_entity_1.SoundType, id);
+            });
+        }
+        catch (err) {
+            console.error('[soundType.remove] error during removal', err);
+            throw err;
+        }
+        return { removedCount: removedIds.length, removedSoundIds: removedIds };
     }
 };
 exports.SoundTypeService = SoundTypeService;
 exports.SoundTypeService = SoundTypeService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(soundType_entity_1.SoundType)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __param(1, (0, typeorm_1.InjectRepository)(sound_entity_1.Sound)),
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository])
 ], SoundTypeService);
 //# sourceMappingURL=soundType.service.js.map

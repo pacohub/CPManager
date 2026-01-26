@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { FaArrowLeft, FaEdit, FaTrash, FaHandPaper } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaTrash, FaHandPaper, FaExclamation } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import { getSkills, createSkill, updateSkill, deleteSkill } from './skillApi';
 import ClearableSearchInput from '../components/ClearableSearchInput';
@@ -19,6 +19,43 @@ const SkillsView: React.FC<{ onBack: () => void; onOpenSkill?: (id: number) => v
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
   const [importConfirmOpen, setImportConfirmOpen] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [lastImport, setLastImport] = useState<any>(null);
+
+  const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
+
+  const formatRelative = (ts: number) => {
+    const diff = Date.now() - ts;
+    const sec = Math.floor(diff / 1000);
+    if (sec < 60) return `hace ${sec}s`;
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `hace ${min}m`;
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return `hace ${hr}h`;
+    const days = Math.floor(hr / 24);
+    if (days < 30) return `hace ${days}d`;
+    const months = Math.floor(days / 30);
+    return `hace ${months}m`;
+  };
+
+  const hexToRgb = (hex: string) => {
+    const h = hex.replace('#', '');
+    return { r: parseInt(h.substring(0, 2), 16), g: parseInt(h.substring(2, 4), 16), b: parseInt(h.substring(4, 6), 16) };
+  };
+  const rgbToHex = (r: number, g: number, b: number) => {
+    const toHex = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  };
+  const computeColorFor = (ts: number) => {
+    const base = hexToRgb('#e2d9b7');
+    const target = { r: 255, g: 0, b: 0 };
+    const month = 30 * 24 * 60 * 60 * 1000;
+    const age = Date.now() - ts;
+    const t = Math.max(0, Math.min(1, age / month));
+    const r = base.r + (target.r - base.r) * t;
+    const g = base.g + (target.g - base.g) * t;
+    const b = base.b + (target.b - base.b) * t;
+    return rgbToHex(r, g, b);
+  };
 
   const refresh = async () => {
     setError(null);
@@ -31,6 +68,15 @@ const SkillsView: React.FC<{ onBack: () => void; onOpenSkill?: (id: number) => v
   };
 
   useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${apiBase}/skills/last-import`);
+        const j = await res.json();
+        if (j?.ok && j.info) setLastImport(j.info);
+      } catch {}
+    })();
+  }, []);
   useEffect(() => { (async () => { try { const v = await getVisualEffects(); setVisuals(Array.isArray(v) ? v : []); } catch {} })(); }, []);
 
   const filtered = useMemo(() => {
@@ -48,12 +94,9 @@ const SkillsView: React.FC<{ onBack: () => void; onOpenSkill?: (id: number) => v
           <div style={{fontSize:22, fontWeight:900}}>Habilidades</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button className="icon" title="Actualizar habilidades de Blizzard" onClick={() => setImportConfirmOpen(true)} style={{ marginRight: 6 }}>
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={importing ? 'rotating' : ''}>
-              <path d="M21 12a9 9 0 10-3 6.708" stroke="#FFD700" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M21 3v6h-6" stroke="#FFD700" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {lastImport ? <div style={{ fontSize: 12, color: computeColorFor(lastImport.ts) }} title={new Date(lastImport.ts).toLocaleString()}>Última importación: {formatRelative(lastImport.ts)}</div> : null}
+          </div>
           <button className="icon" title="Nuevo" onClick={() => { setInitial(undefined); setModalOpen(true); }}><FaHandPaper size={22} color="#FFD700" /></button>
         </div>
       </div>
@@ -68,29 +111,38 @@ const SkillsView: React.FC<{ onBack: () => void; onOpenSkill?: (id: number) => v
 
       <div style={{ padding: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-          {filtered.map((it) => (
-            <div
-              key={it.id}
-              className="block-border block-border-soft mechanic-card"
-              style={{ padding: 12, position: 'relative', cursor: onOpenSkill ? 'pointer' : 'default' }}
-              onMouseEnter={() => setHoveredId(it.id)}
-              onMouseLeave={() => setHoveredId(undefined)}
-              onClick={() => { if (onOpenSkill) onOpenSkill(it.id); }}
-            >
-              <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 8, opacity: hoveredId === it.id ? 1 : 0, transition: 'opacity 0.18s' }}>
-                <button className="icon option" title="Editar" onClick={(e) => { e.stopPropagation(); setInitial(it); setModalOpen(true); }}><FaEdit size={16} /></button>
-                <button className="icon option" title="Eliminar" onClick={(e) => { e.stopPropagation(); setPendingDeleteId(it.id); setConfirmOpen(true); }}><FaTrash size={16} /></button>
-              </div>
+          {filtered.map((it) => {
+            const missing: string[] = [];
+            if (!((it.icon || '') + '').trim()) missing.push('icono');
+            const showWarning = missing.length > 0;
+            const warningText = `Falta: ${missing.join(', ')}.`;
 
-              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                <CpImage rawSrc={it.icon} width={64} height={64} fit="cover" frameClassName="metallic-border metallic-border-square" />
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: 900 }}>{it.name}</div>
-                  {it.levels ? <div style={{ marginTop: 6, fontSize: 13 }}>Niveles: {it.levels}</div> : null}
+            return (
+              <div
+                key={it.id}
+                className="block-border block-border-soft mechanic-card"
+                style={{ padding: 12, position: 'relative', cursor: onOpenSkill ? 'pointer' : 'default' }}
+                onMouseEnter={() => setHoveredId(it.id)}
+                onMouseLeave={() => setHoveredId(undefined)}
+                onClick={() => { if (onOpenSkill) onOpenSkill(it.id); }}
+              >
+                {/* ...eliminado warning visual... */}
+
+                <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 8, opacity: hoveredId === it.id ? 1 : 0, transition: 'opacity 0.18s' }}>
+                  <button className="icon option" title="Editar" onClick={(e) => { e.stopPropagation(); setInitial(it); setModalOpen(true); }}><FaEdit size={16} /></button>
+                  <button className="icon option" title="Eliminar" onClick={(e) => { e.stopPropagation(); setPendingDeleteId(it.id); setConfirmOpen(true); }}><FaTrash size={16} /></button>
+                </div>
+
+                <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                  <CpImage rawSrc={it.icon} width={64} height={64} fit="cover" frameClassName={it.passive ? 'metallic-border metallic-border-square passive-inner' : 'metallic-border metallic-border-square'} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 900 }}>{it.name}</div>
+                    {it.levels ? <div style={{ marginTop: 6, fontSize: 13 }}>Niveles: {it.levels}</div> : null}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {filtered.length === 0 ? <div style={{ marginTop: 12, opacity: 0.8, color: '#e2d9b7' }}>No hay habilidades.</div> : null}
@@ -136,7 +188,7 @@ const SkillsView: React.FC<{ onBack: () => void; onOpenSkill?: (id: number) => v
           setImportConfirmOpen(false);
           setImporting(true);
           try {
-            const res = await fetch('http://localhost:4000/skills/import-blizzard', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+            const res = await fetch(`${apiBase}/skills/import-blizzard`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
             const j = await res.json();
             if (!res.ok || !j?.ok) {
               console.error('Import failed', j);
@@ -144,6 +196,8 @@ const SkillsView: React.FC<{ onBack: () => void; onOpenSkill?: (id: number) => v
             } else {
               // refresh list
               await refresh();
+              // refresh last-import info
+              try { const r2 = await fetch(`${apiBase}/skills/last-import`); const j2 = await r2.json(); if (j2?.ok && j2.info) setLastImport(j2.info); } catch {}
             }
           } catch (e: any) {
             console.error('Import error', e);

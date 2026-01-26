@@ -7,4 +7,6 @@ export interface ClassItem {
 	description?: string;
 	level?: number;
 	animations?: AnimationItem[];
+	// optional associated talent trees
+	talentTrees?: { id: number; name: string }[];
 }

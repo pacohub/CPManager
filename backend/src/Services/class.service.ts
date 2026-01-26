@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Animation } from '../Entities/animation.entity';
 import { Class } from '../Entities/class.entity';
+import { TalentTree } from '../Entities/talentTree.entity';
 
 @Injectable()
 export class ClassService {
@@ -11,6 +12,8 @@ export class ClassService {
 		private classRepository: Repository<Class>,
 		@InjectRepository(Animation)
 		private animationRepository: Repository<Animation>,
+		@InjectRepository(TalentTree)
+		private talentTreeRepository: Repository<TalentTree>,
 	) {}
 
 	private coerceIdArray(value: any): number[] {
@@ -40,16 +43,21 @@ export class ClassService {
 	}
 
 	async findAll(): Promise<Class[]> {
+		// include talent tree entries and their talent data so frontend sees bound talents
 		return this.classRepository
 			.createQueryBuilder('c')
 			.leftJoinAndSelect('c.animations', 'a')
+			.leftJoinAndSelect('c.talentTrees', 't')
+			.leftJoinAndSelect('t.entries', 'te')
+			.leftJoinAndSelect('te.talent', 'tal')
 			.orderBy('LOWER(c.name)', 'ASC')
 			.addOrderBy('c.id', 'ASC')
 			.getMany();
 	}
 
 	async findOne(id: number): Promise<Class | null> {
-		return this.classRepository.findOne({ where: { id }, relations: { animations: true } });
+		// include nested relations: animations + talentTrees and those trees' entries and talents
+		return this.classRepository.findOne({ where: { id }, relations: { animations: true, talentTrees: { entries: { talent: true } } as any } as any });
 	}
 
 	async create(data: any): Promise<Class> {
@@ -85,6 +93,11 @@ export class ClassService {
 		if (data?.animationIds !== undefined) {
 			const ids = this.coerceIdArray(data.animationIds);
 			existing.animations = ids.length ? await this.animationRepository.find({ where: { id: In(ids) } }) : [];
+		}
+
+		if (data?.talentTreeIds !== undefined) {
+			const ids = this.coerceIdArray(data.talentTreeIds);
+			existing.talentTrees = ids.length ? await this.talentTreeRepository.find({ where: { id: In(ids) } }) : [];
 		}
 
 		await this.classRepository.save(existing);

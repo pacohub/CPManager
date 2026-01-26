@@ -1,4 +1,5 @@
 export interface DefenseTypeItem {
 	id: number;
-	name: string;
+		name: string;
+		icon?: string | null;
 }

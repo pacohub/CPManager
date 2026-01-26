@@ -18,12 +18,15 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const animation_entity_1 = require("../Entities/animation.entity");
 const class_entity_1 = require("../Entities/class.entity");
+const talentTree_entity_1 = require("../Entities/talentTree.entity");
 let ClassService = class ClassService {
     classRepository;
     animationRepository;
-    constructor(classRepository, animationRepository) {
+    talentTreeRepository;
+    constructor(classRepository, animationRepository, talentTreeRepository) {
         this.classRepository = classRepository;
         this.animationRepository = animationRepository;
+        this.talentTreeRepository = talentTreeRepository;
     }
     coerceIdArray(value) {
         if (!Array.isArray(value))
@@ -58,12 +61,15 @@ let ClassService = class ClassService {
         return this.classRepository
             .createQueryBuilder('c')
             .leftJoinAndSelect('c.animations', 'a')
+            .leftJoinAndSelect('c.talentTrees', 't')
+            .leftJoinAndSelect('t.entries', 'te')
+            .leftJoinAndSelect('te.talent', 'tal')
             .orderBy('LOWER(c.name)', 'ASC')
             .addOrderBy('c.id', 'ASC')
             .getMany();
     }
     async findOne(id) {
-        return this.classRepository.findOne({ where: { id }, relations: { animations: true } });
+        return this.classRepository.findOne({ where: { id }, relations: { animations: true, talentTrees: { entries: { talent: true } } } });
     }
     async create(data) {
         const name = this.normalizeText(data?.name);
@@ -98,6 +104,10 @@ let ClassService = class ClassService {
             const ids = this.coerceIdArray(data.animationIds);
             existing.animations = ids.length ? await this.animationRepository.find({ where: { id: (0, typeorm_2.In)(ids) } }) : [];
         }
+        if (data?.talentTreeIds !== undefined) {
+            const ids = this.coerceIdArray(data.talentTreeIds);
+            existing.talentTrees = ids.length ? await this.talentTreeRepository.find({ where: { id: (0, typeorm_2.In)(ids) } }) : [];
+        }
         await this.classRepository.save(existing);
         return this.findOne(id);
     }
@@ -110,7 +120,9 @@ exports.ClassService = ClassService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(class_entity_1.Class)),
     __param(1, (0, typeorm_1.InjectRepository)(animation_entity_1.Animation)),
+    __param(2, (0, typeorm_1.InjectRepository)(talentTree_entity_1.TalentTree)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository])
 ], ClassService);
 //# sourceMappingURL=class.service.js.map

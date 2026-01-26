@@ -8,7 +8,7 @@ import ClearableSearchInput from '../components/ClearableSearchInput';
 import { SoundItem } from '../interfaces/sound';
 import { SoundTypeItem } from '../interfaces/soundType';
 import { createSound, deleteSound, getSounds, updateSound } from './soundApi';
-import { createSoundType, getSoundTypes } from './soundTypeApi';
+import { createSoundType, getSoundTypes, deleteSoundType } from './soundTypeApi';
 
 function asFileUrl(raw?: string): string | undefined {
 	const v = (raw || '').trim();
@@ -169,11 +169,7 @@ const SoundsView: React.FC<Props> = ({ onBack }) => {
 						const warningText = `Falta: ${missing.join(', ')}.`;
 						return (
 							<div key={s.id} className="block-border block-border-soft mechanic-card" style={{ padding: 12, position: 'relative' }}>
-								{showWarning ? (
-									<span className="campaign-warning" title={warningText} aria-label={warningText}>
-										<FaExclamation size={14} />
-									</span>
-								) : null}
+									{/* ...eliminado warning visual... */}
 								<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
 									<div style={{ minWidth: 0 }}>
 										<div style={{ fontWeight: 900, wordBreak: 'break-word' }}>{s.name}</div>
@@ -233,6 +229,11 @@ const SoundsView: React.FC<Props> = ({ onBack }) => {
 					onCreateType={async (name) => {
 						await createSoundType({ name });
 						await refresh();
+					}}
+					onDeleteType={async (id: number) => {
+						const res = await deleteSoundType(id);
+						await refresh();
+						return res;
 					}}
 					onSubmit={async (data) => {
 						const formData = new FormData();

@@ -2,17 +2,32 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { FaBookmark, FaLock, FaLockOpen, FaExclamation } from 'react-icons/fa';
+import { FaBookmark, FaLock, FaLockOpen, FaExclamation, FaCompass, FaMountain, FaFlag } from 'react-icons/fa';
 import { FaArrowLeft } from 'react-icons/fa';
-import { FaEdit, FaTrash, FaDownload, FaUpload } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaDownload, FaUpload, FaExternalLinkAlt } from 'react-icons/fa';
+import { GiWarPick, GiChest } from 'react-icons/gi';
 import { Campaign } from '../interfaces/campaign';
+import { useNavigate } from 'react-router-dom';
 import { Chapter } from '../interfaces/chapter';
 import { deleteCampaign, getCampaign, updateCampaign } from './campaignApi';
 import { createChapter, deleteChapter, getChaptersByCampaign, updateChapter } from './chapterApi';
-import { getEventCountsByChapter } from './eventApi';
+import { getChapterFactionsByCampaign } from './chapterFactionApi';
+import { getEventCountsByChapter, getEvents } from './eventApi';
+import { getObjectives } from './objectiveApi';
+import { getMaps } from './mapApi';
+import { getFactions, getFactionProfessions } from './factionApi';
+import { getChapterResources } from './chapterResourceApi';
+import { MapItem } from '../interfaces/map';
+import { ResourceItem } from '../interfaces/resource';
+import { GameObjectItem } from '../interfaces/gameObject';
+import { FactionItem } from '../interfaces/faction';
+import { ProfessionItem } from '../interfaces/profession';
 import ChapterModal from '../components/ChapterModal';
 import CampaignModal from '../components/CampaignModal';
 import ConfirmModal from '../components/ConfirmModal';
+import MapCard from '../components/MapCard';
+import FactionCard from '../components/FactionCard';
+import CpImage from '../components/CpImage';
 
 interface Props {
   campaignId: number;
@@ -85,10 +100,14 @@ function buildChapterUpdateFormData(chapter: Chapter, patch: Partial<Chapter> = 
 }
 
 const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEvents }) => {
+  const navigate = useNavigate();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [eventCountsByChapterId, setEventCountsByChapterId] = useState<Record<number, { count: number; warningCount: number; missionCount: number; cinematicCount: number }>>({});
   const [eventCountsLoaded, setEventCountsLoaded] = useState(false);
+  const [chapterFactionsByChapterId, setChapterFactionsByChapterId] = useState<Record<number, any[]>>({});
+  const [objectivesByChapterId, setObjectivesByChapterId] = useState<Record<number, number>>({});
+  const [cinematicHasDialogueByChapterId, setCinematicHasDialogueByChapterId] = useState<Record<number, boolean>>({});
   const [chaptersDndEnabled, setChaptersDndEnabled] = useState(false);
   const [chapterModalOpen, setChapterModalOpen] = useState(false);
   const [chapterInitial, setChapterInitial] = useState<Partial<Chapter> | undefined>(undefined);
@@ -97,6 +116,14 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
 
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
   const [confirmCampaignOpen, setConfirmCampaignOpen] = useState(false);
+
+  const [aggregatedMaps, setAggregatedMaps] = useState<MapItem[]>([]);
+  const [aggregatedProfessions, setAggregatedProfessions] = useState<ProfessionItem[]>([]);
+  const [aggregatedResources, setAggregatedResources] = useState<ResourceItem[]>([]);
+  const [aggregatedObjects, setAggregatedObjects] = useState<GameObjectItem[]>([]);
+  const [aggregatedFactions, setAggregatedFactions] = useState<FactionItem[]>([]);
+  const [aggregatedLoading, setAggregatedLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'maps' | 'professions' | 'resources' | 'objects' | 'factions'>('maps');
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -108,6 +135,138 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
       setCampaign(c);
     })().catch((e) => console.error('Error cargando campaña', e));
   }, [campaignId]);
+
+  useEffect(() => {
+    // fetch objectives and cinematic dialogue presence for chapters
+    (async () => {
+      try {
+        const objMap: Record<number, number> = {};
+        const cineMap: Record<number, boolean> = {};
+        for (const ch of chapters || []) {
+          try {
+            const objs = await getObjectives({ chapterId: ch.id }).catch(() => []);
+            objMap[ch.id] = Array.isArray(objs) ? objs.length : 0;
+          } catch (err) {
+            objMap[ch.id] = 0;
+          }
+
+          try {
+            const events = await getEvents({ chapterId: ch.id }).catch(() => []);
+            const cinematics = (events || []).filter((ev: any) => String(ev.type ?? '').toUpperCase() === 'CINEMATIC');
+            let hasDialogue = false;
+            for (const ev of cinematics) {
+              const dlg = (ev as any)?.dialogue;
+              if (dlg && Array.isArray(dlg.lines) && dlg.lines.length > 0) { hasDialogue = true; break; }
+            }
+            cineMap[ch.id] = hasDialogue;
+          } catch (err) {
+            cineMap[ch.id] = false;
+          }
+        }
+        setObjectivesByChapterId(objMap);
+        setCinematicHasDialogueByChapterId(cineMap);
+      } catch (err) {
+        console.error('Error cargando objetivos/cinemáticas', err);
+      }
+    })();
+  }, [chapters]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!chapters || chapters.length === 0) {
+        setAggregatedMaps([]);
+        setAggregatedProfessions([]);
+        setAggregatedResources([]);
+        setAggregatedObjects([]);
+        setAggregatedFactions([]);
+        return;
+      }
+      setAggregatedLoading(true);
+      try {
+        const chapterIds = (chapters || []).map((c) => c.id);
+
+        const eventPromises = chapterIds.map((cid) => getEvents({ chapterId: cid }).catch(() => []));
+        const eventsByChapter = await Promise.all(eventPromises);
+        const mapIdSet = new Set<number>();
+        for (const evs of eventsByChapter) {
+          for (const ev of evs || []) {
+            const rawMapId = (ev as any).mapId ?? (ev as any).map?.id ?? (ev as any).map?.Id;
+            const mid = Number(rawMapId);
+            if (Number.isFinite(mid)) mapIdSet.add(mid);
+          }
+        }
+        const allMaps = await getMaps().catch(() => []);
+        const maps = (allMaps || []).filter((m: any) => mapIdSet.has(Number(m.id)));
+
+        const objPromises = chapterIds.map((cid) => getObjectives({ chapterId: cid }).catch(() => []));
+        const objsByChapter = await Promise.all(objPromises);
+        const objectById = new Map<number, GameObjectItem>();
+        for (const list of objsByChapter) {
+          for (const o of list || []) {
+            if (Array.isArray((o as any).objects)) {
+              for (const obj of (o as any).objects) {
+                const id = Number(obj?.id);
+                if (Number.isFinite(id) && !objectById.has(id)) objectById.set(id, obj as GameObjectItem);
+              }
+            }
+          }
+        }
+
+        const resPromises = chapterIds.map((cid) => getChapterResources(cid).catch(() => []));
+        const resourcesLists = await Promise.all(resPromises);
+        const resourceById = new Map<number, ResourceItem>();
+        for (const rl of resourcesLists) {
+          for (const r of rl || []) {
+            const id = Number((r as any).id);
+            if (Number.isFinite(id) && !resourceById.has(id)) resourceById.set(id, r as ResourceItem);
+          }
+        }
+
+        const factionIdSet = new Set<number>();
+        for (const ch of chapters) {
+          const links = chapterFactionsByChapterId[ch.id] || [];
+          for (const l of links) {
+            const fid = Number((l as any).factionId);
+            if (Number.isFinite(fid)) factionIdSet.add(fid);
+          }
+        }
+        const allFactions = await getFactions().catch(() => []);
+        const factions = (allFactions || []).filter((f: any) => factionIdSet.has(Number(f.id)));
+
+        const profById = new Map<number, ProfessionItem>();
+        const factionIds = Array.from(factionIdSet);
+        for (const fid of factionIds) {
+          try {
+            const profs = await getFactionProfessions(fid).catch(() => []);
+            for (const p of profs || []) {
+              const id = Number((p as any).id);
+              if (Number.isFinite(id) && !profById.has(id)) profById.set(id, p as ProfessionItem);
+            }
+          } catch (err) {
+            // ignore per-faction errors
+          }
+        }
+
+        if (cancelled) return;
+        setAggregatedMaps(maps || []);
+        setAggregatedObjects(Array.from(objectById.values()));
+        setAggregatedResources(Array.from(resourceById.values()));
+        setAggregatedFactions(factions || []);
+        setAggregatedProfessions(Array.from(profById.values()));
+      } catch (err) {
+        console.error('Error cargando agregados por capítulos', err);
+        setAggregatedMaps([]);
+        setAggregatedObjects([]);
+        setAggregatedResources([]);
+        setAggregatedFactions([]);
+        setAggregatedProfessions([]);
+      } finally {
+        if (!cancelled) setAggregatedLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [chapters, chapterFactionsByChapterId]);
 
   const refreshChapters = useCallback(async () => {
     const list = await getChaptersByCampaign(campaignId);
@@ -124,6 +283,18 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
   useEffect(() => {
     refreshChapters().catch((e) => console.error('Error cargando capítulos', e));
   }, [refreshChapters]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const map = await getChapterFactionsByCampaign(campaignId).catch(() => ({} as Record<number, any[]>));
+        setChapterFactionsByChapterId(map || {});
+      } catch (err) {
+        console.error('Error cargando chapter-factions', err);
+        setChapterFactionsByChapterId({});
+      }
+    })();
+  }, [campaignId]);
 
   useEffect(() => {
     refreshEventCounts().catch((e) => {
@@ -471,27 +642,12 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
                                 if (count <= 0) missing.push('eventos');
                                 if (warningCount > 0) warnings.push(`Eventos sin descripción: ${warningCount}.`);
                               }
+                              // Check chapter-faction associations
+                              const factionLinks = chapterFactionsByChapterId[ch.id] || [];
+                              if (factionLinks.length === 0) missing.push('facciones');
                               if (missing.length === 0 && warnings.length === 0) return null;
                               const parts: string[] = [];
-                              if (missing.length > 0) {
-                                const missingText = missing.length === 1
-                                  ? `Falta: ${missing[0]}.`
-                                  : `Falta: ${missing.join(', ')}.`;
-                                parts.push(missingText);
-                              }
-                              if (warnings.length > 0) parts.push(warnings.join('\n'));
-                              const warningText = parts.join('\n\n');
-                              return (
-                                <span
-                                  className="saga-warning"
-                                  title={warningText}
-                                  aria-label={warningText}
-                                  onPointerDown={(e) => e.stopPropagation()}
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <FaExclamation size={16} />
-                                </span>
-                              );
+                              // ...eliminado warning visual...
                             })()}
                           </div>
                         </div>
@@ -538,7 +694,216 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
         </div>
       </div>
 
-      {chapterModalOpen ? (
+        <div style={{ padding: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: '#e2d9b7' }}>Asociados en capítulos</div>
+              <div style={{ display: 'flex', gap: 8 }}>
+              {(['maps','professions','resources','objects','factions'] as const).map((t) => (
+                <button
+                  key={t}
+                  aria-label={
+                    t === 'maps' ? `Mapas (${aggregatedMaps.length})`
+                    : t === 'professions' ? `Profesiones (${aggregatedProfessions.length})`
+                    : t === 'resources' ? `Recursos (${aggregatedResources.length})`
+                    : t === 'objects' ? `Objetos (${aggregatedObjects.length})`
+                    : `Facciones (${aggregatedFactions.length})`
+                  }
+                  data-tooltip={t === 'maps' ? 'Mapas' : t === 'professions' ? 'Profesiones' : t === 'resources' ? 'Recursos' : t === 'objects' ? 'Objetos' : 'Facciones'}
+                  title={
+                    t === 'maps' ? `Mapas (${aggregatedMaps.length})`
+                    : t === 'professions' ? `Profesiones (${aggregatedProfessions.length})`
+                    : t === 'resources' ? `Recursos (${aggregatedResources.length})`
+                    : t === 'objects' ? `Objetos (${aggregatedObjects.length})`
+                    : `Facciones (${aggregatedFactions.length})`
+                  }
+                  onClick={() => setActiveTab(t)}
+                  style={{
+                    padding: '6px 10px',
+                    background: activeTab === t ? 'rgba(255,217,64,0.08)' : 'transparent',
+                    border: '1px solid transparent',
+                    borderBottom: activeTab === t ? '2px solid #FFD700' : undefined,
+                    color: '#e2d9b7',
+                    cursor: 'pointer',
+                    fontWeight: activeTab === t ? 800 : 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 6,
+                  }}
+                >
+                  {t === 'maps' ? (
+                    <>
+                      <FaCompass size={18} color="#FFD700" />
+                      <span style={{ marginLeft: 6, background: '#FFD700', color: '#000', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 800 }}>{aggregatedMaps.length}</span>
+                    </>
+                  ) : t === 'professions' ? (
+                    <>
+                      <GiWarPick size={18} color="#FFD700" />
+                      <span style={{ marginLeft: 6, background: '#FFD700', color: '#000', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 800 }}>{aggregatedProfessions.length}</span>
+                    </>
+                  ) : t === 'resources' ? (
+                    <>
+                      <FaMountain size={18} color="#FFD700" />
+                      <span style={{ marginLeft: 6, background: '#FFD700', color: '#000', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 800 }}>{aggregatedResources.length}</span>
+                    </>
+                  ) : t === 'objects' ? (
+                    <>
+                      <GiChest size={18} color="#FFD700" />
+                      <span style={{ marginLeft: 6, background: '#FFD700', color: '#000', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 800 }}>{aggregatedObjects.length}</span>
+                    </>
+                  ) : (
+                    <>
+                      <FaFlag size={18} color="#FFD700" />
+                      <span style={{ marginLeft: 6, background: '#FFD700', color: '#000', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 800 }}>{aggregatedFactions.length}</span>
+                    </>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+              <div style={{ marginTop: 10 }}>
+            {aggregatedLoading ? (
+              <div style={{ opacity: 0.6 }}>Cargando...</div>
+            ) : (
+              <div>
+                {activeTab === 'maps' ? (
+                  aggregatedMaps.length === 0 ? <div style={{ opacity: 0.7 }}>—</div> : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+                      {aggregatedMaps.map((m) => (
+                        <MapCard
+                          key={m.id}
+                          map={m}
+                          componentCount={undefined}
+                          onChanged={() => {}}
+                          onOpen={() => navigate(`/maps/${m.id}`)}
+                          onEdit={() => {}}
+                          onDelete={() => {}}
+                          hideActions={true}
+                        />
+                      ))}
+                    </div>
+                  )
+                ) : activeTab === 'professions' ? (
+                  aggregatedProfessions.length === 0 ? <div style={{ opacity: 0.7 }}>—</div> : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
+                      {aggregatedProfessions.map((p) => (
+                        <div
+                          key={p.id}
+                          className="block-border block-border-soft mechanic-card"
+                          style={{ padding: 12, cursor: 'pointer' }}
+                          onClick={() => navigate(`/professions/${p.id}`)}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{p.name}</div>
+                              </div>
+                              {p.description ? (
+                                <div style={{ marginTop: 6, opacity: 0.9, fontSize: 13, whiteSpace: 'pre-wrap' }}>{p.description}</div>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                ) : activeTab === 'resources' ? (
+                  aggregatedResources.length === 0 ? <div style={{ opacity: 0.7 }}>—</div> : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+                      {aggregatedResources.map((r) => {
+                        const iconUrl = r.icon ? (r.icon.startsWith('http') || r.icon.startsWith('data:') ? r.icon : `http://localhost:4000/${r.icon.replace(/^\/+/, '')}`) : undefined;
+                        const linkHref = r.fileLink ? (r.fileLink.startsWith('http') ? r.fileLink : `http://localhost:4000/${r.fileLink.replace(/^\/+/, '')}`) : undefined;
+                        const missing: string[] = [];
+                        if (!r.resourceType?.id) missing.push('tipo');
+                        if (!r.description) missing.push('descripción');
+                        if (!r.icon) missing.push('icono');
+                        if (!r.fileLink) missing.push('archivo');
+                        return (
+                          <div key={r.id} className="block-border block-border-soft mechanic-card" style={{ padding: 12, cursor: 'pointer' }} onClick={() => navigate('/resources')}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                              <div style={{ minWidth: 0 }} title={(r.description || '').trim() || undefined}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <CpImage src={iconUrl} width={32} height={32} fit="cover" frameStyle={{ flex: '0 0 auto' }} />
+                                  <div style={{ minWidth: 0 }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                                      <div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{r.name}</div>
+                                      {/* ...eliminado warning visual... */}
+                                    </div>
+                                    {r.resourceType?.name ? <div style={{ marginTop: 2, fontSize: 12, opacity: 0.85 }}>{r.resourceType.name}</div> : null}
+                                  </div>
+                                </div>
+                                {linkHref ? (
+                                  <div style={{ marginTop: 6, opacity: 0.92, fontSize: 13 }}>
+                                    Archivo:{' '}
+                                    <a href={linkHref} target="_blank" rel="noopener noreferrer">{r.fileLink}</a>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : activeTab === 'objects' ? (
+                  aggregatedObjects.length === 0 ? <div style={{ opacity: 0.7 }}>—</div> : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+                      {aggregatedObjects.map((o) => {
+                        const iconUrl = o.icon ? (o.icon.startsWith('http') || o.icon.startsWith('data:') ? o.icon : `http://localhost:4000/${o.icon.replace(/^\/+/, '')}`) : undefined;
+                        const missing: string[] = [];
+                        if (!(o.icon || '').trim()) missing.push('icono');
+                        if (!(o.description || '').trim()) missing.push('descripción');
+                        if (!(o.fileLink || '').trim()) missing.push('link');
+                        const showWarning = missing.length > 0;
+                        return (
+                          <div key={o.id} className="block-border block-border-soft mechanic-card" style={{ padding: 12, position: 'relative', cursor: 'pointer' }} onClick={() => navigate(`/objects/${o.id}`)}>
+                            {/* ...eliminado warning visual... */}
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                              <div style={{ minWidth: 0 }} title={(o.description || '').trim() || undefined}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                  <CpImage src={iconUrl} width={32} height={32} fit="cover" frameStyle={{ flex: '0 0 auto' }} />
+                                  <div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{o.name}</div>
+                                </div>
+
+                                {(o.fileLink || '').trim() ? (
+                                  <div style={{ marginTop: 8, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <FaExternalLinkAlt size={12} />
+                                    <a href={(o.fileLink || '').trim()} target="_blank" rel="noreferrer" style={{ color: '#e2c044', textDecoration: 'underline', wordBreak: 'break-all' }}>{(o.fileLink || '').trim()}</a>
+                                  </div>
+                                ) : null}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )
+                ) : (
+                  aggregatedFactions.length === 0 ? <div style={{ opacity: 0.7 }}>—</div> : (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
+                      {aggregatedFactions.map((f) => (
+                        <FactionCard
+                          key={f.id}
+                          faction={f}
+                          professions={[]}
+                          classes={[]}
+                          onEdit={() => {}}
+                          onDelete={() => {}}
+                          onOpen={() => navigate(`/factions/${f.id}`)}
+                          hideActions={true}
+                        />
+                      ))}
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {chapterModalOpen ? (
         <ChapterModal
           open={chapterModalOpen}
           campaignId={campaignId}

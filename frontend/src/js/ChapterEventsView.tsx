@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DndContext, DragOverlay, PointerSensor, closestCenter, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { FaComment, FaArrowLeft, FaPlus, FaEdit, FaDownload, FaTrash, FaExclamation, FaUser, FaFilm, FaFlag, FaMountain } from 'react-icons/fa';
+import { FaComment, FaArrowLeft, FaPlus, FaEdit, FaDownload, FaTrash, FaExclamation, FaUser, FaFilm, FaFlag, FaMountain, FaLockOpen, FaLock, FaExternalLinkAlt } from 'react-icons/fa';
+import { GiChest } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
 import FactionModal from '../components/FactionModal';
 import ResourceModal from '../components/ResourceModal';
@@ -22,6 +24,7 @@ import { EventItem } from '../interfaces/event';
 import { FactionItem } from '../interfaces/faction';
 import { MechanicItem } from '../interfaces/mechanic';
 import { MapItem } from '../interfaces/map';
+import { GameObjectItem } from '../interfaces/gameObject';
 import { ObjectiveItem } from '../interfaces/objective';
 import { ResourceItem } from '../interfaces/resource';
 import { ResourceTypeItem } from '../interfaces/resourceType';
@@ -38,6 +41,8 @@ import { createResourceType, getResourceTypes } from './resourceTypeApi';
 import { createEvent, deleteEvent, getEvents, updateEvent } from './eventApi';
 import { getEventCountsByChapter } from './eventApi';
 import { createObjective, deleteObjective, getObjectives, updateObjective } from './objectiveApi';
+import ObjectiveObjectsModal from '../components/ObjectiveObjectsModal';
+import { getObjects } from './gameObjectApi';
 
 interface Props {
 	chapterId: number;
@@ -343,7 +348,8 @@ const SortableChapterFactionRow: React.FC<{
 		id: `cf:${link.factionId}`,
 	});
 
-	const iconUrl = imageUrl(faction.iconImage) ?? null;
+	// Prefer showing the faction's crest image when available; fall back to nothing.
+	const iconUrl = imageUrl(faction.crestImage) ?? null;
 	const isPlayable = Boolean(link.isPlayable);
 
 	const style: React.CSSProperties = {
@@ -386,7 +392,9 @@ const SortableChapterFactionRow: React.FC<{
 				onChange={onTogglePlayable}
 			/>
 
-			<CpImage src={iconUrl || undefined} width={18} height={18} fit="contain" showFrame={false} alt={faction.name} />
+						{iconUrl ? (
+							<CpImage src={iconUrl} width={24} height={24} fit="cover" showFrame={false} alt={faction.name} />
+						) : null}
 
 			<div style={{ minWidth: 0, flex: '1 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
 				<span style={{ fontWeight: isPlayable ? 900 : 600 }}>{faction.name}</span>
@@ -472,6 +480,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 	const [characters, setCharacters] = useState<CharacterItem[]>([]);
 	const [events, setEvents] = useState<EventItem[]>([]);
 	const [objectives, setObjectives] = useState<ObjectiveItem[]>([]);
+	const [objects, setObjects] = useState<GameObjectItem[]>([]);
 	const [search, setSearch] = useState('');
 	const [eventsDndEnabled, setEventsDndEnabled] = useState(false);
 	const [dialogueKeysByEventId, setDialogueKeysByEventId] = useState<Record<number, string[]>>({});
@@ -497,6 +506,8 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 
 	const [objectiveModalOpen, setObjectiveModalOpen] = useState(false);
 	const [objectiveInitial, setObjectiveInitial] = useState<Partial<ObjectiveItem> | undefined>(undefined);
+	const [objectiveObjectsModalOpen, setObjectiveObjectsModalOpen] = useState(false);
+	const [objectiveObjectsTarget, setObjectiveObjectsTarget] = useState<ObjectiveItem | null>(null);
 	const [objectiveEventId, setObjectiveEventId] = useState<number | null>(null);
 	const [confirmObjectiveOpen, setConfirmObjectiveOpen] = useState(false);
 	const [pendingDeleteObjective, setPendingDeleteObjective] = useState<ObjectiveItem | null>(null);
@@ -529,6 +540,43 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 			return next;
 		});
 	}, [events]);
+
+	// If URL contains ?objectiveId=... or ?eventId=..., expand and scroll when data is ready
+	const [searchParams] = useSearchParams();
+	useEffect(() => {
+		const rawObj = searchParams.get('objectiveId');
+		if (rawObj) {
+			const id = Number(rawObj);
+			if (Number.isFinite(id)) {
+				const found = (objectives || []).find((o) => Number(o.id) === id);
+				if (found) {
+					setExpandedObjectiveId(id);
+					const evId = Number((found as any).eventId ?? found.event?.id);
+					if (Number.isFinite(evId)) setExpandedEventIds((prev) => new Set(prev).add(evId));
+					setTimeout(() => {
+						const el = document.getElementById(`objective-row-${id}`);
+						if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+					}, 150);
+					return;
+				}
+			}
+		}
+
+		const rawEvent = searchParams.get('eventId');
+		if (rawEvent) {
+			const id = Number(rawEvent);
+			if (Number.isFinite(id)) {
+				const foundEv = (events || []).find((e) => Number(e.id) === id);
+				if (foundEv) {
+					setExpandedEventIds((prev) => new Set(prev).add(id));
+					setTimeout(() => {
+						const el = document.getElementById(`event-row-${id}`);
+						if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+					}, 150);
+				}
+			}
+		}
+	}, [objectives, events, searchParams]);
 
 	useEffect(() => {
 		getChapter(chapterId).then(setChapter).catch((e) => console.error('Error cargando capítulo', e));
@@ -714,6 +762,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 	useEffect(() => {
 		refreshChapterResources().catch((e) => console.error('Error cargando recursos del capítulo', e));
 		if (!showResourcesSection) setSelectedResourceToAdd('');
+		getObjects().then((list) => setObjects(list || [])).catch((e) => console.error('Error cargando objetos', e));
 	}, [refreshChapterResources, showResourcesSection]);
 
 	const persistChapterResources = useCallback(async (resourceIds: number[]) => {
@@ -1524,9 +1573,9 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 							if (isFilteringActive) return;
 							setEventsDndEnabled((v) => !v);
 						}}
-						style={{ opacity: isFilteringActive ? 0.5 : 1 }}
+						style={{ opacity: isFilteringActive ? 0.5 : 1, marginLeft: 4, background: 'none', border: 'none', cursor: 'pointer' }}
 					>
-						{/* lock icon removed */}
+						{eventsDndEnabled ? <FaLockOpen size={22} color="#FFD700" /> : <FaLock size={22} color="#FFD700" />}
 					</button>
 				</div>
 			</div>
@@ -1756,7 +1805,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 											const renderCard = (
 												dragHandleProps: { attributes: any; listeners: any } | null,
 											) => (
-												<div className="block-border block-border-soft event-card" style={{ padding: 12, position: 'relative' }}>
+												<div id={`event-row-${ev.id}`} className="block-border block-border-soft event-card" style={{ padding: 12, position: 'relative' }}>
 													<div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
 														<div style={{ minWidth: 0, flex: 1 }}>
 																		<div
@@ -2197,8 +2246,8 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 																						const objectiveDetailedWarningText = 'Este objetivo no tiene descripción detallada.';
 
 																						return (
-																							<SortableObjectiveRow key={o.id} objective={o} enabled={dndEnabled}>
-																								<div className="objective-row" onClick={() => setExpandedObjectiveId((prev) => (prev === o.id ? null : o.id))}>
+																												<SortableObjectiveRow key={o.id} objective={o} enabled={dndEnabled}>
+																													<div id={`objective-row-${o.id}`} className="objective-row" onClick={() => setExpandedObjectiveId((prev) => (prev === o.id ? null : o.id))}>
 																									<div className="objective-stripe" aria-hidden="true" />
 																									<div className="objective-toggle" aria-hidden="true">
 																										{expandedObjectiveId === o.id ? '▾' : '▸'}
@@ -2235,6 +2284,20 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 																												style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}
 																												onPointerDown={(e) => e.stopPropagation()}
 																											>
+																													<button
+																													className="icon option"
+																													title="Objetos"
+																													type="button"
+																													onPointerDown={(e) => e.stopPropagation()}
+																													onClick={(e) => {
+																														e.stopPropagation();
+																														setObjectiveObjectsTarget(o);
+																														setObjectiveObjectsModalOpen(true);
+																													}}
+																													style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+																												>
+																													<GiChest size={16} color="currentColor" />
+																													</button>
 																												<button
 																													className="icon option"
 																													title="Editar"
@@ -2278,6 +2341,19 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 																												</div>
 																											) : null}
 																											<div style={{ marginTop: 6, opacity: 0.9 }}>Mecánica: {mechanicName || '(sin mecánica)'}</div>
+																										{(o.objects && (o.objects || []).length) ? (
+																											<div style={{ marginTop: 8 }}>
+																												<div style={{ fontWeight: 700, opacity: 0.95, marginBottom: 6 }}>Objetos asociados</div>
+																												<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+																													{(o.objects || []).map((obj: any) => (
+																														<div key={obj.id} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, background: '#0b0b0b', border: '1px solid rgba(255,255,255,0.03)' }}>
+																															<GiChest size={14} color="currentColor" />
+																															<div style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{obj.name}</div>
+																														</div>
+																													))}
+																												</div>
+																											</div>
+																										) : null}
 																										</div>
 																									) : null}
 																								</div>
@@ -2495,6 +2571,7 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 					open={objectiveModalOpen}
 					eventId={objectiveEventId}
 					mechanics={mechanics}
+					objects={objects}
 					onMechanicCreated={(created) => {
 						setMechanics((prev) => {
 							const next = [...(prev || []), created];
@@ -2520,6 +2597,26 @@ const ChapterEventsView: React.FC<Props> = ({ chapterId, onBack }) => {
 						setObjectiveModalOpen(false);
 						setObjectiveInitial(undefined);
 						setObjectiveEventId(null);
+					}}
+				/>
+			) : null}
+
+			{objectiveObjectsModalOpen && objectiveObjectsTarget ? (
+				<ObjectiveObjectsModal
+					open={objectiveObjectsModalOpen}
+					objectiveId={objectiveObjectsTarget.id}
+					objectiveName={objectiveObjectsTarget.name}
+					objects={objects}
+					initialSelectedIds={(objectiveObjectsTarget.objectIds || (objectiveObjectsTarget.objects || []).map((x: any) => x.id))}
+					onClose={() => {
+						setObjectiveObjectsModalOpen(false);
+						setObjectiveObjectsTarget(null);
+					}}
+					onSave={async (ids) => {
+						console.log('ChapterEventsView: save objective objects', { id: objectiveObjectsTarget?.id, ids });
+						if (!objectiveObjectsTarget) return;
+						await updateObjective(objectiveObjectsTarget.id, { objectIds: ids || [] } as any);
+						await refreshObjectives();
 					}}
 				/>
 			) : null}

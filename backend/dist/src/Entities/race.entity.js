@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Race = exports.RACE_MOVEMENT_TYPES = exports.RACE_DEATH_TYPES = void 0;
 const typeorm_1 = require("typeorm");
 const animation_entity_1 = require("./animation.entity");
+const skill_entity_1 = require("./skill.entity");
 const armorType_entity_1 = require("./armorType.entity");
 const sound_entity_1 = require("./sound.entity");
 exports.RACE_DEATH_TYPES = [
@@ -33,6 +34,7 @@ let Race = class Race {
     id;
     name;
     icon;
+    description;
     deathType;
     baseDefense;
     movementSpeed;
@@ -52,6 +54,7 @@ let Race = class Race {
     armorTypeEntity;
     armorTypeId;
     animations;
+    skills;
 };
 exports.Race = Race;
 __decorate([
@@ -66,6 +69,10 @@ __decorate([
     (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     __metadata("design:type", String)
 ], Race.prototype, "icon", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'text', nullable: true }),
+    __metadata("design:type", String)
+], Race.prototype, "description", void 0);
 __decorate([
     (0, typeorm_1.Column)({ type: 'text', nullable: true }),
     __metadata("design:type", String)
@@ -145,6 +152,11 @@ __decorate([
     (0, typeorm_1.JoinTable)({ name: 'race_animations' }),
     __metadata("design:type", Array)
 ], Race.prototype, "animations", void 0);
+__decorate([
+    (0, typeorm_1.ManyToMany)(() => skill_entity_1.Skill, (skill) => skill.races),
+    (0, typeorm_1.JoinTable)({ name: 'race_skills' }),
+    __metadata("design:type", Array)
+], Race.prototype, "skills", void 0);
 exports.Race = Race = __decorate([
     (0, typeorm_1.Entity)()
 ], Race);

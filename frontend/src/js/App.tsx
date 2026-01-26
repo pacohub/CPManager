@@ -11,9 +11,11 @@ import FactionDetail from './FactionDetail';
 import ProfessionsView from './ProfessionsView';
 import ProfessionDetail from './ProfessionDetail';
 import ObjectsView from './ObjectsView';
+import ObjectDetail from './ObjectDetail';
 import ComponentsView from './ComponentsView';
 import AnimationsView from './AnimationsView';
 import ResourcesView from './ResourcesView';
+import ResourceDetail from './ResourceDetail';
 import ChapterEventsView from './ChapterEventsView';
 import ClassesView from './ClassesView';
 import CharactersView from './CharactersView';
@@ -89,7 +91,16 @@ function ProfessionDetailRoute() {
 
 function ObjectsRoute() {
 	const navigate = useNavigate();
-	return <ObjectsView onBack={() => navigate('/')} />;
+	return <ObjectsView onBack={() => navigate('/')} onOpenObject={(id) => navigate(`/objects/${id}`)} />;
+}
+
+function ObjectDetailRoute() {
+	const navigate = useNavigate();
+	const params = useParams();
+	const objectId = Number(params.id);
+
+	if (!Number.isFinite(objectId) || objectId <= 0) return <Navigate to="/objects" />;
+	return <ObjectDetail objectId={objectId} onBack={() => navigate('/objects')} />;
 }
 
 function ClassesRoute() {
@@ -123,7 +134,16 @@ function AnimationsRoute() {
 
 function ResourcesRoute() {
 	const navigate = useNavigate();
-	return <ResourcesView onBack={() => navigate('/')} />;
+	return <ResourcesView onBack={() => navigate('/')} onOpenResource={(id) => navigate(`/resources/${id}`)} />;
+}
+
+function ResourceDetailRoute() {
+	const navigate = useNavigate();
+	const params = useParams();
+	const resourceId = Number(params.id);
+
+	if (!Number.isFinite(resourceId) || resourceId <= 0) return <Navigate to="/resources" />;
+	return <ResourceDetail resourceId={resourceId} onBack={() => navigate('/resources')} />;
 }
 
 function SoundsRoute() {
@@ -226,7 +246,7 @@ function CampaignDetailRoute() {
 		<CampaignDetail
 			campaignId={campaignId}
 			onBack={() => navigate('/')}
-			onOpenChapterEvents={(chapterId) => navigate(`/campaigns/${campaignId}/chapters/${chapterId}/events`)}
+			onOpenChapterEvents={(chapterId: number) => navigate(`/campaigns/${campaignId}/chapters/${chapterId}/events`)}
 		/>
 	);
 }
@@ -498,6 +518,8 @@ function App() {
 				<Route path="/components" element={<ComponentsRoute />} />
 				<Route path="/animations" element={<AnimationsRoute />} />
 				<Route path="/resources" element={<ResourcesRoute />} />
+				<Route path="/resources/:id" element={<ResourceDetailRoute />} />
+				<Route path="/objects/:id" element={<ObjectDetailRoute />} />
 				<Route path="/sounds" element={<SoundsRoute />} />
 				<Route path="/visual-effects" element={<VisualEffectsRoute />} />
 				<Route path="/effects" element={<EffectsRoute />} />

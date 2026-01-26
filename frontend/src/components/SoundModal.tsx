@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { FaPlus } from 'react-icons/fa';
-import { FaTimes } from 'react-icons/fa';
+import { FaTimes, FaTrash } from 'react-icons/fa';
 import NameModal from './NameModal';
 import { SoundItem } from '../interfaces/sound';
 import { SoundTypeItem } from '../interfaces/soundType';
+import ConfirmModal from './ConfirmModal';
+import { getSounds } from '../js/soundApi';
 
 interface Props {
 	open: boolean;
@@ -12,10 +14,11 @@ interface Props {
 	types: SoundTypeItem[];
 	onClose: () => void;
 	onCreateType?: (name: string) => Promise<void>;
+	onDeleteType?: (id: number) => Promise<void>;
 	onSubmit: (data: { name: string; typeIds: number[]; file?: File | null; removeFile?: boolean }) => void | Promise<void>;
 }
 
-const SoundModal: React.FC<Props> = ({ open, initial, existing, types, onClose, onCreateType, onSubmit }) => {
+const SoundModal: React.FC<Props> = ({ open, initial, existing, types, onClose, onCreateType, onDeleteType, onSubmit }) => {
 	const [name, setName] = useState(initial?.name ?? '');
 	const [typeIds, setTypeIds] = useState<number[]>(() => (initial?.types || []).map((t) => t.id));
 	const [file, setFile] = useState<File | null>(null);
@@ -24,6 +27,11 @@ const SoundModal: React.FC<Props> = ({ open, initial, existing, types, onClose, 
 	const [error, setError] = useState<string | null>(null);
 	const [createTypeOpen, setCreateTypeOpen] = useState(false);
 	const [createTypeError, setCreateTypeError] = useState<string | null>(null);
+
+	const [hoveredTypeId, setHoveredTypeId] = useState<number | null>(null);
+	const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+	const [pendingDeleteTypeId, setPendingDeleteTypeId] = useState<number | null>(null);
+	const [pendingDeleteTypeUsageCount, setPendingDeleteTypeUsageCount] = useState<number | null>(null);
 
 	const existingNames = useMemo(() => new Set((existing || []).filter((x) => x.id !== initial?.id).map((x) => (x.name || '').trim().toLowerCase())), [existing, initial?.id]);
 
@@ -85,17 +93,46 @@ const SoundModal: React.FC<Props> = ({ open, initial, existing, types, onClose, 
 								{types.map((t) => {
 									const checked = typeIds.includes(t.id);
 									return (
-										<label key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-											<input
-												type="checkbox"
-												checked={checked}
-												onChange={(e) => {
+										<div
+											key={t.id}
+											onMouseEnter={() => setHoveredTypeId(t.id)}
+											onMouseLeave={() => setHoveredTypeId((prev) => (prev === t.id ? null : prev))}
+											style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+										>
+											<label style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+												<input
+													type="checkbox"
+													checked={checked}
+													onChange={(e) => {
 													if (e.target.checked) setTypeIds((prev) => Array.from(new Set([...prev, t.id])));
 													else setTypeIds((prev) => prev.filter((x) => x !== t.id));
 												}}
-											/>
-											<span>{t.name}</span>
-										</label>
+												/>
+												<span>{t.name}</span>
+											</label>
+											{typeof (onDeleteType) === 'function' ? (
+												<button
+													type="button"
+													className="icon option"
+													title="Eliminar tipo"
+													style={{ visibility: hoveredTypeId === t.id ? 'visible' : 'hidden' }}
+													onClick={async () => {
+														setPendingDeleteTypeId(t.id);
+														// check usage
+														try {
+															const sounds = await getSounds();
+															const count = (sounds || []).filter((s) => (s.types || []).some((tt) => tt.id === t.id)).length;
+															setPendingDeleteTypeUsageCount(count);
+														} catch (err) {
+															setPendingDeleteTypeUsageCount(null);
+														}
+														setConfirmDeleteOpen(true);
+													}}
+												>
+													<FaTrash size={14} />
+												</button>
+											) : null}
+										</div>
 									);
 								})}
 							</div>
@@ -161,6 +198,50 @@ const SoundModal: React.FC<Props> = ({ open, initial, existing, types, onClose, 
 					} catch (e: any) {
 						setCreateTypeError(e?.message || 'No se pudo crear el tipo.');
 					}
+				}}
+			/>
+
+			<ConfirmModal
+				open={confirmDeleteOpen}
+				requireText="eliminar"
+				message={
+					pendingDeleteTypeId
+						? (
+							(() => {
+								const name = types.find((x) => x.id === pendingDeleteTypeId)?.name || '';
+								if (pendingDeleteTypeUsageCount && pendingDeleteTypeUsageCount > 0) {
+									return (
+										<div>
+											<p>¿Eliminar el tipo "{name}"?</p>
+											<p style={{ color: '#e2a03a', fontWeight: 700 }}>ADVERTENCIA: Este tipo está en uso por {pendingDeleteTypeUsageCount} sonido(s). Al confirmar se eliminarán las asociaciones y se borrará el tipo.</p>
+										</div>
+									);
+								}
+								return `¿Eliminar el tipo "${name}"?`;
+							})()
+						)
+					: '¿Eliminar el tipo?'
+				}
+				onConfirm={async () => {
+					if (!pendingDeleteTypeId || !onDeleteType) {
+						setConfirmDeleteOpen(false);
+						setPendingDeleteTypeId(null);
+						return;
+					}
+					try {
+						await onDeleteType(pendingDeleteTypeId);
+						setTypeIds((prev) => prev.filter((x) => x !== pendingDeleteTypeId));
+						setError(null);
+					} catch (err: any) {
+						setError(err?.message || 'No se pudo eliminar el tipo.');
+					} finally {
+						setConfirmDeleteOpen(false);
+						setPendingDeleteTypeId(null);
+					}
+				}}
+				onCancel={() => {
+					setConfirmDeleteOpen(false);
+					setPendingDeleteTypeId(null);
 				}}
 			/>
 		</div>

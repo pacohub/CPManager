@@ -1,6 +1,8 @@
 import { Animation } from './animation.entity';
 import { Class } from './class.entity';
 import { Race } from './race.entity';
+import { TalentTree } from './talentTree.entity';
+import { CharacterTalentTree } from './characterTalentTree.entity';
 export declare class Character {
     id: number;
     name: string;
@@ -15,4 +17,6 @@ export declare class Character {
     raceId: number | null;
     children: Character[];
     animations: Animation[];
+    talentTrees: TalentTree[];
+    charTalentTreeFlags: CharacterTalentTree[];
 }

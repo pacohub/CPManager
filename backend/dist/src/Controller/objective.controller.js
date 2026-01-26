@@ -34,9 +34,11 @@ let ObjectiveController = class ObjectiveController {
         return this.objectiveService.findOne(Number(id));
     }
     async create(data) {
+        console.log('[ObjectiveController] create payload:', { objectIds: data?.objectIds });
         return this.objectiveService.create(data);
     }
     async update(id, data) {
+        console.log('[ObjectiveController] update payload:', { id: Number(id), objectIds: data?.objectIds });
         return this.objectiveService.update(Number(id), data);
     }
     async remove(id) {

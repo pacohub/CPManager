@@ -13,7 +13,9 @@ const SkillModal: React.FC<Props> = ({ open, initial, visuals, onClose, onSubmit
   const [name, setName] = useState(initial?.name ?? '');
   const [description, setDescription] = useState(initial?.description ?? '');
   const [icon, setIcon] = useState(initial?.icon ?? '');
+  const [referencia, setReferencia] = useState(initial?.referencia ?? '');
   const [levels, setLevels] = useState<number>(initial?.levels ?? 1);
+  const [passive, setPassive] = useState<boolean>(initial?.passive ?? false);
   const [casterVisualId, setCasterVisualId] = useState<number | null>(initial?.casterVisual?.id ?? null);
   const [missileVisualId, setMissileVisualId] = useState<number | null>(initial?.missileVisual?.id ?? null);
   const [targetVisualId, setTargetVisualId] = useState<number | null>(initial?.targetVisual?.id ?? null);
@@ -27,7 +29,9 @@ const SkillModal: React.FC<Props> = ({ open, initial, visuals, onClose, onSubmit
     setName(initial?.name ?? '');
     setDescription(initial?.description ?? '');
     setIcon(initial?.icon ?? '');
+    setReferencia(initial?.referencia ?? '');
     setLevels(initial?.levels ?? 1);
+    setPassive(initial?.passive ?? false);
     setCasterVisualId(initial?.casterVisual?.id ?? null);
     setMissileVisualId(initial?.missileVisual?.id ?? null);
     setTargetVisualId(initial?.targetVisual?.id ?? null);
@@ -56,7 +60,9 @@ const SkillModal: React.FC<Props> = ({ open, initial, visuals, onClose, onSubmit
                 name: trimmed,
                 description: description?.trim() || undefined,
                 icon: icon?.trim() || undefined,
+                referencia: referencia?.trim() || undefined,
                 levels: Number(levels) || 1,
+                passive: Boolean(passive),
                 casterVisualId: casterVisualId ? Number(casterVisualId) : undefined,
                 missileVisualId: missileVisualId ? Number(missileVisualId) : undefined,
                 targetVisualId: targetVisualId ? Number(targetVisualId) : undefined,
@@ -78,6 +84,11 @@ const SkillModal: React.FC<Props> = ({ open, initial, visuals, onClose, onSubmit
             <label style={{ width: 120 }}>
               Niveles
               <input className="no-spin" type="number" value={levels} min={1} onChange={(e) => setLevels(Number(e.target.value) || 1)} />
+            </label>
+            
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="checkbox" checked={passive} onChange={(e) => setPassive(e.target.checked)} />
+              <span style={{ fontSize: 13 }}>Pasiva</span>
             </label>
           </div>
 
@@ -132,6 +143,11 @@ const SkillModal: React.FC<Props> = ({ open, initial, visuals, onClose, onSubmit
               <option value="">(ninguno)</option>
               {(visuals || []).map((v: any) => <option key={v.id} value={v.id}>{v.name}</option>)}
             </select>
+          </label>
+
+          <label>
+            Referencia
+            <input value={referencia} onChange={(e) => setReferencia(e.target.value)} maxLength={64} />
           </label>
 
           {error ? <div style={{ color: '#e24444', fontSize: 13 }}>{error}</div> : null}

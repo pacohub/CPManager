@@ -17,6 +17,7 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const animation_entity_1 = require("../Entities/animation.entity");
+const skill_entity_1 = require("../Entities/skill.entity");
 const armorType_entity_1 = require("../Entities/armorType.entity");
 const race_entity_1 = require("../Entities/race.entity");
 const sound_entity_1 = require("../Entities/sound.entity");
@@ -25,11 +26,13 @@ let RaceService = class RaceService {
     armorTypeRepository;
     soundRepository;
     animationRepository;
-    constructor(raceRepository, armorTypeRepository, soundRepository, animationRepository) {
+    skillRepository;
+    constructor(raceRepository, armorTypeRepository, soundRepository, animationRepository, skillRepository) {
         this.raceRepository = raceRepository;
         this.armorTypeRepository = armorTypeRepository;
         this.soundRepository = soundRepository;
         this.animationRepository = animationRepository;
+        this.skillRepository = skillRepository;
     }
     async resolveArmorTypeId(data) {
         if (data?.armorTypeId !== undefined) {
@@ -84,6 +87,7 @@ let RaceService = class RaceService {
             .leftJoinAndSelect('ms.types', 'mst')
             .leftJoinAndSelect('r.armorTypeEntity', 'at')
             .leftJoinAndSelect('r.animations', 'a')
+            .leftJoinAndSelect('r.skills', 's')
             .orderBy('LOWER(r.name)', 'ASC')
             .addOrderBy('r.id', 'ASC')
             .getMany();
@@ -91,7 +95,7 @@ let RaceService = class RaceService {
     async findOne(id) {
         return this.raceRepository.findOne({
             where: { id },
-            relations: { movementSound: { types: true }, armorTypeEntity: true, animations: true },
+            relations: { movementSound: { types: true }, armorTypeEntity: true, animations: true, skills: true },
         });
     }
     coerceIdArray(value) {
@@ -113,7 +117,7 @@ let RaceService = class RaceService {
     normalize(data) {
         if (typeof data.name === 'string')
             data.name = data.name.trim();
-        for (const key of ['icon', 'deathType', 'movementType', 'attack1', 'attack2', 'defenseType', 'armorType']) {
+        for (const key of ['icon', 'description', 'deathType', 'movementType', 'attack1', 'attack2', 'defenseType', 'armorType']) {
             const v = data[key];
             if (typeof v === 'string')
                 data[key] = v.trim();
@@ -183,6 +187,9 @@ let RaceService = class RaceService {
         const animationIdsRaw = data?.animationIds;
         const shouldUpdateAnimations = animationIdsRaw !== undefined;
         delete data.animationIds;
+        const skillIdsRaw = data?.skillIds;
+        const shouldUpdateSkills = skillIdsRaw !== undefined;
+        delete data.skillIds;
         delete data.armorTypeEntity;
         const existing = await this.raceRepository.findOne({
             where: { id },
@@ -208,6 +215,10 @@ let RaceService = class RaceService {
         if (shouldUpdateAnimations) {
             const ids = this.coerceIdArray(animationIdsRaw);
             existing.animations = ids.length ? await this.animationRepository.find({ where: { id: (0, typeorm_2.In)(ids) } }) : [];
+        }
+        if (shouldUpdateSkills) {
+            const ids = this.coerceIdArray(skillIdsRaw);
+            existing.skills = ids.length ? await this.skillRepository.find({ where: { id: (0, typeorm_2.In)(ids) } }) : [];
         }
         if (resolvedArmorTypeId !== undefined) {
             if (!resolvedArmorTypeId) {
@@ -235,7 +246,9 @@ exports.RaceService = RaceService = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(armorType_entity_1.ArmorType)),
     __param(2, (0, typeorm_1.InjectRepository)(sound_entity_1.Sound)),
     __param(3, (0, typeorm_1.InjectRepository)(animation_entity_1.Animation)),
+    __param(4, (0, typeorm_1.InjectRepository)(skill_entity_1.Skill)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository])

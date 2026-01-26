@@ -10,6 +10,12 @@ import { ResourceItem } from '../interfaces/resource';
 import { ResourceTypeItem } from '../interfaces/resourceType';
 import { createResource, deleteResource, getResources, updateResource } from './resourceApi';
 import { createResourceType, getResourceTypes } from './resourceTypeApi';
+import { getAllCampaigns } from './campaignApi';
+import { getAllChapters } from './chapterApi';
+import { getChapterResources } from './chapterResourceApi';
+import { getProfessions } from './professionApi';
+import { getProfessionObjectResourcesByProfession } from './professionObjectResourceApi';
+import { getObjects } from './gameObjectApi';
 
 function asImageUrl(raw?: string): string | undefined {
 	const v = (raw || '').trim();
@@ -29,9 +35,10 @@ function asExternalHref(raw?: string): string | undefined {
 
 interface Props {
 	onBack: () => void;
+	onOpenResource?: (id: number) => void;
 }
 
-const ResourcesView: React.FC<Props> = ({ onBack }) => {
+const ResourcesView: React.FC<Props> = ({ onBack, onOpenResource }) => {
 	const [resources, setResources] = useState<ResourceItem[]>([]);
 	const [resourceTypes, setResourceTypes] = useState<ResourceTypeItem[]>([]);
 	const [search, setSearch] = useState('');
@@ -46,6 +53,46 @@ const ResourcesView: React.FC<Props> = ({ onBack }) => {
 		const [items, types] = await Promise.all([getResources(), getResourceTypes()]);
 		setResources(items ?? []);
 		setResourceTypes(types ?? []);
+	}, []);
+
+	const [usageCountByResourceId, setUsageCountByResourceId] = useState<Record<number, number>>({});
+
+	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			try {
+				const campaigns = await getAllCampaigns().catch(() => []);
+				const chapters = await getAllChapters().catch(() => []);
+				const professions = await getProfessions().catch(() => []);
+				const objects = await getObjects().catch(() => []);
+				const byRes: Record<number, number> = {};
+
+				// chapters -> chapter resources
+				for (const ch of chapters || []) {
+					const resList = await getChapterResources(ch.id).catch(() => []);
+					for (const r of resList || []) {
+						byRes[r.id] = (byRes[r.id] || 0) + 1;
+					}
+				}
+
+				// professions -> objects -> resources
+				for (const p of professions || []) {
+					const map = await getProfessionObjectResourcesByProfession(p.id).catch(() => ({} as Record<number, any[]>));
+					for (const entries of Object.values(map || {})) {
+						for (const link of entries || []) {
+							byRes[link.resourceId] = (byRes[link.resourceId] || 0) + 1;
+						}
+					}
+				}
+
+				if (!cancelled) setUsageCountByResourceId(byRes);
+			} catch (err) {
+				console.error('Error calculando usos de recursos', err);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
 	}, []);
 
 	useEffect(() => {
@@ -134,43 +181,53 @@ const ResourcesView: React.FC<Props> = ({ onBack }) => {
 						if (missingDescription) missing.push('descripción');
 						if (missingIcon) missing.push('icono');
 						if (missingFile) missing.push('archivo');
+						const usageCount = usageCountByResourceId[r.id] || 0;
 						return (
-							<div key={r.id} className="block-border block-border-soft mechanic-card" style={{ padding: 12 }}>
+							<div key={r.id} className="block-border block-border-soft mechanic-card" style={{ padding: 12, position: 'relative' }}>
+								{usageCount > 0 ? (
+									<div
+										style={{
+											position: 'absolute',
+											right: 8,
+											top: 8,
+											background: 'rgba(0,0,0,0.6)',
+											color: '#fff',
+											padding: '4px 8px',
+											borderRadius: 12,
+											fontSize: 12,
+											fontWeight: 700,
+										}}
+										title={`Usos: ${usageCount}`}
+									>
+										{usageCount}
+									</div>
+								) : null}
+
 								<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-									<div style={{ minWidth: 0 }}>
+									<div
+										style={{ minWidth: 0, cursor: onOpenResource ? 'pointer' : 'default' }}
+										title={(r.description || '').trim() || undefined}
+										onClick={() => {
+											if (onOpenResource) onOpenResource(r.id);
+										}}
+									>
 										<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-												<CpImage src={iconUrl} width={32} height={32} fit="cover" frameStyle={{ flex: '0 0 auto' }} />
+											<CpImage src={iconUrl} width={32} height={32} fit="cover" frameStyle={{ flex: '0 0 auto' }} />
 											<div style={{ minWidth: 0 }}>
-													<div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-														<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{r.name}</div>
-														{missing.length > 0 ? (
-															<span
-																className="saga-warning"
-																title={`Faltan: ${missing.join(', ')}`}
-																style={{ display: 'inline-flex', alignItems: 'center' }}
-															>
-																<FaExclamation size={14} />
-															</span>
-														) : null}
-													</div>
+												<div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+													<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{r.name}</div>
+													{/* warning visual eliminado; no se renderiza nada aquí */}
+												</div>
 												{r.resourceType?.name ? <div style={{ marginTop: 2, fontSize: 12, opacity: 0.85 }}>{r.resourceType.name}</div> : null}
 											</div>
 										</div>
 
-										{r.description ? (
-											<div style={{ marginTop: 6, opacity: 0.9, fontSize: 13, whiteSpace: 'pre-wrap' }}>{r.description}</div>
-										) : null}
 										{linkHref ? (
 											<div style={{ marginTop: 6, opacity: 0.92, fontSize: 13 }}>
 												Archivo:{' '}
 												<a href={linkHref} target="_blank" rel="noopener noreferrer">
 													{r.fileLink}
 												</a>
-											</div>
-										) : null}
-										{missing.length > 0 ? (
-											<div style={{ marginTop: 6, opacity: 0.88, fontSize: 12 }}>
-												Faltan campos: {missing.join(', ')}.
 											</div>
 										) : null}
 									</div>

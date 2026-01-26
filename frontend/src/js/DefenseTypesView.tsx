@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { FaArrowLeft } from 'react-icons/fa';
 import { FaShieldAlt, FaEdit, FaTrash } from 'react-icons/fa';
+import CpImage from '../components/CpImage';
 import ConfirmModal from '../components/ConfirmModal';
 import DefenseTypeModal from '../components/DefenseTypeModal';
 import ClearableSearchInput from '../components/ClearableSearchInput';
 import { DefenseTypeItem } from '../interfaces/defenseType';
-import { createDefenseType, deleteDefenseType, getDefenseTypes, updateDefenseType } from './defenseTypeApi';
+import { createDefenseType, deleteDefenseType, getDefenseTypes, updateDefenseType, uploadDefenseTypeIcon } from './defenseTypeApi';
 
 interface Props {
 	onBack: () => void;
@@ -40,6 +41,14 @@ const DefenseTypesView: React.FC<Props> = ({ onBack }) => {
 		const list = q ? (items || []).filter((a) => (a.name || '').toLowerCase().includes(q)) : (items || []);
 		return list.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
 	}, [items, search]);
+
+function asImageUrl(raw?: string): string | undefined {
+	const v = (raw || '').trim();
+	if (!v) return undefined;
+	if (v.startsWith('data:') || v.startsWith('http://') || v.startsWith('https://')) return v;
+	if (v.startsWith('/')) return encodeURI(`http://localhost:4000/${v.replace(/^\/+/, '')}`);
+	return undefined;
+}
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">
@@ -105,7 +114,10 @@ const DefenseTypesView: React.FC<Props> = ({ onBack }) => {
 						<div key={a.id} className="block-border block-border-soft mechanic-card" style={{ padding: 12 }}>
 							<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
 								<div style={{ minWidth: 0 }}>
-									<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{a.name}</div>
+									<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+										<CpImage src={asImageUrl(a.icon || undefined)} width={32} height={32} fit="cover" frameStyle={{ flex: '0 0 auto' }} />
+										<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{a.name}</div>
+									</div>
 								</div>
 								<div className="mechanic-actions" style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
 									<button
@@ -147,8 +159,17 @@ const DefenseTypesView: React.FC<Props> = ({ onBack }) => {
 						setInitial(undefined);
 					}}
 					onSubmit={async (data) => {
-						if (initial?.id) await updateDefenseType(Number(initial.id), { name: data.name });
-						else await createDefenseType({ name: data.name });
+						const anyData = data as any;
+						const iconFile: File | null | undefined = anyData?.iconFile;
+						let icon = (anyData.icon || '').trim();
+						if ((anyData as any).removeIcon) {
+							icon = '';
+						} else if (iconFile) {
+							const uploaded = await uploadDefenseTypeIcon(iconFile);
+							if (uploaded) icon = uploaded;
+						}
+						if (initial?.id) await updateDefenseType(Number(initial.id), { name: data.name, icon: icon || null });
+						else await createDefenseType({ name: data.name, icon: icon || null });
 						await refresh();
 						setModalOpen(false);
 						setInitial(undefined);

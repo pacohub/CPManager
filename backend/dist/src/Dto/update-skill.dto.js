@@ -17,9 +17,11 @@ class UpdateSkillDto {
     icon;
     levels;
     file;
+    referencia;
     casterVisualId;
     missileVisualId;
     targetVisualId;
+    passive;
 }
 exports.UpdateSkillDto = UpdateSkillDto;
 __decorate([
@@ -51,6 +53,12 @@ __decorate([
 ], UpdateSkillDto.prototype, "file", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.MaxLength)(64),
+    __metadata("design:type", String)
+], UpdateSkillDto.prototype, "referencia", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
     (0, class_validator_1.IsInt)(),
     __metadata("design:type", Number)
 ], UpdateSkillDto.prototype, "casterVisualId", void 0);
@@ -64,4 +72,9 @@ __decorate([
     (0, class_validator_1.IsInt)(),
     __metadata("design:type", Number)
 ], UpdateSkillDto.prototype, "targetVisualId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsBoolean)(),
+    __metadata("design:type", Boolean)
+], UpdateSkillDto.prototype, "passive", void 0);
 //# sourceMappingURL=update-skill.dto.js.map

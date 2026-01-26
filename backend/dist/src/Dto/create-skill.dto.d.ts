@@ -4,7 +4,9 @@ export declare class CreateSkillDto {
     icon?: string;
     levels?: number;
     file?: string;
+    referencia?: string;
     casterVisualId?: number;
     missileVisualId?: number;
     targetVisualId?: number;
+    passive?: boolean;
 }

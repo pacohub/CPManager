@@ -35,17 +35,11 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 	const [sounds, setSounds] = useState<SoundItem[]>([]);
 	const [search, setSearch] = useState('');
 	const [error, setError] = useState<string | null>(null);
+	const [hoveredId, setHoveredId] = useState<number | null>(null);
 
 	const [tooltip, setTooltip] = useState<{ visible: boolean; text?: string; x?: number; y?: number }>({ visible: false });
-	const [hoverPreview, setHoverPreview] = useState<{ id: number; rect: DOMRect } | null>(null);
-	const [previewHovered, setPreviewHovered] = useState(false);
-	const hideTimerRef = useRef<number | null>(null);
 
-	useEffect(() => {
-		return () => {
-			if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
-		};
-	}, []);
+
 
 	const [modalOpen, setModalOpen] = useState(false);
 	const [initial, setInitial] = useState<Partial<CharacterItem> | undefined>(undefined);
@@ -177,24 +171,10 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 							<div
 								key={c.id}
 								className="block-border block-border-soft mechanic-card"
-								style={{ padding: 12, cursor: onOpenCharacter ? 'pointer' : 'default', position: 'relative' }}
+								style={{ padding: 12, cursor: 'pointer', position: 'relative' }}
 								onClick={() => onOpenCharacter?.(c.id)}
-								onMouseEnter={(e) => {
-									if (hideTimerRef.current) {
-										window.clearTimeout(hideTimerRef.current);
-										hideTimerRef.current = null;
-									}
-									const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-									setHoverPreview({ id: c.id, rect });
-								}}
-								onMouseLeave={() => {
-									// delay hiding to allow moving into the preview without flicker
-									if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
-									hideTimerRef.current = window.setTimeout(() => {
-										if (!previewHovered) setHoverPreview(null);
-										hideTimerRef.current = null;
-									}, 120) as unknown as number;
-								}}
+								onMouseEnter={() => setHoveredId(c.id)}
+								onMouseLeave={() => setHoveredId(null)}
 							>
 								{showWarning ? (
 									<span
@@ -280,7 +260,18 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 
 									<div
 										className="mechanic-actions"
-										style={{ display: 'flex', alignItems: 'flex-start', gap: 8, position: 'absolute', top: 10, right: 10, zIndex: 2 }}
+										style={{
+											display: 'flex',
+											alignItems: 'flex-start',
+											gap: 8,
+											position: 'absolute',
+											top: 10,
+											right: 10,
+											zIndex: 32000,
+											opacity: hoveredId === c.id ? 1 : 0,
+											pointerEvents: hoveredId === c.id ? 'auto' : 'none',
+											transition: 'opacity 0.12s ease-in-out',
+										}}
 									>
 										<button
 											className="icon option"
@@ -311,48 +302,7 @@ const CharactersView: React.FC<Props> = ({ onBack, onOpenCharacter }) => {
 					})}
 				</div>
 
-				{hoverPreview ? (() => {
-					const target = filtered.find((x) => x.id === hoverPreview.id) || characters.find((x) => x.id === hoverPreview.id);
-					if (!target) return null;
-					const rect = hoverPreview.rect;
-					const preferRight = rect.right + 340 < window.innerWidth;
-					const left = preferRight ? rect.right + 12 : Math.max(8, rect.left);
-					const top = rect.top;
-					const classNameFull = classById.get(target.classId)?.name || target.class?.name || '';
-					const raceNameFull = raceById.get(Number((target as any)?.raceId) || 0)?.name || target.race?.name || '';
-					const iconUrl = asImageUrl(target.icon);
-						return (
-						<div
-							className="card-hover-preview"
-							style={{ position: 'fixed', left: rect.left, top: rect.top, width: rect.width, zIndex: 11000, transform: 'none', pointerEvents: 'auto', cursor: onOpenCharacter ? 'pointer' : 'default' }}
-							onClick={() => onOpenCharacter?.(target.id)}
-							onMouseEnter={() => {
-								if (hideTimerRef.current) {
-									window.clearTimeout(hideTimerRef.current);
-									hideTimerRef.current = null;
-								}
-								setPreviewHovered(true);
-							}}
-							onMouseLeave={() => {
-								setPreviewHovered(false);
-								if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current);
-								hideTimerRef.current = window.setTimeout(() => setHoverPreview(null), 120) as unknown as number;
-							}}
-						>
-							<div style={{ display: 'flex', gap: 12, padding: 12 }}>
-								<div style={{ width: 96, height: 96, flex: '0 0 96px' }}>
-									<CpImage src={iconUrl} width={96} height={96} fit="cover" frameClassName="metallic-border metallic-border-square" />
-								</div>
-								<div style={{ minWidth: 0, flex: 1 }}>
-									<div style={{ fontWeight: 900, fontSize: 16, marginBottom: 6 }}>{target.name}</div>
-									{classNameFull ? <div style={{ marginTop: 2, opacity: 0.95 }}>{classNameFull}</div> : null}
-									{raceNameFull ? <div style={{ marginTop: 2, opacity: 0.95 }}>{raceNameFull}</div> : null}
-									{(target.model || '').trim() ? <div style={{ marginTop: 8, opacity: 0.9 }}>Modelo: {(target.model || '').trim()}</div> : null}
-								</div>
-							</div>
-						</div>
-					);
-				})() : null}
+
 
 				{filtered.length === 0 ? <div style={{ marginTop: 12, opacity: 0.8, color: '#e2d9b7' }}>No hay personajes todavía.</div> : null}
 			</div>

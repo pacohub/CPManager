@@ -5,6 +5,7 @@ import { ArmorTypeItem } from './armorType';
 export interface RaceItem {
 	id: number;
 	name: string;
+	description?: string;
 	icon?: string;
 	deathType?: string;
 	baseDefense: number;
@@ -24,4 +25,5 @@ export interface RaceItem {
 	armorTypeId?: number | null;
 	armorTypeEntity?: ArmorTypeItem | null;
 	animations?: AnimationItem[];
+	skills?: any[];
 }

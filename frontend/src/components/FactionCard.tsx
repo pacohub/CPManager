@@ -14,6 +14,8 @@ interface Props {
 	onRemoveCrest?: () => void;
 	professions?: ProfessionItem[];
 	classes?: ClassItem[];
+	hideActions?: boolean;
+	campaignCount?: number;
 }
 
 const toBackendUrl = (path?: string) => {
@@ -22,7 +24,7 @@ const toBackendUrl = (path?: string) => {
 	return encodeURI(`http://localhost:4000/${path.replace(/^\/+/, '')}`);
 };
 
-const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRemoveCrest, professions, classes }) => {
+const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRemoveCrest, professions, classes, hideActions, campaignCount }) => {
 	// "Imagen" (iconImage) se usa como fondo de la tarjeta
 	const [iconExists, setIconExists] = useState(true);
 	const iconUrl = useMemo(() => toBackendUrl(faction.iconImage), [faction.iconImage]);
@@ -120,7 +122,7 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRem
 	return (
 		<div
 			className={`campaign-card metallic-border${crestExists ? ' has-crest' : ''}`}
-			style={{ ...backgroundStyle, width: '100%', height: 'auto', aspectRatio: '4 / 3' }}
+			style={{ ...backgroundStyle, width: '100%', height: 'auto', aspectRatio: '4 / 3', paddingTop: 120 }}
 			tabIndex={0}
 			aria-label={faction.name}
 			role={onOpen ? 'button' : undefined}
@@ -133,23 +135,32 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRem
 				}
 			}}
 		>
-			{showWarning ? (
-				<span
-					className="campaign-warning"
-					title={warningText}
-					aria-label={warningText}
-					onClick={(e) => e.stopPropagation()}
-					onPointerDown={(e) => e.stopPropagation()}
+				{/* ...eliminado warning visual... */}
+			{typeof campaignCount === 'number' && campaignCount > 0 ? (
+				<div
+					style={{
+						position: 'absolute',
+						right: 8,
+						top: 8,
+						background: 'rgba(0,0,0,0.6)',
+						color: '#fff',
+						padding: '4px 8px',
+						borderRadius: 12,
+						fontSize: 12,
+						fontWeight: 700,
+					}
+					}
+					title={`Capítulos asociados: ${campaignCount}`}
 				>
-					<FaExclamation size={14} />
-				</span>
+					{campaignCount}
+				</div>
 			) : null}
 			{crestUrl && crestExists ? (
-				<div className="faction-crest-center" aria-hidden="true">
+				<div aria-hidden="true" style={{ position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)', width: 165, height: 165, zIndex: 20 }}>
 					<CpImage
 						src={crestUrl}
-						width={120}
-						height={120}
+						width={165}
+						height={165}
 						fit="cover"
 						showFrame={false}
 						imgStyle={{ borderRadius: 8, width: '100%', height: '100%' }}
@@ -171,11 +182,11 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRem
 							))}
 						</div>
 					) : null}
-					<div className="faction-top-row"></div>	
 					<div className="faction-name">{faction.name}</div>
 				</div>
 			</div>
 
+			{!hideActions ? (
 			<div className="campaign-actions">
 				<button
 					className="icon option"
@@ -202,6 +213,7 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRem
 					<FaTrash size={14} />
 				</button>
 			</div>
+			) : null}
 
 			<div className="campaign-desc" onClick={(e)=>e.stopPropagation()}>
 				<div ref={descRef} className={`campaign-desc-content ${showFullDesc ? 'expanded' : ''}`}>{faction.description}</div>

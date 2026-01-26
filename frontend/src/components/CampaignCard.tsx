@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { createCampaign, updateCampaign } from '../js/campaignApi';
 import { FaExclamation } from 'react-icons/fa';
+import { missingFor, RequiredField } from '../js/warningUtils';
 import { FaEdit, FaTrash, FaDownload, FaUpload } from 'react-icons/fa';
 import { Campaign } from '../interfaces/campaign';
 
@@ -11,6 +12,7 @@ interface Props {
   onDelete: () => void;
   onOpen?: () => void;
   chapterCount?: number;
+  chapterWarningCount?: number;
 }
 
 const getImageUrl = (img?: string) => {
@@ -20,7 +22,7 @@ const getImageUrl = (img?: string) => {
   return encodeURI(`http://localhost:4000/${img.replace(/^\/+/, '')}`);
 };
 
-const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete, onOpen, chapterCount = 0 }) => {
+const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete, onOpen, chapterCount = 0, chapterWarningCount = 0 }) => {
   const [imageExists, setImageExists] = useState(true);
   useEffect(() => {
     if (!campaign.image) return setImageExists(true);
@@ -39,15 +41,23 @@ const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete, onOpen, cha
   };
   console.log('CampaignCard debug:', debugInfo);
 
-  const hasDescription = Boolean((campaign.description ?? '').trim());
-  const hasImage = Boolean(campaign.image);
-  const hasFile = Boolean(campaign.file);
-  const hasChapters = chapterCount > 0;
-  const missing: string[] = [];
-  if (!hasDescription) missing.push('descripción');
-  if (!hasImage) missing.push('imagen');
-  if (!hasFile) missing.push('archivo');
-  if (!hasChapters) missing.push('capítulos');
+  const spec: RequiredField[] = [
+    { key: 'description', label: 'descripción' },
+    { key: 'image', label: 'imagen' },
+    { key: 'file', label: 'archivo' },
+    { key: 'chapters', label: 'capítulos', validator: (v) => Number(v) > 0 },
+  ];
+
+  // Build a lightweight object matching expected keys for validation
+  const sample = {
+    description: campaign.description,
+    image: campaign.image,
+    file: campaign.file,
+    chapters: chapterCount,
+  };
+
+  const missing = missingFor(sample, spec);
+  if ((chapterWarningCount ?? 0) > 0) missing.push('capítulos con problemas');
   const showWarning = missing.length > 0;
   const warningText = `Falta: ${missing.join(', ')}.`;
 
@@ -61,17 +71,7 @@ const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete, onOpen, cha
       aria-label={campaign.name}
       onClick={() => onOpen?.()}
     >
-      {showWarning ? (
-        <span
-          className="campaign-warning"
-          title={warningText}
-          aria-label={warningText}
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <FaExclamation size={14} />
-        </span>
-      ) : null}
+      {/* ...eliminado warning visual... */}
       {/* Overlay hover handled by CSS */}
       {/* Nombre de la campaña */}
       <div className="campaign-title">

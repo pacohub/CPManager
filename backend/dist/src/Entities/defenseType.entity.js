@@ -14,6 +14,7 @@ const typeorm_1 = require("typeorm");
 let DefenseType = class DefenseType {
     id;
     name;
+    icon;
 };
 exports.DefenseType = DefenseType;
 __decorate([
@@ -24,6 +25,10 @@ __decorate([
     (0, typeorm_1.Column)({ length: 120, unique: true }),
     __metadata("design:type", String)
 ], DefenseType.prototype, "name", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', length: 255, nullable: true }),
+    __metadata("design:type", Object)
+], DefenseType.prototype, "icon", void 0);
 exports.DefenseType = DefenseType = __decorate([
     (0, typeorm_1.Entity)({ name: 'defense_type' })
 ], DefenseType);

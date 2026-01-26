@@ -13,6 +13,7 @@ exports.Faction = void 0;
 const typeorm_1 = require("typeorm");
 const profession_entity_1 = require("./profession.entity");
 const class_entity_1 = require("./class.entity");
+const talentTree_entity_1 = require("./talentTree.entity");
 let Faction = class Faction {
     id;
     name;
@@ -25,6 +26,7 @@ let Faction = class Faction {
     file;
     professions;
     classes;
+    talentTrees;
 };
 exports.Faction = Faction;
 __decorate([
@@ -73,6 +75,11 @@ __decorate([
     (0, typeorm_1.JoinTable)(),
     __metadata("design:type", Array)
 ], Faction.prototype, "classes", void 0);
+__decorate([
+    (0, typeorm_1.ManyToMany)(() => talentTree_entity_1.TalentTree),
+    (0, typeorm_1.JoinTable)({ name: 'faction_talent_trees' }),
+    __metadata("design:type", Array)
+], Faction.prototype, "talentTrees", void 0);
 exports.Faction = Faction = __decorate([
     (0, typeorm_1.Entity)()
 ], Faction);

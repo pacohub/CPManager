@@ -11,6 +11,8 @@ interface Props {
   onChanged?: () => void;
 	onOpen?: () => void;
 	componentCount?: number;
+  hideActions?: boolean;
+  campaignCount?: number;
 }
 
 const getImageUrl = (img?: string) => {
@@ -19,7 +21,7 @@ const getImageUrl = (img?: string) => {
   return encodeURI(`http://localhost:4000/${img.replace(/^\/+/, '')}`);
 };
 
-const MapCard: React.FC<Props> = ({ map, onEdit, onDelete, onChanged, onOpen, componentCount }) => {
+const MapCard: React.FC<Props> = ({ map, onEdit, onDelete, onChanged, onOpen, componentCount, hideActions, campaignCount }) => {
   const bg = map.image ? `url("${getImageUrl(map.image)}")` : undefined;
 
   const [imageExists, setImageExists] = useState(true);
@@ -58,22 +60,18 @@ const MapCard: React.FC<Props> = ({ map, onEdit, onDelete, onChanged, onOpen, co
       aria-label={map.name}
 		onClick={() => onOpen?.()}
     >
-      {showWarning ? (
-        <span
-          className="campaign-warning"
-          title={warningText}
-          aria-label={warningText}
-          onClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <FaExclamation size={14} />
-        </span>
-      ) : null}
-      <div className="campaign-title">
-        <div>{map.name}</div>
+      {/* ...eliminado warning visual... */}
+      <div className="campaign-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ flex: '1 1 auto' }}>{map.name}</div>
+        {typeof campaignCount === 'number' && campaignCount > 0 ? (
+          <div style={{ background: '#000', color: '#FFD700', borderRadius: 999, padding: '2px 8px', fontSize: 12, fontWeight: 800 }} title={`${campaignCount} campañas`}>
+            {campaignCount}
+          </div>
+        ) : null}
       </div>
 
-      <div className="campaign-actions">
+      {!hideActions ? (
+        <div className="campaign-actions">
         {fileUrl ? (
           <a
             className="icon option"
@@ -136,7 +134,8 @@ const MapCard: React.FC<Props> = ({ map, onEdit, onDelete, onChanged, onOpen, co
         >
           <FaTrash size={14} />
         </button>
-      </div>
+        </div>
+      ) : null}
 
       <div className="campaign-desc">{map.description}</div>
     </div>

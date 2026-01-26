@@ -7,4 +7,7 @@ export class DefenseType {
 
 	@Column({ length: 120, unique: true })
 	name: string;
+
+	@Column({ type: 'varchar', length: 255, nullable: true })
+	icon?: string | null;
 }

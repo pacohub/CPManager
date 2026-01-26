@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { FaArrowLeft, FaEdit, FaTrash } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../components/ConfirmModal';
+import CpImage from '../components/CpImage';
 import EffectModal from '../components/EffectModal';
 import { getEffects, getEffect, updateEffect, deleteEffect } from './effectApi';
 
@@ -41,8 +42,8 @@ const EffectDetail: React.FC<{ effectId: number; onBack: () => void }> = ({ effe
           <div style={{fontSize:22, fontWeight:900}}>{item?.name ?? 'Efecto'}</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button className="icon" title="Editar" aria-label="Editar" onClick={() => setEditOpen(true)} disabled={!item}><FaEdit size={18} color="#FFD700" /></button>
-          <button className="icon" title="Eliminar" aria-label="Eliminar" onClick={() => setConfirmOpen(true)} disabled={!item}><FaTrash size={18} color="#FFD700" /></button>
+          <button className="icon" title="Editar" aria-label="Editar" onClick={() => setEditOpen(true)} disabled={!item}><FaEdit size={18} style={{ color: 'currentColor' }} /></button>
+          <button className="icon" title="Eliminar" aria-label="Eliminar" onClick={() => setConfirmOpen(true)} disabled={!item}><FaTrash size={18} style={{ color: 'currentColor' }} /></button>
         </div>
       </div>
 
@@ -50,11 +51,16 @@ const EffectDetail: React.FC<{ effectId: number; onBack: () => void }> = ({ effe
         {error ? <div style={{ color: '#e24444' }}>{error}</div> : null}
         {!item ? <div>Cargando...</div> : (
           <div>
-            <div style={{ fontWeight: 900, fontSize: 18 }}>{item.name}</div>
-            {item.description ? <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{item.description}</div> : null}
-            {item.type ? <div style={{ marginTop: 8, opacity: 0.9 }}>Tipo: {item.type === 'benefit' ? 'Beneficio' : item.type === 'harm' ? 'Perjuicio' : item.type}</div> : null}
-            {item.visualEffect?.name ? <div style={{ marginTop: 8 }}>Efecto visual: {item.visualEffect.name}</div> : null}
-            {item.file ? <div style={{ marginTop: 8 }}>Archivo: {item.file}</div> : null}
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <CpImage rawSrc={item.icon} width={96} height={96} fit="cover" frameClassName={item.passive ? 'metallic-border metallic-border-square passive-inner' : 'metallic-border metallic-border-square'} />
+              <div>
+                <div style={{ fontWeight: 900, fontSize: 18 }}>{item.name}</div>
+                {item.description ? <div style={{ marginTop: 8, whiteSpace: 'pre-wrap' }}>{item.description}</div> : null}
+                {item.type ? <div style={{ marginTop: 8, opacity: 0.9 }}>Tipo: {item.type === 'benefit' ? 'Beneficio' : item.type === 'harm' ? 'Perjuicio' : item.type}</div> : null}
+                {item.visualEffect?.name ? <div style={{ marginTop: 8 }}>Efecto visual: {item.visualEffect.name}</div> : null}
+                {item.file ? <div style={{ marginTop: 8 }}>Archivo: {item.file}</div> : null}
+              </div>
+            </div>
           </div>
         )}
       </div>

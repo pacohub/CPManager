@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min, IsBoolean } from 'class-validator';
 
 export class CreateSkillDto {
   @IsString()
@@ -24,6 +24,11 @@ export class CreateSkillDto {
   file?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  referencia?: string;
+
+  @IsOptional()
   @IsInt()
   casterVisualId?: number;
 
@@ -34,4 +39,8 @@ export class CreateSkillDto {
   @IsOptional()
   @IsInt()
   targetVisualId?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  passive?: boolean;
 }

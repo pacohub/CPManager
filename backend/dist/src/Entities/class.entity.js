@@ -13,6 +13,7 @@ exports.Class = void 0;
 const typeorm_1 = require("typeorm");
 const animation_entity_1 = require("./animation.entity");
 const faction_entity_1 = require("./faction.entity");
+const talentTree_entity_1 = require("./talentTree.entity");
 let Class = class Class {
     id;
     name;
@@ -21,6 +22,7 @@ let Class = class Class {
     level;
     factions;
     animations;
+    talentTrees;
 };
 exports.Class = Class;
 __decorate([
@@ -52,6 +54,11 @@ __decorate([
     (0, typeorm_1.JoinTable)({ name: 'class_animations' }),
     __metadata("design:type", Array)
 ], Class.prototype, "animations", void 0);
+__decorate([
+    (0, typeorm_1.ManyToMany)(() => talentTree_entity_1.TalentTree),
+    (0, typeorm_1.JoinTable)({ name: 'class_talent_trees' }),
+    __metadata("design:type", Array)
+], Class.prototype, "talentTrees", void 0);
 exports.Class = Class = __decorate([
     (0, typeorm_1.Entity)()
 ], Class);

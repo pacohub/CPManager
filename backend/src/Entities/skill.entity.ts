@@ -1,6 +1,7 @@
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToMany, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { VisualEffect } from './visualEffect.entity';
 import { SkillEffect } from './skillEffect.entity';
+import { Race } from './race.entity';
 
 @Entity()
 export class Skill {
@@ -22,6 +23,9 @@ export class Skill {
   @Column({ type: 'text', nullable: true })
   file: string;
 
+  @Column({ length: 64, nullable: true })
+  referencia: string;
+
   @ManyToOne(() => VisualEffect, { eager: true, nullable: true, onDelete: 'SET NULL' })
   casterVisual: VisualEffect | null;
 
@@ -33,4 +37,10 @@ export class Skill {
 
   @OneToMany(() => SkillEffect, (se) => se.skill)
   effects: SkillEffect[];
+
+  @Column({ type: 'boolean', default: false })
+  passive: boolean;
+
+	@ManyToMany(() => Race, (r) => r.skills)
+	races: Race[];
 }

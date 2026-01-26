@@ -1,5 +1,6 @@
 import { Repository } from 'typeorm';
 import { Animation } from '../Entities/animation.entity';
+import { Skill } from '../Entities/skill.entity';
 import { ArmorType } from '../Entities/armorType.entity';
 import { Race } from '../Entities/race.entity';
 import { Sound } from '../Entities/sound.entity';
@@ -8,7 +9,8 @@ export declare class RaceService {
     private armorTypeRepository;
     private soundRepository;
     private animationRepository;
-    constructor(raceRepository: Repository<Race>, armorTypeRepository: Repository<ArmorType>, soundRepository: Repository<Sound>, animationRepository: Repository<Animation>);
+    private skillRepository;
+    constructor(raceRepository: Repository<Race>, armorTypeRepository: Repository<ArmorType>, soundRepository: Repository<Sound>, animationRepository: Repository<Animation>, skillRepository: Repository<Skill>);
     private resolveArmorTypeId;
     private ensureAnimationsExistByName;
     private resolveDefaultAnimationsForRace;

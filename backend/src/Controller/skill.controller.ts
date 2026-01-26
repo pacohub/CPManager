@@ -1,13 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, BadRequestException } from '@nestjs/common';
 import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { Request } from 'express';
-import * as path from 'path';
 import { Skill } from '../Entities/skill.entity';
 import { SkillService } from '../Services/skill.service';
 import { CreateSkillDto } from '../Dto/create-skill.dto';
 import { UpdateSkillDto } from '../Dto/update-skill.dto';
+import * as fs from 'fs';
+import * as path from 'path';
 
 @Controller('skills')
 export class SkillController {
@@ -20,7 +21,9 @@ export class SkillController {
 
   @Get(':id')
   async findOne(@Param('id') id: string): Promise<Skill | null> {
-    return this.skillService.findOne(Number(id));
+    const idNum = Number(id);
+    if (Number.isNaN(idNum)) throw new BadRequestException('Invalid id');
+    return this.skillService.findOne(idNum);
   }
 
   @Post()
@@ -60,6 +63,8 @@ export class SkillController {
 
   @Put(':id')
   async update(@Param('id') id: string, @Body() data: UpdateSkillDto): Promise<Skill | null> {
+    const idNum = Number(id);
+    if (Number.isNaN(idNum)) throw new BadRequestException('Invalid id');
     const payload: any = { ...data };
     if ((data as any).casterVisualId) payload.casterVisual = { id: Number((data as any).casterVisualId) };
     if ((data as any).missileVisualId) payload.missileVisual = { id: Number((data as any).missileVisualId) };
@@ -67,12 +72,14 @@ export class SkillController {
     delete payload.casterVisualId;
     delete payload.missileVisualId;
     delete payload.targetVisualId;
-    return this.skillService.update(Number(id), payload);
+    return this.skillService.update(idNum, payload);
   }
 
   @Delete(':id')
   async remove(@Param('id') id: string): Promise<void> {
-    return this.skillService.remove(Number(id));
+    const idNum = Number(id);
+    if (Number.isNaN(idNum)) throw new BadRequestException('Invalid id');
+    return this.skillService.remove(idNum);
   }
 
   @Post('import-blizzard')
@@ -82,6 +89,19 @@ export class SkillController {
       return { ok: true, ...res };
     } catch (e: any) {
       return { ok: false, error: e?.message || String(e) };
+    }
+  }
+
+  @Get('last-import')
+  async lastImport() {
+    try {
+      const file = path.join(process.cwd(), 'backups', 'last-blizzard-import.json');
+      if (!fs.existsSync(file)) return { ok: true, info: null };
+      const txt = fs.readFileSync(file, 'utf8');
+      const info = JSON.parse(txt);
+      return { ok: true, info };
+    } catch (e) {
+      return { ok: false, error: String(e) };
     }
   }
 }

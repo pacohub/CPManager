@@ -1,5 +1,6 @@
 import { Animation } from './animation.entity';
 import { Faction } from './faction.entity';
+import { TalentTree } from './talentTree.entity';
 export declare class Class {
     id: number;
     name: string;
@@ -8,4 +9,5 @@ export declare class Class {
     level: number;
     factions: Faction[];
     animations: Animation[];
+    talentTrees: TalentTree[];
 }

@@ -1,6 +1,7 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, ManyToMany, ManyToOne, PrimaryGeneratedColumn, JoinTable } from 'typeorm';
 import { Event, EventDifficulty } from './event.entity';
 import { Mechanic } from './mechanic.entity';
+import { GameObject } from './gameObject.entity';
 
 @Entity()
 export class Objective {
@@ -33,4 +34,8 @@ export class Objective {
 
 	@ManyToOne(() => Mechanic, { eager: true, onDelete: 'CASCADE' })
 	mechanic: Mechanic;
+
+	@ManyToMany(() => GameObject, { eager: true })
+	@JoinTable()
+	objects: GameObject[];
 }

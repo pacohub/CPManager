@@ -25,6 +25,10 @@ let DefenseTypeService = class DefenseTypeService {
     normalize(data) {
         if (typeof data.name === 'string')
             data.name = data.name.trim();
+        if (typeof data.icon === 'string') {
+            const v = data.icon.trim();
+            data.icon = v === '' ? null : v;
+        }
     }
     async findAll() {
         return this.defenseTypeRepository
@@ -40,7 +44,7 @@ let DefenseTypeService = class DefenseTypeService {
         this.normalize(data);
         if (!String(data?.name ?? '').trim())
             throw new common_1.BadRequestException('name es requerido');
-        const entity = this.defenseTypeRepository.create({ name: String(data.name).trim() });
+        const entity = this.defenseTypeRepository.create({ name: String(data.name).trim(), icon: data.icon ?? null });
         return this.defenseTypeRepository.save(entity);
     }
     async update(id, data) {
@@ -52,6 +56,9 @@ let DefenseTypeService = class DefenseTypeService {
             if (!String(data.name ?? '').trim())
                 throw new common_1.BadRequestException('name es requerido');
             existing.name = String(data.name).trim();
+        }
+        if (data?.icon !== undefined) {
+            existing.icon = data.icon === null ? null : String(data.icon).trim();
         }
         await this.defenseTypeRepository.save(existing);
         return this.findOne(id);

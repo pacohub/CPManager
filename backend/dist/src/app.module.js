@@ -75,6 +75,11 @@ const visualEffect_entity_1 = require("./Entities/visualEffect.entity");
 const effect_entity_1 = require("./Entities/effect.entity");
 const skill_entity_1 = require("./Entities/skill.entity");
 const skillEffect_entity_1 = require("./Entities/skillEffect.entity");
+const talent_entity_1 = require("./Entities/talent.entity");
+const talentTree_entity_1 = require("./Entities/talentTree.entity");
+const talentTreeTalent_entity_1 = require("./Entities/talentTreeTalent.entity");
+const talentTreeLink_entity_1 = require("./Entities/talentTreeLink.entity");
+const characterTalentTree_entity_1 = require("./Entities/characterTalentTree.entity");
 const soundType_service_1 = require("./Services/soundType.service");
 const sound_service_1 = require("./Services/sound.service");
 const race_service_1 = require("./Services/race.service");
@@ -85,6 +90,9 @@ const visualEffect_service_1 = require("./Services/visualEffect.service");
 const effect_service_1 = require("./Services/effect.service");
 const skill_service_1 = require("./Services/skill.service");
 const skillEffect_service_1 = require("./Services/skillEffect.service");
+const talent_service_1 = require("./Services/talent.service");
+const talentTree_service_1 = require("./Services/talentTree.service");
+const characterTalentTree_service_1 = require("./Services/characterTalentTree.service");
 const soundType_controller_1 = require("./Controller/soundType.controller");
 const sound_controller_1 = require("./Controller/sound.controller");
 const race_controller_1 = require("./Controller/race.controller");
@@ -96,6 +104,9 @@ const effect_controller_1 = require("./Controller/effect.controller");
 const skill_controller_1 = require("./Controller/skill.controller");
 const skillEffect_controller_1 = require("./Controller/skillEffect.controller");
 const backup_controller_1 = require("./Controller/backup.controller");
+const talent_controller_1 = require("./Controller/talent.controller");
+const talentTree_controller_1 = require("./Controller/talentTree.controller");
+const characterTalentTree_controller_1 = require("./Controller/characterTalentTree.controller");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -105,10 +116,10 @@ exports.AppModule = AppModule = __decorate([
             typeorm_1.TypeOrmModule.forRoot({
                 type: 'sqlite',
                 database: 'database.sqlite',
-                entities: [saga_entity_1.Saga, campaign_entity_1.Campaign, chapter_entity_1.Chapter, map_entity_1.Map, event_entity_1.Event, mechanic_entity_1.Mechanic, objective_entity_1.Objective, faction_entity_1.Faction, chapterFaction_entity_1.ChapterFaction, profession_entity_1.Profession, class_entity_1.Class, character_entity_1.Character, professionObject_entity_1.ProfessionObject, professionObjectResource_entity_1.ProfessionObjectResource, gameObject_entity_1.GameObject, component_entity_1.Component, resource_entity_1.Resource, resourceType_entity_1.ResourceType, soundType_entity_1.SoundType, sound_entity_1.Sound, race_entity_1.Race, animation_entity_1.Animation, armorType_entity_1.ArmorType, defenseType_entity_1.DefenseType, visualEffect_entity_1.VisualEffect, effect_entity_1.Effect, skill_entity_1.Skill, skillEffect_entity_1.SkillEffect],
+                entities: [saga_entity_1.Saga, campaign_entity_1.Campaign, chapter_entity_1.Chapter, map_entity_1.Map, event_entity_1.Event, mechanic_entity_1.Mechanic, objective_entity_1.Objective, faction_entity_1.Faction, chapterFaction_entity_1.ChapterFaction, profession_entity_1.Profession, class_entity_1.Class, character_entity_1.Character, professionObject_entity_1.ProfessionObject, professionObjectResource_entity_1.ProfessionObjectResource, gameObject_entity_1.GameObject, component_entity_1.Component, resource_entity_1.Resource, resourceType_entity_1.ResourceType, soundType_entity_1.SoundType, sound_entity_1.Sound, race_entity_1.Race, animation_entity_1.Animation, armorType_entity_1.ArmorType, defenseType_entity_1.DefenseType, visualEffect_entity_1.VisualEffect, effect_entity_1.Effect, skill_entity_1.Skill, skillEffect_entity_1.SkillEffect, talent_entity_1.Talent, talentTree_entity_1.TalentTree, talentTreeTalent_entity_1.TalentTreeTalent, talentTreeLink_entity_1.TalentTreeLink, characterTalentTree_entity_1.CharacterTalentTree],
                 synchronize: true,
             }),
-            typeorm_1.TypeOrmModule.forFeature([saga_entity_1.Saga, campaign_entity_1.Campaign, chapter_entity_1.Chapter, map_entity_1.Map, event_entity_1.Event, mechanic_entity_1.Mechanic, objective_entity_1.Objective, faction_entity_1.Faction, chapterFaction_entity_1.ChapterFaction, profession_entity_1.Profession, class_entity_1.Class, character_entity_1.Character, professionObject_entity_1.ProfessionObject, professionObjectResource_entity_1.ProfessionObjectResource, gameObject_entity_1.GameObject, component_entity_1.Component, resource_entity_1.Resource, resourceType_entity_1.ResourceType, soundType_entity_1.SoundType, sound_entity_1.Sound, race_entity_1.Race, animation_entity_1.Animation, armorType_entity_1.ArmorType, defenseType_entity_1.DefenseType, visualEffect_entity_1.VisualEffect, effect_entity_1.Effect, skill_entity_1.Skill, skillEffect_entity_1.SkillEffect]),
+            typeorm_1.TypeOrmModule.forFeature([saga_entity_1.Saga, campaign_entity_1.Campaign, chapter_entity_1.Chapter, map_entity_1.Map, event_entity_1.Event, mechanic_entity_1.Mechanic, objective_entity_1.Objective, faction_entity_1.Faction, chapterFaction_entity_1.ChapterFaction, profession_entity_1.Profession, class_entity_1.Class, character_entity_1.Character, professionObject_entity_1.ProfessionObject, professionObjectResource_entity_1.ProfessionObjectResource, gameObject_entity_1.GameObject, component_entity_1.Component, resource_entity_1.Resource, resourceType_entity_1.ResourceType, soundType_entity_1.SoundType, sound_entity_1.Sound, race_entity_1.Race, animation_entity_1.Animation, armorType_entity_1.ArmorType, defenseType_entity_1.DefenseType, visualEffect_entity_1.VisualEffect, effect_entity_1.Effect, skill_entity_1.Skill, skillEffect_entity_1.SkillEffect, talent_entity_1.Talent, talentTree_entity_1.TalentTree, talentTreeTalent_entity_1.TalentTreeTalent, talentTreeLink_entity_1.TalentTreeLink, characterTalentTree_entity_1.CharacterTalentTree]),
         ],
         controllers: [
             app_controller_1.AppController,
@@ -141,8 +152,11 @@ exports.AppModule = AppModule = __decorate([
             skill_controller_1.SkillController,
             skillEffect_controller_1.SkillEffectController,
             backup_controller_1.BackupController,
+            talent_controller_1.TalentController,
+            talentTree_controller_1.TalentTreeController,
+            characterTalentTree_controller_1.CharacterTalentTreeController,
         ],
-        providers: [app_service_1.AppService, saga_service_1.SagaService, campaign_service_1.CampaignService, chapter_service_1.ChapterService, map_service_1.MapService, event_service_1.EventService, mechanic_service_1.MechanicService, objective_service_1.ObjectiveService, faction_service_1.FactionService, chapterFaction_service_1.ChapterFactionService, profession_service_1.ProfessionService, class_service_1.ClassService, character_service_1.CharacterService, professionObject_service_1.ProfessionObjectService, professionObjectResource_service_1.ProfessionObjectResourceService, gameObject_service_1.GameObjectService, component_service_1.ComponentService, resource_service_1.ResourceService, resourceType_service_1.ResourceTypeService, soundType_service_1.SoundTypeService, sound_service_1.SoundService, race_service_1.RaceService, animation_service_1.AnimationService, armorType_service_1.ArmorTypeService, defenseType_service_1.DefenseTypeService, visualEffect_service_1.VisualEffectService, effect_service_1.EffectService, skill_service_1.SkillService, skillEffect_service_1.SkillEffectService],
+        providers: [app_service_1.AppService, saga_service_1.SagaService, campaign_service_1.CampaignService, chapter_service_1.ChapterService, map_service_1.MapService, event_service_1.EventService, mechanic_service_1.MechanicService, objective_service_1.ObjectiveService, faction_service_1.FactionService, chapterFaction_service_1.ChapterFactionService, profession_service_1.ProfessionService, class_service_1.ClassService, character_service_1.CharacterService, professionObject_service_1.ProfessionObjectService, professionObjectResource_service_1.ProfessionObjectResourceService, gameObject_service_1.GameObjectService, component_service_1.ComponentService, resource_service_1.ResourceService, resourceType_service_1.ResourceTypeService, soundType_service_1.SoundTypeService, sound_service_1.SoundService, race_service_1.RaceService, animation_service_1.AnimationService, armorType_service_1.ArmorTypeService, defenseType_service_1.DefenseTypeService, visualEffect_service_1.VisualEffectService, effect_service_1.EffectService, skill_service_1.SkillService, skillEffect_service_1.SkillEffectService, talent_service_1.TalentService, talentTree_service_1.TalentTreeService, characterTalentTree_service_1.CharacterTalentTreeService],
     })
 ], AppModule);
 //# sourceMappingURL=app.module.js.map

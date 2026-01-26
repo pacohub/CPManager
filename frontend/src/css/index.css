@@ -1,16 +1,65 @@
+.campaign-card::after {
+    content: '';
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 0px;
+    bottom: 0px;
+    /* dim the background image to make it appear more opaque */
+    background: rgba(0, 0, 0, 0.35);
+    transition: background 0.2s;
+    z-index: 9;
+    pointer-events: none;
+}
+/* Custom scrollbars for panels (professions/classes) to match site style */
+.cp-scrollbar {
+    /* Firefox */
+    scrollbar-width: thin;
+    scrollbar-color: rgba(226, 192, 68, 0.9) rgba(0, 0, 0, 0.16);
+}
+
+.cp-scrollbar::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.cp-scrollbar::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.16);
+    border-radius: 12px;
+}
+
+.cp-scrollbar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ffd870, #e2c044);
+    border-radius: 12px;
+    border: 2px solid rgba(0, 0, 0, 0.16);
+}
+
+.cp-scrollbar::-webkit-scrollbar-thumb:hover {
+    filter: brightness(0.95);
+}
 /* Responsive campaigns table for SagaPanel */
 .campaigns-responsive-table {
     display: grid;
     /* 4 columns if there's room; otherwise wraps to 2x2 or 1x4 based on min width */
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 10px;
-    margin-top: 12px;
-    min-height: 400px;
-    width: 100%;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0px;
 }
+
+@media (max-width: 1100px) {
+    .campaigns-responsive-table {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .campaigns-responsive-table {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Responsive cell for campaign, ensures card fills cell */
 .campaigns-responsive-cell {
-    padding: 0;
+    padding: 12px;
     border: none;
     vertical-align: top;
     min-width: 220px;
@@ -38,6 +87,7 @@
     max-width: 100% !important;
     margin: 0 !important;
 }
+
 /* auto-fit + minmax handles 4/2/1 columns automatically */
 
 .metallic-border {
@@ -51,20 +101,26 @@
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    box-shadow: 0 2px 12px #0007, inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.65);
+    box-shadow: none;
     overflow: hidden;
     border: 2px solid #b0b3b8;
     border-radius: 8px;
     background-clip: padding-box;
 }
 
+/* Small meta text used on cards (counts, small labels) */
+.mechanic-card .meta-small {
+    font-size: 12px;
+    line-height: 1.1;
+}
+
 /* Square variant: same metallic border, but no rounding */
 .metallic-border-square {
-	border-radius: 0;
+    border-radius: 0;
 }
 
 .metallic-border-square::before {
-	border-radius: 0;
+    border-radius: 0;
 }
 
 .metallic-border::before {
@@ -73,8 +129,13 @@
     inset: 0;
     border-radius: 8px;
     pointer-events: none;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 0 0 3px rgba(0,0,0,0.55);
+    box-shadow: none;
     z-index: 5;
+}
+
+/* Passive skills: darker inner border to indicate passive nature */
+.passive-inner::before {
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.35), inset 0 0 0 4px rgba(0, 0, 0, 0.85);
 }
 
 /* hide spinner arrows on number inputs with class no-spin */
@@ -83,12 +144,26 @@
     -webkit-appearance: none;
     margin: 0;
 }
+
 .no-spin {
     -moz-appearance: textfield;
     appearance: textfield;
 }
 
+/* Remove native number input spinners globally */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
 .campaign-card {
+    margin: 0;
     background-size: cover;
     background-position: center;
 }
@@ -106,14 +181,16 @@
     top: 0;
     left: 0;
     right: 0;
-    padding: 12px;
+    padding: 20px 14px;
     margin: 0;
     box-sizing: border-box;
-    background: linear-gradient(0deg, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.1) 100%);
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.7) 70%, rgba(0, 0, 0, 0.1) 100%);
     color: #fff;
     text-shadow: 0 2px 8px #000a;
     font-weight: 700;
-    font-size: 18px;
+    font-size: 22px;
+    min-height: 80px;
+    line-height: 1.1;
     z-index: 20;
     pointer-events: none;
     width: 100%;
@@ -125,12 +202,14 @@
     word-break: break-word;
     text-align: center;
 }
+
 .campaign-subtitle {
     margin-top: 4px;
     font-size: 12px;
     color: #e2c044;
     opacity: 0.95;
 }
+
 .campaign-actions {
     position: absolute;
     top: 12px;
@@ -142,6 +221,7 @@
     pointer-events: none;
     transition: opacity 0.2s;
 }
+
 .campaign-card:hover .campaign-actions,
 .campaign-card:focus-within .campaign-actions {
     opacity: 1 !important;
@@ -159,7 +239,7 @@
     width: 100%;
     text-align: center;
     text-shadow: 0 2px 8px #000a;
-    background: linear-gradient(0deg, rgba(0,0,0,0.7) 70%, rgba(0,0,0,0.1) 100%);
+    background: linear-gradient(0deg, rgba(0, 0, 0, 0.7) 70%, rgba(0, 0, 0, 0.1) 100%);
     box-sizing: border-box;
     min-height: 48px;
     font-size: 14px;
@@ -170,6 +250,7 @@
     transform: translateY(8px);
     transition: opacity 0.2s, transform 0.2s;
 }
+
 .campaign-card:hover .campaign-desc,
 .campaign-card:focus-within .campaign-desc {
     opacity: 1 !important;
@@ -186,14 +267,17 @@
     overflow: hidden;
     text-overflow: ellipsis;
     transition: max-height 0.22s ease;
-    max-height: 4.8em; /* approx 3 lines */
+    max-height: 4.8em;
+    /* approx 3 lines */
 }
+
 .campaign-desc .campaign-desc-content.expanded {
     display: block;
     -webkit-line-clamp: initial;
     line-clamp: initial;
     max-height: 1000px;
 }
+
 .desc-toggle {
     background: transparent;
     border: none;
@@ -211,12 +295,12 @@
 }
 
 .desc-toggle svg {
-    filter: drop-shadow(0 4px 10px rgba(255,216,112,0.9));
+    filter: drop-shadow(0 4px 10px rgba(255, 216, 112, 0.9));
     color: #ffd870;
 }
 
 .desc-toggle:focus {
-    outline: 2px solid rgba(255,216,112,0.16);
+    outline: 2px solid rgba(255, 216, 112, 0.16);
     outline-offset: 2px;
 }
 
@@ -235,10 +319,10 @@
     align-items: center;
     pointer-events: none;
     transform: translateY(-100%);
-    transition: top 0.32s cubic-bezier(.2,.8,.2,1), transform 0.32s cubic-bezier(.2,.8,.2,1);
+    transition: top 0.32s cubic-bezier(.2, .8, .2, 1), transform 0.32s cubic-bezier(.2, .8, .2, 1);
 }
 
-.faction-top-row{
+.faction-top-row {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -247,15 +331,27 @@
     min-height: 48px;
     box-sizing: border-box;
     padding: 0 12px;
-    position: relative; /* allow left-positioned crest if needed */
+    position: relative;
+    /* allow left-positioned crest if needed */
 }
+
 .faction-name {
     font-weight: 800;
     font-size: 16px;
     color: #fff;
     text-shadow: 0 2px 8px #000a;
     text-align: center;
-    z-index: 2;    
+    z-index: 2;
+}
+
+/* Truncate long faction names to at most 2 lines with ellipsis */
+.faction-name {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
 }
 
 /* left cell may contain a small crest or be empty; center column kept centered by symmetric side columns */
@@ -268,6 +364,7 @@
     bottom: auto;
     transform: translateY(0);
 }
+
 /* Hero area for faction detail page */
 .faction-hero {
     width: 100%;
@@ -279,16 +376,19 @@
     overflow: hidden;
     margin-bottom: 12px;
 }
+
 .faction-hero::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: rgba(0,0,0,0);
+    background: rgba(0, 0, 0, 0);
     transition: background 0.2s;
 }
+
 .faction-hero.has-crest::after {
-    background: rgba(0,0,0,0.5);
+    background: rgba(0, 0, 0, 0.5);
 }
+
 .faction-crest-large {
     position: absolute;
     left: 50%;
@@ -300,8 +400,22 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
 }
+
+/* Remove any shadow or border from the hero icon/crest in faction detail view */
+.faction-hero,
+.faction-hero * {
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
+}
+
+.faction-crest-large {
+    box-shadow: none !important;
+    border: none !important;
+}
+
 body {
     margin: 0px;
     font-family: 'Cinzel', 'Segoe UI', serif;
@@ -328,9 +442,11 @@ body {
 .panel-sticky-header {
     position: sticky;
     top: 0;
-    z-index: 200;
-    background: transparent; /* removed background for menu */
+    z-index: 500;
+    background: linear-gradient(180deg, rgba(35,39,43,0.98) 0%, rgba(32,32,32,0.98) 100%);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
     padding-top: 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
 }
 
 .block-panel-border:before {
@@ -388,8 +504,10 @@ body {
     display: flex;
     align-items: center;
     justify-content: flex-start;
-    z-index: 50; /* keep below modal overlay (1000) */
+    z-index: 50;
+    /* keep below modal overlay (1000) */
     pointer-events: auto;
+    padding: 10px;
 }
 
 .saga-name {
@@ -421,9 +539,11 @@ body {
     text-overflow: ellipsis;
     cursor: default;
 }
+
 .trunc-field:focus {
     outline: none;
 }
+
 .trunc-field .trunc-full {
     display: none;
     position: absolute;
@@ -431,17 +551,19 @@ body {
     top: calc(100% + 6px);
     z-index: 9999;
     pointer-events: auto;
-    background: #111; /* dark background matching UI */
+    background: #111;
+    /* dark background matching UI */
     color: #e2d9b7;
     padding: 8px 10px;
     border-radius: 6px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6);
     min-width: 160px;
     max-width: 520px;
     white-space: normal;
     word-break: break-word;
     font-size: 13px;
 }
+
 .trunc-field:hover .trunc-full,
 .trunc-field:focus .trunc-full,
 .trunc-field:focus-within .trunc-full {
@@ -459,9 +581,9 @@ body {
 /* Hover preview card shown when hovering a character card */
 .card-hover-preview {
     background: linear-gradient(180deg, #151515, #0b0b0b);
-    border: 1px solid rgba(255,255,255,0.04);
+    border: 1px solid rgba(255, 255, 255, 0.04);
     border-radius: 8px;
-    box-shadow: 0 12px 48px rgba(0,0,0,0.8);
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
     color: #e2d9b7;
     pointer-events: auto;
 }
@@ -470,25 +592,63 @@ body {
 .fixed-mechanic-tooltip {
     position: fixed;
     transform: translate(-50%, 6px);
-    z-index: 16000; /* ensure tooltip is above the dropdown */
+    z-index: 16000;
+    /* ensure tooltip is above the dropdown */
     max-width: 420px;
     pointer-events: auto;
     background: #111;
     color: #e2d9b7;
     padding: 8px 10px;
     border-radius: 6px;
-    box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
     font-size: 13px;
     word-break: break-word;
 }
 
 /* Custom mechanic select styles */
-.mechanic-select { position: relative; z-index: 13000; }
-.mechanic-select-value { cursor: pointer; z-index:13001; position: relative; display: flex; align-items: center; }
-.mechanic-select-caret { margin-left: 8px; opacity: 0.85; font-size: 12px; color: #e2d9b7; display: inline-block; transform: translateY(1px); }
-.mechanic-select-menu { position: absolute; left: 0; right: 0; margin-top: 6px; z-index: 14000; pointer-events: auto; max-height: 240px; overflow-y: auto; box-shadow: 0 12px 48px rgba(0,0,0,0.8); }
-.mechanic-select + .icon { position: relative; z-index: 1000; }
-.mechanic-option { padding: 8px 10px; cursor: pointer; }
+.mechanic-select {
+    position: relative;
+    z-index: 13000;
+}
+
+.mechanic-select-value {
+    cursor: pointer;
+    z-index: 13001;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.mechanic-select-caret {
+    margin-left: 8px;
+    opacity: 0.85;
+    font-size: 12px;
+    color: #e2d9b7;
+    display: inline-block;
+    transform: translateY(1px);
+}
+
+.mechanic-select-menu {
+    position: absolute;
+    left: 0;
+    right: 0;
+    margin-top: 6px;
+    z-index: 14000;
+    pointer-events: auto;
+    max-height: 240px;
+    overflow-y: auto;
+    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.8);
+}
+
+.mechanic-select+.icon {
+    position: relative;
+    z-index: 1000;
+}
+
+.mechanic-option {
+    padding: 8px 10px;
+    cursor: pointer;
+}
 
 /* Make mechanic dropdown match form controls */
 .mechanic-select-value,
@@ -499,7 +659,7 @@ body {
     border-bottom: 1px solid #3f3f3f;
     border-radius: 5px;
     padding: 10px;
-    box-shadow: inset 0px 0px 10px rgba(0,0,0,0.9);
+    box-shadow: inset 0px 0px 10px rgba(0, 0, 0, 0.9);
     box-sizing: border-box;
     width: 100%;
 }
@@ -523,8 +683,15 @@ body {
     font-size: 1rem;
     color: #e2d9b7;
 }
-.mechanic-option:hover { background: rgba(226,192,68,0.06); }
-.mechanic-option[aria-selected="true"] { background: rgba(226,192,68,0.12); font-weight: 700; }
+
+.mechanic-option:hover {
+    background: rgba(226, 192, 68, 0.06);
+}
+
+.mechanic-option[aria-selected="true"] {
+    background: rgba(226, 192, 68, 0.12);
+    font-weight: 700;
+}
 
 
 
@@ -532,6 +699,7 @@ body {
 .preview-container {
     position: relative;
 }
+
 .preview-remove-btn {
     position: absolute;
     top: 8px;
@@ -543,18 +711,19 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: rgba(0,0,0,0.18);
+    background: rgba(0, 0, 0, 0.18);
     color: currentColor;
-    box-shadow: -8px -8px 18px rgba(0,0,0,0.45);
-    background: rgba(0,0,0,0.64);
-    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: -8px -8px 18px rgba(0, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.64);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     color: #fff;
     backdrop-filter: blur(2px);
     z-index: 9999;
     cursor: pointer;
 }
+
 .preview-remove-btn:focus {
-    outline: 2px solid rgba(255,255,255,0.12);
+    outline: 2px solid rgba(255, 255, 255, 0.12);
     outline-offset: 2px;
 }
 
@@ -562,7 +731,7 @@ body {
 .preview-remove-btn.top-right {
     left: auto;
     right: 8px;
-    box-shadow: 8px -8px 18px rgba(0,0,0,0.45);
+    box-shadow: 8px -8px 18px rgba(0, 0, 0, 0.45);
 }
 
 /* Ensure the SVG X is visible */
@@ -571,7 +740,8 @@ body {
     fill: #fff !important;
     stroke: #fff !important;
 }
-.preview-remove-btn > svg {
+
+.preview-remove-btn>svg {
     width: 16px;
     height: 16px;
 }
@@ -594,7 +764,7 @@ body {
     z-index: 10000;
     font-size: 14px;
     font-weight: 700;
-    text-shadow: 0 0 6px rgba(0,0,0,0.8) !important;
+    text-shadow: 0 0 6px rgba(0, 0, 0, 0.8) !important;
 }
 
 /* Stronger selector to override other styles inside modal contexts */
@@ -606,7 +776,7 @@ body {
 
 /* Ensure images inside preview containers sit below the remove button */
 .preview-container img,
-.preview-container > img {
+.preview-container>img {
     position: relative;
     z-index: 10;
 }
@@ -642,14 +812,17 @@ body {
 /* CampaignDetail chapters */
 .chapters-scroll {
     overflow-y: auto;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge Legacy */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge Legacy */
 }
 
 .chapters-scroll::-webkit-scrollbar {
     width: 0;
     height: 0;
-    display: none; /* Chrome/Safari */
+    display: none;
+    /* Chrome/Safari */
 }
 
 .chapter-row {
@@ -691,7 +864,7 @@ body {
     box-shadow: inset 0 1px 0 #8a8f97, inset 0 -1px 0 #0b0c0e, 0 1px 4px #000;
 }
 
-.chapter-play > svg {
+.chapter-play>svg {
     filter: drop-shadow(0 1px 1px #000);
 }
 
@@ -739,7 +912,7 @@ body {
     padding: 5px;
     min-height: 100px;
     background: #202020;
-    box-shadow: 0 2px 12px #0007, inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.65);
+    box-shadow: 0 2px 12px #0007, inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.65);
     overflow: hidden;
     border: 2px solid #b0b3b8;
     border-radius: 8px;
@@ -752,7 +925,7 @@ body {
     inset: 0;
     border-radius: 8px;
     pointer-events: none;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 0 0 3px rgba(0,0,0,0.55);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10), inset 0 0 0 3px rgba(0, 0, 0, 0.55);
     z-index: 1;
 }
 
@@ -768,7 +941,7 @@ body {
     position: relative;
     overflow: hidden;
     background: #202020;
-    box-shadow: 0 2px 12px #0007, inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.65);
+    box-shadow: 0 2px 12px #0007, inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 -1px 0 rgba(0, 0, 0, 0.65);
     border: 2px solid #b0b3b8;
     border-radius: 8px;
     background-clip: padding-box;
@@ -780,17 +953,17 @@ body {
     inset: 0;
     border-radius: 8px;
     pointer-events: none;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.10), inset 0 0 0 3px rgba(0,0,0,0.55);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.10), inset 0 0 0 3px rgba(0, 0, 0, 0.55);
     z-index: 1;
 }
 
-.dialogue-speaker-icon-frame > * {
+.dialogue-speaker-icon-frame>* {
     position: relative;
     z-index: 2;
 }
 
 /* Ensure content and actions sit above the metallic overlay */
-.dialogue-line-row.dialogue-line-card > * {
+.dialogue-line-row.dialogue-line-card>* {
     z-index: 2;
 }
 
@@ -842,8 +1015,27 @@ body {
 
 .mechanic-card:hover .mechanic-actions,
 .mechanic-card:focus-within .mechanic-actions {
-        opacity: 1;
-        pointer-events: auto;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Also show action buttons when hovering table rows (e.g. ProfessionDetail objects list) */
+tbody tr:hover .mechanic-actions,
+tbody tr:focus-within .mechanic-actions {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Position the action buttons at the top-right of the mechanic (race) card */
+.mechanic-card {
+    position: relative;
+}
+.mechanic-card .mechanic-actions {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 8px;
 }
 
 /* Ensure character cards don't clip the hover tooltip */
@@ -899,8 +1091,11 @@ body {
 .rotating {
     animation: spin 1s linear infinite;
 }
+
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 input,
@@ -970,7 +1165,7 @@ select {
 
     border: 1px solid #1f1f1f;
     background: #151515;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.55);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
 }
 
 .wc3-color-option {
@@ -995,7 +1190,7 @@ button {
     border: 1.5px solid #e2c044;
     border-radius: 6px;
     cursor: pointer;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.10), inset 0 -1px 0 rgba(0,0,0,0.65), 0 1px 4px #0004;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10), inset 0 -1px 0 rgba(0, 0, 0, 0.65), 0 1px 4px #0004;
     font-weight: bold;
 }
 
@@ -1024,6 +1219,12 @@ button.icon {
     transition: filter 0.2s, box-shadow 0.2s;
 }
 
+/* Ensure icon buttons inherit the site's font color */
+button.icon,
+.icon.option {
+    color: inherit;
+}
+
 button.icon:hover {
     filter: drop-shadow(0 0 4px #e2c044);
 }
@@ -1032,6 +1233,7 @@ button.icon:hover {
 .panel-sticky-header .icon {
     transition: transform 120ms ease, filter 150ms ease;
 }
+
 .panel-sticky-header .icon:hover {
     transform: scale(1.18);
 }
@@ -1046,7 +1248,7 @@ button.icon:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 20000;
 }
 
 .modal-content {
@@ -1057,6 +1259,7 @@ button.icon:hover {
     border: 20px solid transparent;
     border-image: url('../images/metal-border2.png') 40 fill repeat;
     position: relative;
+    z-index: 20010;
 }
 
 .modal-content::before {
@@ -1092,21 +1295,25 @@ button.icon:hover {
 .modal-body {
     /* Firefox */
     scrollbar-width: thin;
-    scrollbar-color: rgba(226,192,68,0.9) rgba(0,0,0,0.16);
+    scrollbar-color: rgba(226, 192, 68, 0.9) rgba(0, 0, 0, 0.16);
 }
+
 .modal-body::-webkit-scrollbar {
     width: 10px;
     height: 10px;
 }
+
 .modal-body::-webkit-scrollbar-track {
-    background: rgba(0,0,0,0.16);
+    background: rgba(0, 0, 0, 0.16);
     border-radius: 12px;
 }
+
 .modal-body::-webkit-scrollbar-thumb {
     background: linear-gradient(180deg, #ffd870, #e2c044);
     border-radius: 12px;
-    border: 2px solid rgba(0,0,0,0.16);
+    border: 2px solid rgba(0, 0, 0, 0.16);
 }
+
 .modal-body::-webkit-scrollbar-thumb:hover {
     filter: brightness(0.95);
 }
@@ -1143,24 +1350,194 @@ button.icon:hover {
     /* stacking context for pseudo-elements */
 }
 
-.campaign-card::after {
-    content: '';
-    position: absolute;
-    left: -10px;
-    right: -10px;
-    top: -10px;
-    bottom: -10px;
-    background: rgba(0,0,0,0);
-    transition: background 0.2s;
-    z-index: 9;
-    pointer-events: none;
+
+/* Talent cells should sit above the dim overlay and use a metallic square border */
+.campaign-card .talent-cell {
+    z-index: 31; /* above overlay (9) and title (20), below actions (30) but we set higher */
+    position: relative;
+    aspect-ratio: 1 / 1; /* keep square */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.04);
+    transition: background 0.12s, transform 0.08s;
+    border-radius: 0; /* square */
+    border: 2px solid #b0b3b8; /* match metallic border */
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.65);
+    overflow: visible; /* allow tooltip to escape the square cell */
 }
+
+.campaign-card .talent-cell.talent-filled {
+    background: rgba(255,255,255,0.08);
+}
+
+.campaign-card .talent-cell:hover {
+    /* no generic hover effect for talent cells; hover styles apply only to empty slots */
+}
+
+.campaign-card .talent-cell .talent-icon {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
+}
+
+.campaign-card .talent-cell .talent-missing {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    color: #ffd870;
+    font-weight: 900;
+    font-size: 20px;
+}
+
+/* Tooltip for talents: name (strong) and smaller description below */
+.campaign-card .talent-cell .talent-tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(6px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: auto;
+    transition: opacity 0.12s ease, transform 0.12s ease;
+    background: rgba(0,0,0,0.95);
+    color: #fff;
+    border-radius: 6px;
+    padding: 8px 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.04);
+    /* keep tooltip below campaign action buttons */
+    z-index: 20;
+    min-width: 160px;
+    max-width: 320px;
+    text-align: left;
+}
+
+.campaign-card .talent-cell:hover .talent-tooltip {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Card-level tooltip: full card width and top-right placement */
+.campaign-card .card-tooltip {
+    position: absolute;
+    top: 8px;
+    left: 0;
+    right: 0;
+    transform: none;
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    background: rgba(18,18,18,0.96);
+    color: #fff;
+    border-radius: 6px;
+    padding: 10px 12px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+    z-index: 120;
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 160px;
+    text-align: left;
+}
+
+/* Portal tooltip (rendered in document.body) */
+.portal-tooltip {
+    position: absolute;
+    transform: translateY(-100%) translateX(0); /* anchor bottom-left at provided (left,top) */
+    background: rgba(0,0,0,0.95);
+    color: #fff;
+    border-radius: 6px;
+    padding: 8px 10px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+    z-index: 3000;
+    min-width: 160px;
+    max-width: 420px;
+    text-align: left;
+    pointer-events: none;
+    border: 1px solid rgba(255,255,255,0.04);
+}
+.portal-tooltip .title { font-weight: 900; font-size: 18px; margin-bottom: 6px; color: #ffd870; }
+.portal-tooltip .desc { font-size: 11px; color: #e2d9b7; line-height: 1.2; }
+
+.campaign-card .talent-cell .talent-tooltip .title {
+    font-weight: 900;
+    font-size: 18px;
+    margin-bottom: 6px;
+    color: #ffd870; /* highlighted name */
+}
+
+.campaign-card .talent-cell .talent-tooltip .desc {
+    font-size: 11px;
+    color: #e2d9b7;
+    opacity: 0.9;
+    line-height: 1.2;
+}
+
+/* clickable gap between talent cells */
+.campaign-card .talent-cell .talent-gap {
+    position: absolute;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    pointer-events: auto;
+}
+.campaign-card .talent-cell .talent-gap.horizontal {
+    left: calc(100% + 8px);
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
+}
+.campaign-card .talent-cell .talent-gap.vertical {
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 24px;
+    height: 24px;
+}
+
+/* arrow visuals inside gap */
+.campaign-card .talent-cell .talent-arrow {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.campaign-card .talent-cell .talent-arrow svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: #ffd870;
+    stroke-width: 2.2px;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+/* Empty talent slots: fully opaque normally, fade to transparent on hover */
+.campaign-card .talent-cell.talent-empty {
+    opacity: 0;
+    transition: opacity 0.16s ease;
+}
+
+.campaign-card .talent-cell.talent-empty:hover {
+    opacity: 1;
+    background: rgba(255,255,255,0.12);
+}
+
 
 /* No hover-specific dimming: background should be dimmed whenever the card has a crest */
 
 /* When a faction has a crest, dim the background image to make the crest stand out */
 .campaign-card.has-crest::after {
-    background: rgba(0,0,0,0.5);
+    background: rgba(0, 0, 0, 0.5);
 }
 
 /* Centered crest overlay */
@@ -1176,11 +1553,11 @@ button.icon:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.55);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
 }
 
 /* If no crest, keep the crest area (in footer) positioned to the left (previous behavior) */
-.campaign-card:not(.has-crest) .faction-top-row > *:first-child {
+.campaign-card:not(.has-crest) .faction-top-row>*:first-child {
     position: absolute;
     left: 12px;
     top: 50%;
@@ -1192,10 +1569,6 @@ button.icon:hover {
 /* removed special padding for .has-crest so centering uses flex; crest is absolutely positioned */
 
 .campaign-warning {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    z-index: 35;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1204,6 +1577,8 @@ button.icon:hover {
     background: rgba(0, 0, 0, 0.55);
     border-radius: 6px;
     padding: 4px 6px;
+    font-size: 13px;
+    line-height: 1;
 }
 
 input[type="checkbox"],
@@ -1213,6 +1588,85 @@ input[type="radio"] {
     box-shadow: none;
     background: none;
     border: none;
+}
+
+/* Custom styled checkboxes */
+input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-block;
+    vertical-align: middle;
+    width: 18px;
+    height: 18px;
+    margin: 0;
+    padding: 0;
+    border-radius: 4px;
+    border: 2px solid #b0b3b8;
+    background: linear-gradient(#111, #1b1b1b);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.4);
+    transition: all 120ms ease-in-out;
+    cursor: pointer;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 70% 70%;
+}
+
+input[type="checkbox"]:checked {
+    border-color: #d1a800;
+    background: linear-gradient(#f6e39a, #e2c044);
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 10'><path d='M1 5.2l3 3 7-7' fill='none' stroke='%23e2c044' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+}
+
+input[type="checkbox"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(226,192,68,0.12), inset 0 1px 0 rgba(255,255,255,0.06);
+}
+
+input[type="checkbox"][disabled],
+input[type="checkbox"]:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* Ensure adjacent label text aligns nicely */
+label > input[type="checkbox"] + span,
+.checkbox-label > input[type="checkbox"] + span {
+    margin-left: 6px;
+    user-select: none;
+}
+
+/* Associated animations list in Race detail */
+.assoc-animations {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.assoc-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 6px;
+    background: transparent;
+}
+.assoc-item .assoc-name {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.assoc-item .assoc-actions {
+    opacity: 0;
+    transition: opacity 120ms ease-in-out;
+    display: flex;
+    gap: 6px;
+}
+.assoc-item:hover .assoc-actions {
+    opacity: 1;
+}
+.assoc-item .assoc-actions .icon.option {
+    background: transparent;
 }
 
 /* Form textareas: same font as the page + auto-grow friendly */
@@ -1275,12 +1729,13 @@ input[type="radio"] {
     overflow: auto;
     width: max-content;
     z-index: 99999;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.55);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.12s, transform 0.12s;
     display: none;
 }
+
 .cp-tooltip {
     position: fixed;
     left: 0;
@@ -1291,13 +1746,14 @@ input[type="radio"] {
     pointer-events: none;
     background: #111;
     color: #e2d9b7;
-    padding: 8px 10px;
+    max-width: 420px;
     border-radius: 6px;
-    box-shadow: 0 8px 28px rgba(0,0,0,0.6);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
     font-size: 13px;
     word-break: break-word;
     max-width: min(420px, calc(100vw - 16px));
-    z-index: 10010; /* default high when no modal open; overridden inline when modal present */
+    z-index: 10010;
+    /* default high when no modal open; overridden inline when modal present */
 }
 
 .cp-tooltip.cp-tooltip--below {
@@ -1317,14 +1773,17 @@ input[type="radio"] {
 
 /* Hide scrollbars but keep scrolling */
 .scroll-hidden {
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge Legacy */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge Legacy */
 }
 
 .scroll-hidden::-webkit-scrollbar {
     width: 0;
     height: 0;
-    display: none; /* Chrome/Safari */
+    display: none;
+    /* Chrome/Safari */
 }
 
 /* Color swatches for factions: top-right corner */
@@ -1340,11 +1799,12 @@ input[type="radio"] {
     pointer-events: none;
     z-index: 24;
 }
-.faction-swatches-row > span {
+
+.faction-swatches-row>span {
     width: 14px;
     height: 14px;
     border-radius: 999px;
-    border: 1px solid rgba(0,0,0,0.35);
+    border: 1px solid rgba(0, 0, 0, 0.35);
     display: inline-block;
 }
 
@@ -1354,12 +1814,14 @@ input[type="radio"] {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
-    background: rgba(0,0,0,0.48); /* dark backdrop across the card width */
-    padding: 8px 12px 12px;
-    border-radius: 0 0 8px 8px;
+    gap: 45px;
+    background: rgba(0, 0, 0, 0.48);
+    /* dark backdrop across the card width */
+    padding: 6px 12px 10px;
     pointer-events: none;
     z-index: 24;
+    min-height: 72px;
+    overflow: hidden;
 }
 
 /* Unified warning badge used across the app (saga-warning)
@@ -1370,10 +1832,16 @@ input[type="radio"] {
     justify-content: center;
     color: #e24444;
     cursor: help;
-    background: rgba(0,0,0,0.55);
+    background: rgba(0, 0, 0, 0.55);
     border-radius: 6px;
     padding: 4px 6px;
     font-size: 13px;
     line-height: 1;
     z-index: 9999;
+}
+
+/* Allow campaign-card variants that also include metallic-border to show tooltips outside */
+.campaign-card.metallic-border,
+.campaigns-responsive-cell .campaign-card.metallic-border {
+    overflow: visible;
 }

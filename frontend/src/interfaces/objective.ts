@@ -1,5 +1,6 @@
 import { EventDifficulty, EventItem } from './event';
 import { MechanicItem } from './mechanic';
+import { GameObjectItem } from './gameObject';
 
 export interface ObjectiveItem {
 	id: number;
@@ -16,4 +17,6 @@ export interface ObjectiveItem {
 
 	eventId?: number;
 	mechanicId?: number;
+	objects?: GameObjectItem[];
+	objectIds?: number[];
 }

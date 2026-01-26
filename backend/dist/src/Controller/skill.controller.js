@@ -50,10 +50,11 @@ const common_1 = require("@nestjs/common");
 const common_2 = require("@nestjs/common");
 const platform_express_1 = require("@nestjs/platform-express");
 const multer_1 = require("multer");
-const path = __importStar(require("path"));
 const skill_service_1 = require("../Services/skill.service");
 const create_skill_dto_1 = require("../Dto/create-skill.dto");
 const update_skill_dto_1 = require("../Dto/update-skill.dto");
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 let SkillController = class SkillController {
     skillService;
     constructor(skillService) {
@@ -63,7 +64,10 @@ let SkillController = class SkillController {
         return this.skillService.findAll();
     }
     async findOne(id) {
-        return this.skillService.findOne(Number(id));
+        const idNum = Number(id);
+        if (Number.isNaN(idNum))
+            throw new common_1.BadRequestException('Invalid id');
+        return this.skillService.findOne(idNum);
     }
     async create(data) {
         const payload = { ...data };
@@ -89,6 +93,9 @@ let SkillController = class SkillController {
         return { icon: `/uploads/images/${file.filename}` };
     }
     async update(id, data) {
+        const idNum = Number(id);
+        if (Number.isNaN(idNum))
+            throw new common_1.BadRequestException('Invalid id');
         const payload = { ...data };
         if (data.casterVisualId)
             payload.casterVisual = { id: Number(data.casterVisualId) };
@@ -99,10 +106,13 @@ let SkillController = class SkillController {
         delete payload.casterVisualId;
         delete payload.missileVisualId;
         delete payload.targetVisualId;
-        return this.skillService.update(Number(id), payload);
+        return this.skillService.update(idNum, payload);
     }
     async remove(id) {
-        return this.skillService.remove(Number(id));
+        const idNum = Number(id);
+        if (Number.isNaN(idNum))
+            throw new common_1.BadRequestException('Invalid id');
+        return this.skillService.remove(idNum);
     }
     async importBlizzard(body = {}) {
         try {
@@ -111,6 +121,19 @@ let SkillController = class SkillController {
         }
         catch (e) {
             return { ok: false, error: e?.message || String(e) };
+        }
+    }
+    async lastImport() {
+        try {
+            const file = path.join(process.cwd(), 'backups', 'last-blizzard-import.json');
+            if (!fs.existsSync(file))
+                return { ok: true, info: null };
+            const txt = fs.readFileSync(file, 'utf8');
+            const info = JSON.parse(txt);
+            return { ok: true, info };
+        }
+        catch (e) {
+            return { ok: false, error: String(e) };
         }
     }
 };
@@ -173,6 +196,12 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], SkillController.prototype, "importBlizzard", null);
+__decorate([
+    (0, common_1.Get)('last-import'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], SkillController.prototype, "lastImport", null);
 exports.SkillController = SkillController = __decorate([
     (0, common_1.Controller)('skills'),
     __metadata("design:paramtypes", [skill_service_1.SkillService])

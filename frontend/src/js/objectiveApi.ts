@@ -46,6 +46,7 @@ export async function createObjective(data: {
 	eventId: number;
 	mechanicId: number;
 	position?: number;
+	objectIds?: number[];
 }): Promise<ObjectiveItem> {
 	const res = await fetch(API_URL, {
 		method: 'POST',
@@ -67,6 +68,7 @@ export async function updateObjective(
 		eventId: number;
 		mechanicId: number;
 		position: number;
+		objectIds: number[];
 	}>,
 ): Promise<ObjectiveItem> {
 	const res = await fetch(`${API_URL}/${id}`, {

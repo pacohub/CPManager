@@ -7,6 +7,9 @@ import MapModal from '../components/MapModal';
 import ClearableSearchInput from '../components/ClearableSearchInput';
 import { MapItem } from '../interfaces/map';
 import { createMap, deleteMap, getMapComponents, getMaps, updateMap } from './mapApi';
+import { getAllCampaigns } from './campaignApi';
+import { getChaptersByCampaign } from './chapterApi';
+import { getEvents } from './eventApi';
 
 interface Props {
   onBack: () => void;
@@ -16,6 +19,7 @@ interface Props {
 const MapsView: React.FC<Props> = ({ onBack, onOpenMap }) => {
   const [maps, setMaps] = useState<MapItem[]>([]);
   const [componentCountByMapId, setComponentCountByMapId] = useState<Record<number, number | undefined>>({});
+  const [campaignCountByMapId, setCampaignCountByMapId] = useState<Record<number, number>>({});
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [initial, setInitial] = useState<Partial<MapItem> | undefined>(undefined);
@@ -28,7 +32,7 @@ const MapsView: React.FC<Props> = ({ onBack, onOpenMap }) => {
     setMaps(mapsList);
 
     // Fetch component counts per map for warnings (best-effort).
-    Promise.allSettled(mapsList.map((m) => getMapComponents(m.id)))
+      Promise.allSettled(mapsList.map((m) => getMapComponents(m.id)))
       .then((results) => {
         const next: Record<number, number | undefined> = {};
         for (let i = 0; i < mapsList.length; i++) {
@@ -42,6 +46,39 @@ const MapsView: React.FC<Props> = ({ onBack, onOpenMap }) => {
         // Ignore count errors; we just won't show the missing-components warning.
         setComponentCountByMapId({});
       });
+
+    // Compute how many campaigns reference each map (best-effort client-side).
+    (async () => {
+      try {
+        const campaigns = await getAllCampaigns().catch(() => []);
+        const mapToCampaigns = new Map<number, Set<number>>();
+        await Promise.all((campaigns || []).map(async (c) => {
+          try {
+            const chapters = await getChaptersByCampaign(c.id).catch(() => []);
+            const eventsLists = await Promise.all((chapters || []).map((ch: any) => getEvents({ chapterId: ch.id }).catch(() => [])));
+            for (const evs of eventsLists) {
+              for (const ev of evs || []) {
+                const rawMapId = (ev as any).mapId ?? (ev as any).map?.id ?? (ev as any).map?.Id;
+                const mid = Number(rawMapId);
+                if (Number.isFinite(mid)) {
+                  const s = mapToCampaigns.get(mid) ?? new Set<number>();
+                  s.add(c.id);
+                  mapToCampaigns.set(mid, s);
+                }
+              }
+            }
+          } catch (err) {
+            // ignore per-campaign errors
+          }
+        }));
+
+        const counts: Record<number, number> = {};
+        for (const m of mapsList) counts[m.id] = mapToCampaigns.get(m.id)?.size ?? 0;
+        setCampaignCountByMapId(counts);
+      } catch (err) {
+        setCampaignCountByMapId({});
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -127,8 +164,9 @@ const MapsView: React.FC<Props> = ({ onBack, onOpenMap }) => {
               key={m.id}
               map={m}
               componentCount={componentCountByMapId[m.id]}
+              campaignCount={campaignCountByMapId[m.id] ?? 0}
               onChanged={() => refresh().catch((e) => console.error('Error refrescando mapas', e))}
-					onOpen={() => onOpenMap(m.id)}
+              onOpen={() => onOpenMap(m.id)}
               onEdit={() => {
                 setInitial(m);
                 setModalOpen(true);

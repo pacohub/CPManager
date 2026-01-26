@@ -1,10 +1,12 @@
 import { Repository } from 'typeorm';
 import { Animation } from '../Entities/animation.entity';
 import { Class } from '../Entities/class.entity';
+import { TalentTree } from '../Entities/talentTree.entity';
 export declare class ClassService {
     private classRepository;
     private animationRepository;
-    constructor(classRepository: Repository<Class>, animationRepository: Repository<Animation>);
+    private talentTreeRepository;
+    constructor(classRepository: Repository<Class>, animationRepository: Repository<Animation>, talentTreeRepository: Repository<TalentTree>);
     private coerceIdArray;
     private normalizeText;
     private normalizeLevel;

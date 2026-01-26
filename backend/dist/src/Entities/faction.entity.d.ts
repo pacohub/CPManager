@@ -1,5 +1,6 @@
 import { Profession } from './profession.entity';
 import { Class } from './class.entity';
+import { TalentTree } from './talentTree.entity';
 export declare class Faction {
     id: number;
     name: string;
@@ -12,4 +13,5 @@ export declare class Faction {
     file: string;
     professions: Profession[];
     classes: Class[];
+    talentTrees: TalentTree[];
 }

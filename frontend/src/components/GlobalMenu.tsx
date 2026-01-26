@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaBook, FaCompass, FaCubes, FaMountain, FaFlag, FaUser, FaPaw, FaStar, FaHandPaper } from 'react-icons/fa';
+import ConfirmModal from './ConfirmModal';
 import { FaCogs, FaVolumeUp, FaRunning, FaShieldAlt } from 'react-icons/fa';
 import { GiArmorUpgrade, GiChest, GiCrossedSwords, GiWarPick } from 'react-icons/gi';
 
@@ -66,7 +67,9 @@ const GlobalMenu: React.FC = () => {
 		return rgbToHex(r, g, b);
 	};
 
-	const handleBackup = async () => {
+	const [confirmBackupOpen, setConfirmBackupOpen] = useState(false);
+
+	const doBackup = async () => {
 		setBackingUp(true);
 		const apiBase = window.location.hostname === 'localhost' ? 'http://localhost:4000' : '';
 		try {
@@ -96,13 +99,16 @@ const GlobalMenu: React.FC = () => {
 		}
 	};
 
+	const handleBackup = () => setConfirmBackupOpen(true);
+
 	return (
 		<div className="panel-sticky-header">
 			<div className="panel-header" style={{ justifyContent: 'center' }}>
 				<div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-						<button className="icon" aria-label="Saga" data-tooltip="Saga" onClick={() => navigate('/')}>
-							<FaBook size={26} color="#FFD700" />
-						</button>
+					<h1 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#FFFFFF', letterSpacing: 0.4 }}>CPManager</h1>
+					<button className="icon" aria-label="Saga" data-tooltip="Saga" onClick={() => navigate('/')}> 
+						<FaBook size={26} color="#FFD700" />
+					</button>
 					<button className="icon" aria-label="Mapas" data-tooltip="Mapas" onClick={() => navigate('/maps')}>
 						<FaCompass size={26} color="#FFD700" />
 					</button>
@@ -159,19 +165,51 @@ const GlobalMenu: React.FC = () => {
 						<FaHandPaper size={26} color="#FFD700" />
 					</button>
 					<div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-						<button className="icon" aria-label="Backup" data-tooltip="Crear backup" onClick={handleBackup}>
+						<button className="icon" aria-label="Backup" data-tooltip="Crear backup" onClick={handleBackup} disabled={backingUp}>
 							<svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={backingUp ? 'rotating' : ''}>
 								<title>Backup</title>
 								<path d="M16 16V11H13V8H11V11H8L12 15L16 11V16Z" fill="#FFD700" />
 								<path d="M20.39 10.56C19.84 7.86 17.3 6 14.5 6C12.97 6 11.6 6.6 10.66 7.58C9.76 7.21 8.77 7 7.75 7C4.53 7 2 9.53 2 12.75C2 16 4.5 18.5 7.75 18.5H18C20.76 18.5 22.98 16.28 22.98 13.52C23 12.73 22.88 11.97 22.64 11.27C21.9 11.04 21.11 10.76 20.39 10.56Z" fill="#FFD700" />
 							</svg>
 							</button>
-							{lastBackup ? <div style={{ fontSize: 12, color: computeColorFor(lastBackup.mtime) }} title={new Date(lastBackup.mtime).toLocaleString()}>Último: {formatRelative(lastBackup.mtime)}</div> : null}
+							{lastBackup ? <div style={{ fontSize: 12, color: computeColorFor(lastBackup.mtime) }} title={new Date(lastBackup.mtime).toLocaleString()}>{formatRelative(lastBackup.mtime)}</div> : null}
 						</div>
+
+						<ConfirmModal open={confirmBackupOpen} requireText="backup" message={"Escribe 'backup' para confirmar la creación del backup (se subirá y se guardará localmente)."} onConfirm={() => { setConfirmBackupOpen(false); doBackup(); }} onCancel={() => setConfirmBackupOpen(false)} />
 				</div>
 			</div>
-		</div>
-	);
+		   {/* Barra inferior modo desarrollo, fuera del header */}
+		   <div
+			   style={{
+				   width: '100%',
+				   background: '#222',
+				   color: '#FFD700',
+				   fontWeight: 700,
+				   fontSize: 14,
+				   textAlign: 'center',
+				   cursor: 'pointer',
+				   padding: '3px 0 2px 0',
+				   boxShadow: '0 1px 4px rgba(0,0,0,0.07)',
+				   letterSpacing: 0.5,
+				   borderBottomLeftRadius: 0,
+				   borderBottomRightRadius: 0,
+				   borderTop: '1px solid #e2d9b7',
+				   transition: 'background 0.2s',
+				   marginTop: 0,
+				   position: 'relative',
+				   zIndex: 1,
+			   }}
+			   onClick={() => navigate('/dev-mode')}
+			   onMouseEnter={e => (e.currentTarget.style.background = '#333')}
+			   onMouseLeave={e => (e.currentTarget.style.background = '#222')}
+			   role="button"
+			   tabIndex={0}
+			   onKeyDown={e => { if (e.key === 'Enter') navigate('/dev-mode'); }}
+		   >
+			   Modo Desarrollo
+		   </div>
+	   </div>
+	 );
 };
 
 export default GlobalMenu;

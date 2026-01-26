@@ -34,6 +34,7 @@ interface Props {
 
 const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, onSubmit }) => {
 	const [name, setName] = useState(initial?.name ?? '');
+	const [description, setDescription] = useState(initial?.description ?? '');
 	const [deathType, setDeathType] = useState((initial?.deathType || DEATH_TYPES[0]) as string);
 	const [movementType, setMovementType] = useState((initial?.movementType || MOVEMENT_TYPES[0]) as string);
 	const [armorTypes, setArmorTypes] = useState<ArmorTypeItem[]>([]);
@@ -106,6 +107,10 @@ const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, 
 		if (!open) return;
 		setRemoveIcon(false);
 	}, [open]);
+	useEffect(() => {
+		if (!open) return;
+		setDescription(initial?.description || '');
+	}, [open, initial?.description]);
 	const iconPreviewUrl = removeIcon ? null : (iconObjectUrl || iconUrl);
 	const existingNames = useMemo(() => new Set((existing || []).filter((x) => x.id !== initial?.id).map((x) => (x.name || '').trim().toLowerCase())), [existing, initial?.id]);
 	const movementSounds = useMemo(() => {
@@ -120,12 +125,14 @@ const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, 
 
 	return (
 		<div className="modal-overlay" role="dialog" aria-modal="true">
-			<div className="modal-content" style={{ width: 760, maxWidth: '94vw' }}>
+			<div className="modal-content" style={{ width: 760, maxWidth: '94vw', overflow: 'visible', boxSizing: 'border-box' }}>
 					<button className="icon option" title="Cerrar" onClick={onClose} aria-label="Cerrar" style={{ position: 'absolute', top: 12, right: 12 }}>
 					<FaTimes size={18} />
 				</button>
 				<h2 style={{ marginTop: 0 }}>{initial?.id ? 'Editar Raza' : 'Nueva Raza'}</h2>
 
+				{/* inner scroll area so modal border stays visible */}
+				<div className="modal-body" style={{ maxHeight: '76vh', overflowY: 'auto', padding: '0 16px 16px' }}>
 				<form
 					onSubmit={async (e) => {
 						e.preventDefault();
@@ -137,6 +144,7 @@ const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, 
 							setSaving(true);
 							await onSubmit({
 								name: trimmed,
+								description: description.trim() || undefined,
 								icon: icon.trim(),
 								iconFile,
 								removeIcon,
@@ -165,6 +173,11 @@ const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, 
 						<label style={{ gridColumn: '1 / -1' }}>
 							Nombre
 							<input value={name} onChange={(e) => setName(e.target.value)} maxLength={140} />
+						</label>
+
+						<label style={{ gridColumn: '1 / -1' }}>
+							Descripción
+							<textarea value={description} onChange={(e) => setDescription(e.target.value)} />
 						</label>
 
 						<div>
@@ -284,6 +297,7 @@ const RaceModal: React.FC<Props> = ({ open, initial, existing, sounds, onClose, 
 						<button type="button" className="cancel" onClick={onClose} disabled={saving}>Cancelar</button>
 					</div>
 				</form>
+				</div>
 			</div>
 		</div>
 	);

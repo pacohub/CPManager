@@ -3,6 +3,7 @@ import { FaLock, FaLockOpen } from 'react-icons/fa';
 import { FaArrowLeft } from 'react-icons/fa';
 import { FaPlus } from 'react-icons/fa';
 import { FaEdit, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 import ConfirmModal from '../components/ConfirmModal';
 import ComponentModal from '../components/ComponentModal';
 import MapModal from '../components/MapModal';
@@ -11,6 +12,9 @@ import { ComponentItem } from '../interfaces/component';
 import { MapItem } from '../interfaces/map';
 import { createComponent, getComponents } from './componentApi';
 import { deleteMap, getMap, getMapComponents, getMaps, setMapComponents, updateMap } from './mapApi';
+import { getEvents } from './eventApi';
+import { getChapter } from './chapterApi';
+import { getCampaign } from './campaignApi';
 
 function normalizeLink(raw: string): string {
 	const v = (raw || '').trim();
@@ -33,6 +37,7 @@ interface Props {
 }
 
 const MapDetail: React.FC<Props> = ({ mapId, onBack }) => {
+	const navigate = useNavigate();
 	const [map, setMap] = useState<MapItem | null>(null);
 	const [allMaps, setAllMaps] = useState<MapItem[]>([]);
 	const [loading, setLoading] = useState(true);
@@ -82,6 +87,78 @@ const MapDetail: React.FC<Props> = ({ mapId, onBack }) => {
 		refresh().catch(() => undefined);
 	}, [refresh]);
 
+	// Usages: events that reference this map, with chapter and campaign info
+	const [usages, setUsages] = useState<Array<{
+		eventId: number;
+		eventName: string;
+		eventType?: string;
+		chapterId?: number;
+		chapterName?: string;
+		campaignId?: number;
+		campaignName?: string;
+	}>>([]);
+
+	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			if (!map) return;
+			try {
+				const evs = await getEvents({ mapId }).catch(() => []);
+				if (cancelled) return;
+				const chapterIdsToFetch = new Set<number>();
+				const campaignIdsToFetch = new Set<number>();
+				for (const ev of evs || []) {
+					const cid = Number((ev as any).chapterId ?? (ev as any).chapter?.id);
+					if (Number.isFinite(cid)) chapterIdsToFetch.add(cid);
+				}
+				const chapterMap: Record<number, any> = {};
+				await Promise.all(Array.from(chapterIdsToFetch).map(async (cid) => {
+					try {
+						const ch = await getChapter(cid);
+						chapterMap[cid] = ch;
+						if (ch?.campaignId) campaignIdsToFetch.add(Number(ch.campaignId));
+					} catch (err) {
+						// ignore
+					}
+				}));
+				const campaignMap: Record<number, any> = {};
+				await Promise.all(Array.from(campaignIdsToFetch).map(async (cid) => {
+					try {
+						const c = await getCampaign(cid);
+						campaignMap[cid] = c;
+					} catch (err) {
+						// ignore
+					}
+				}));
+
+				const next: typeof usages = [];
+				for (const ev of evs || []) {
+					const eventId = Number((ev as any).id);
+					const eventName = (ev as any).name ?? '';
+					const eventType = (ev as any).type;
+					const chapterId = Number((ev as any).chapterId ?? (ev as any).chapter?.id);
+					const chapterName = (ev as any).chapter?.name ?? chapterMap[chapterId]?.name;
+					const campaignId = chapterMap[chapterId]?.campaignId ?? undefined;
+					const campaignName = campaignId ? campaignMap[campaignId]?.name : undefined;
+					next.push({ eventId, eventName, eventType, chapterId: Number(chapterId) || undefined, chapterName, campaignId, campaignName });
+				}
+				// Ordenar por campaña, luego capítulo, luego evento (alfabético)
+				next.sort((a, b) => {
+					const ca = (a.campaignName || '').localeCompare(b.campaignName || '', undefined, { sensitivity: 'base' });
+					if (ca !== 0) return ca;
+					const cha = (a.chapterName || '').localeCompare(b.chapterName || '', undefined, { sensitivity: 'base' });
+					if (cha !== 0) return cha;
+					return (a.eventName || '').localeCompare(b.eventName || '', undefined, { sensitivity: 'base' });
+				});
+				if (!cancelled) setUsages(next);
+			} catch (err) {
+				console.error('Error cargando usos del mapa', err);
+				if (!cancelled) setUsages([]);
+			}
+		})();
+		return () => { cancelled = true; };
+	}, [map, mapId]);
+
 	useEffect(() => {
 		// Auto-save component linkage (debounced) after initial load.
 		if (!didInitComponents.current) return;
@@ -126,6 +203,16 @@ const MapDetail: React.FC<Props> = ({ mapId, onBack }) => {
 		return list.filter((c) => (c.name || '').toLowerCase().includes(q) || (c.type || '').toLowerCase().includes(q));
 	}, [components, componentIds, componentSearch]);
 
+	const [isWide, setIsWide] = useState<boolean>(typeof window !== 'undefined' ? window.innerWidth >= 1000 : false);
+	useEffect(() => {
+		function onResize() {
+			setIsWide(window.innerWidth >= 1000);
+		}
+		onResize();
+		window.addEventListener('resize', onResize);
+		return () => window.removeEventListener('resize', onResize);
+	}, []);
+
 	// NOTE: didInitComponents is flipped inside refresh() once we have initial componentIds.
 
 	return (
@@ -156,10 +243,10 @@ const MapDetail: React.FC<Props> = ({ mapId, onBack }) => {
 				</div>
 				<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
 					<button className="icon" title="Editar" aria-label="Editar" onClick={() => setEditOpen(true)} disabled={!map}>
-						<FaEdit size={18} color="#FFD700" />
+						<FaEdit size={18} style={{ color: 'currentColor' }} />
 					</button>
 					<button className="icon" title="Eliminar" aria-label="Eliminar" onClick={() => setConfirmOpen(true)} disabled={!map}>
-						<FaTrash size={18} color="#FFD700" />
+						<FaTrash size={18} style={{ color: 'currentColor' }} />
 					</button>
 				</div>
 			</div>
@@ -204,66 +291,105 @@ const MapDetail: React.FC<Props> = ({ mapId, onBack }) => {
 						</div>
 					</div>
 
-					<div style={{ marginTop: 14 }} className="block-border block-border-soft">
-						<div style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-							<div style={{ fontWeight: 900 }}>Componentes del mapa</div>
-							<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-								<button
-									className="icon option"
-									title={linkingEnabled ? 'Nuevo componente' : 'Habilita la vinculación para agregar'}
-									aria-label="Nuevo componente"
-									onClick={() => setComponentModalOpen(true)}
-									disabled={!linkingEnabled}
-								>
-									<FaPlus size={16} />
-								</button>
-								<button
-									className="icon option"
-									title={linkingEnabled ? 'Deshabilitar vinculación' : 'Habilitar vinculación'}
-									aria-label={linkingEnabled ? 'Deshabilitar vinculación' : 'Habilitar vinculación'}
-									onClick={() => setLinkingEnabled((v) => !v)}
-								>
-									{linkingEnabled ? <FaLockOpen size={16} /> : <FaLock size={16} />}
-								</button>
+					<div style={{ marginTop: 14, display: 'grid', gridTemplateColumns: isWide ? '1fr 1fr' : '1fr', gap: 12 }}>
+
+						<div className="block-border block-border-soft">
+							<div style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+								<div style={{ fontWeight: 900 }}>Componentes del mapa</div>
+								<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+									<button
+										className="icon option"
+										title={linkingEnabled ? 'Nuevo componente' : 'Habilita la vinculación para agregar'}
+										aria-label="Nuevo componente"
+										onClick={() => setComponentModalOpen(true)}
+										disabled={!linkingEnabled}
+									>
+										<FaPlus size={16} />
+									</button>
+									<button
+										className="icon option"
+										title={linkingEnabled ? 'Deshabilitar vinculación' : 'Habilitar vinculación'}
+										aria-label={linkingEnabled ? 'Deshabilitar vinculación' : 'Habilitar vinculación'}
+										onClick={() => setLinkingEnabled((v) => !v)}
+									>
+										{linkingEnabled ? <FaLockOpen size={16} /> : <FaLock size={16} />}
+									</button>
+								</div>
+							</div>
+
+							<div style={{ padding: '0 12px 12px 12px' }}>
+								<input
+									type="text"
+									placeholder="Buscar componente..."
+									value={componentSearch}
+									onChange={(e) => setComponentSearch(e.target.value)}
+									className="filters-input"
+									style={{ width: '100%', marginBottom: 8 }}
+								/>
+
+								<div style={{ maxHeight: 360, overflow: 'auto', paddingRight: 6 }}>
+									{filteredComponents.map((c) => {
+										const checked = componentIds.includes(c.id);
+										return (
+											<label key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '6px 0' }}>
+												<input
+													type="checkbox"
+													checked={checked}
+													disabled={!linkingEnabled}
+													onChange={() => {
+														if (!linkingEnabled) return;
+														setComponentIds((prev) => (checked ? prev.filter((id) => id !== c.id) : prev.concat(c.id)));
+													}}
+												/>
+												<div style={{ minWidth: 0 }}>
+													<div style={{ fontWeight: 700, wordBreak: 'break-word' }}>{c.name}</div>
+													<div style={{ opacity: 0.85, fontSize: 12 }}>{c.type}</div>
+												</div>
+											</label>
+										);
+									})}
+									{filteredComponents.length === 0 ? <div style={{ opacity: 0.8, fontSize: 13 }}>No hay componentes.</div> : null}
+								</div>
 							</div>
 						</div>
 
-						<div style={{ padding: '0 12px 12px 12px' }}>
-							<input
-								type="text"
-								placeholder="Buscar componente..."
-								value={componentSearch}
-								onChange={(e) => setComponentSearch(e.target.value)}
-								className="filters-input"
-								style={{ width: '100%', marginBottom: 8 }}
-							/>
-
-							<div style={{ maxHeight: 360, overflow: 'auto', paddingRight: 6 }}>
-								{filteredComponents.map((c) => {
-									const checked = componentIds.includes(c.id);
-									return (
-										<label key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '6px 0' }}>
-											<input
-												type="checkbox"
-												checked={checked}
-												disabled={!linkingEnabled}
-												onChange={() => {
-													if (!linkingEnabled) return;
-													setComponentIds((prev) => (checked ? prev.filter((id) => id !== c.id) : prev.concat(c.id)));
-												}}
-											/>
-											<div style={{ minWidth: 0 }}>
-												<div style={{ fontWeight: 700, wordBreak: 'break-word' }}>{c.name}</div>
-												<div style={{ opacity: 0.85, fontSize: 12 }}>{c.type}</div>
-											</div>
-										</label>
-									);
-								})}
-								{filteredComponents.length === 0 ? <div style={{ opacity: 0.8, fontSize: 13 }}>No hay componentes.</div> : null}
+						<div className="block-border block-border-soft">
+							<div style={{ padding: 12 }}>
+								<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+									<div style={{ fontWeight: 900 }}>Usos del mapa</div>
+									<div style={{ fontWeight: 800, color: '#e2d9b7' }}>{usages.length}</div>
+								</div>
+								<div style={{ marginTop: 8 }}>
+									{usages.length === 0 ? (
+										<div style={{ opacity: 0.7 }}>No se ha utilizado en ningún evento.</div>
+									) : (
+										<div style={{ display: 'grid', gap: 8 }}>
+											{usages.map((u) => (
+												<div key={`${u.eventId}:${u.chapterId}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
+													<div style={{ minWidth: 0 }}>
+														<div
+															style={{ fontWeight: 800, cursor: u.chapterId && u.campaignId ? 'pointer' : (u.campaignId ? 'pointer' : 'default') }}
+															onClick={() => {
+																if (u.chapterId && u.campaignId) return navigate(`/campaigns/${u.campaignId}/chapters/${u.chapterId}/events`);
+																if (u.campaignId) return navigate(`/campaigns/${u.campaignId}`);
+															}}
+														>
+															{u.campaignName ?? '—'}
+														</div>
+														<div style={{ fontSize: 13, opacity: 0.9, cursor: u.chapterId ? 'pointer' : 'default' }} onClick={() => u.chapterId && u.campaignId && navigate(`/campaigns/${u.campaignId}/chapters/${u.chapterId}/events`)}>
+															{u.chapterName ?? `Capítulo ${u.chapterId ?? '—'}`} • {u.eventName || u.eventType}
+														</div>
+													</div>
+													<div style={{ color: '#e2c044', fontWeight: 800 }}>{/* placeholder for potential per-usage actions */}</div>
+												</div>
+											))}
+										</div>
+									)}
+								</div>
 							</div>
 						</div>
 					</div>
-				</div>
+			</div>
 			) : null}
 
 			{editOpen && map ? (

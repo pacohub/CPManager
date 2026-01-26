@@ -1,5 +1,6 @@
 import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Animation } from './animation.entity';
+import { Skill } from './skill.entity';
 import { ArmorType } from './armorType.entity';
 import { Sound } from './sound.entity';
 
@@ -34,6 +35,9 @@ export class Race {
 
 	@Column({ type: 'text', nullable: true })
 	icon: string;
+
+	@Column({ type: 'text', nullable: true })
+	description: string;
 
 	@Column({ type: 'text', nullable: true })
 	deathType: string;
@@ -94,4 +98,8 @@ export class Race {
 	@ManyToMany(() => Animation, (animation) => animation.races)
 	@JoinTable({ name: 'race_animations' })
 	animations: Animation[];
+
+	@ManyToMany(() => Skill, (skill) => skill.races)
+	@JoinTable({ name: 'race_skills' })
+	skills: Skill[];
 }

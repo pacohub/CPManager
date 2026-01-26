@@ -13,6 +13,7 @@ exports.Skill = void 0;
 const typeorm_1 = require("typeorm");
 const visualEffect_entity_1 = require("./visualEffect.entity");
 const skillEffect_entity_1 = require("./skillEffect.entity");
+const race_entity_1 = require("./race.entity");
 let Skill = class Skill {
     id;
     name;
@@ -20,10 +21,13 @@ let Skill = class Skill {
     icon;
     levels;
     file;
+    referencia;
     casterVisual;
     missileVisual;
     targetVisual;
     effects;
+    passive;
+    races;
 };
 exports.Skill = Skill;
 __decorate([
@@ -51,6 +55,10 @@ __decorate([
     __metadata("design:type", String)
 ], Skill.prototype, "file", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ length: 64, nullable: true }),
+    __metadata("design:type", String)
+], Skill.prototype, "referencia", void 0);
+__decorate([
     (0, typeorm_1.ManyToOne)(() => visualEffect_entity_1.VisualEffect, { eager: true, nullable: true, onDelete: 'SET NULL' }),
     __metadata("design:type", Object)
 ], Skill.prototype, "casterVisual", void 0);
@@ -66,6 +74,14 @@ __decorate([
     (0, typeorm_1.OneToMany)(() => skillEffect_entity_1.SkillEffect, (se) => se.skill),
     __metadata("design:type", Array)
 ], Skill.prototype, "effects", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'boolean', default: false }),
+    __metadata("design:type", Boolean)
+], Skill.prototype, "passive", void 0);
+__decorate([
+    (0, typeorm_1.ManyToMany)(() => race_entity_1.Race, (r) => r.skills),
+    __metadata("design:type", Array)
+], Skill.prototype, "races", void 0);
 exports.Skill = Skill = __decorate([
     (0, typeorm_1.Entity)()
 ], Skill);

@@ -8,7 +8,12 @@ import GameObjectModal from '../components/GameObjectModal';
 import CpImage from '../components/CpImage';
 import ClearableSearchInput from '../components/ClearableSearchInput';
 import { GameObjectItem } from '../interfaces/gameObject';
-import { createObject, deleteObject, getObjects, updateObject, uploadObjectIcon } from './gameObjectApi';
+import { createObject, deleteObject, getObjects, updateObject, uploadObjectIcon, getObjects as getAllObjects } from './gameObjectApi';
+import { getAllChapters } from './chapterApi';
+import { getObjectives } from './objectiveApi';
+import { getProfessions } from './professionApi';
+import { getProfessionObjects } from './professionObjectApi';
+import { getEvents } from './eventApi';
 
 function normalizeLink(raw: string): string {
 	const v = (raw || '').trim();
@@ -27,10 +32,12 @@ function asImageUrl(raw?: string): string | undefined {
 
 interface Props {
 	onBack: () => void;
+	onOpenObject?: (id: number) => void;
 }
 
-const ObjectsView: React.FC<Props> = ({ onBack }) => {
+const ObjectsView: React.FC<Props> = ({ onBack, onOpenObject }) => {
 	const [objects, setObjects] = useState<GameObjectItem[]>([]);
+	const [usageCountByObjectId, setUsageCountByObjectId] = useState<Record<number, number>>({});
 	const [search, setSearch] = useState('');
 
 	const [modalOpen, setModalOpen] = useState(false);
@@ -47,6 +54,60 @@ const ObjectsView: React.FC<Props> = ({ onBack }) => {
 	useEffect(() => {
 		refresh().catch((e) => console.error('Error cargando objetos', e));
 	}, [refresh]);
+
+	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			try {
+				const chapters = await getAllChapters().catch(() => []);
+				const professions = await getProfessions().catch(() => []);
+				const objectsAll = await getAllObjects().catch(() => []);
+				const byObj: Record<number, number> = {};
+
+				// count occurrences via events -> objectives
+				for (const ch of (chapters || [])) {
+					try {
+						const events = await getEvents({ chapterId: ch.id }).catch(() => []);
+						if (!events || events.length === 0) continue;
+						const objectiveLists = await Promise.all((events || []).map((ev: any) => getObjectives({ eventId: ev.id }).catch(() => [])));
+						for (const list of objectiveLists) {
+							for (const obj of list || []) {
+								const ids = new Set<number>();
+								if (Array.isArray(obj.objectIds)) {
+									for (const oid of obj.objectIds) ids.add(Number(oid));
+								}
+								if (Array.isArray((obj as any).objects)) {
+									for (const o of (obj as any).objects) ids.add(Number(o?.id));
+								}
+								for (const oid of ids) {
+									if (!Number.isFinite(oid)) continue;
+									byObj[oid] = (byObj[oid] || 0) + 1;
+								}
+							}
+						}
+					} catch (err) {
+						console.error('Error fetching events/objectives for chapter', ch?.id, err);
+					}
+				}
+
+				// count occurrences in profession-objects
+				const profResults = await Promise.all((professions || []).map((p: any) => getProfessionObjects(p.id).catch(() => [])));
+				for (const res of profResults) {
+					for (const link of res || []) {
+						byObj[link.objectId] = (byObj[link.objectId] || 0) + 1;
+					}
+				}
+
+				if (!cancelled) setUsageCountByObjectId(byObj);
+			} catch (err) {
+				console.error('Error calculando usos de objetos', err);
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+		};
+	}, []);
 
 	const filtered = useMemo(() => {
 		const q = search.trim().toLowerCase();
@@ -118,6 +179,7 @@ const ObjectsView: React.FC<Props> = ({ onBack }) => {
 			<div style={{ padding: 12 }}>
 				<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
 					{filtered.map((o) => {
+						const usageCount = usageCountByObjectId[o.id] || 0;
 						const iconUrl = asImageUrl(o.icon);
 						const missing: string[] = [];
 						if (!(o.icon || '').trim()) missing.push('icono');
@@ -125,30 +187,41 @@ const ObjectsView: React.FC<Props> = ({ onBack }) => {
 						if (!(o.fileLink || '').trim()) missing.push('link');
 						const showWarning = missing.length > 0;
 
-						return (
-							<div key={o.id} className="block-border block-border-soft mechanic-card" style={{ padding: 12, position: 'relative' }}>
-								{showWarning ? (
-									<span
-										className="campaign-warning"
-										title={`Falta: ${missing.join(', ')}.`}
-										aria-label="Faltan datos"
-										onClick={(e) => e.stopPropagation()}
-										onPointerDown={(e) => e.stopPropagation()}
+							return (
+								<div key={o.id} className="block-border block-border-soft mechanic-card" style={{ padding: 12, position: 'relative' }}>
+									{usageCount > 0 ? (
+										<div
+											style={{
+												position: 'absolute',
+												right: 8,
+												top: 8,
+												background: 'rgba(0,0,0,0.6)',
+												color: '#fff',
+												padding: '4px 8px',
+												borderRadius: 12,
+												fontSize: 12,
+												fontWeight: 700,
+											}
+											}
+										title={`Usos: ${usageCount}`}
 									>
-										<FaExclamation size={14} />
-									</span>
-								) : null}
+										{usageCount}
+									</div>
+									) : null}
+								{/* ...eliminado warning visual... */}
 
-								<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-									<div style={{ minWidth: 0 }}>
+									<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+										<div
+											style={{ minWidth: 0, cursor: onOpenObject ? 'pointer' : 'default' }}
+											title={(o.description || '').trim() || undefined}
+											onClick={() => onOpenObject?.(o.id)}
+										>
 										<div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
 												<CpImage src={iconUrl} width={32} height={32} fit="cover" frameStyle={{ flex: '0 0 auto' }} />
 											<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{o.name}</div>
 										</div>
 
-										{o.description ? (
-											<div style={{ marginTop: 6, opacity: 0.9, fontSize: 13, whiteSpace: 'pre-wrap' }}>{o.description}</div>
-										) : null}
+										{/* description moved to card tooltip */}
 
 										{(o.fileLink || '').trim() ? (
 											<div style={{ marginTop: 8, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>

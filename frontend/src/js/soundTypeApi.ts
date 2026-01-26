@@ -46,5 +46,10 @@ export async function updateSoundType(id: number, data: { name?: string }): Prom
 
 export async function deleteSoundType(id: number): Promise<void> {
 	const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
-	await ensureOk<void>(res);
+	return ensureOk<any>(res);
+}
+
+export async function getSoundTypeUsage(id: number): Promise<{ count: number; soundIds: number[] }> {
+	const res = await fetch(`${API_URL}/${id}/usage`);
+	return ensureOk<{ count: number; soundIds: number[] }>(res);
 }

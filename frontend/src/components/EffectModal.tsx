@@ -1,13 +1,14 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { FaTimes } from 'react-icons/fa';
 import NameModal from './NameModal';
+import { uploadEffectIcon } from '../js/effectApi';
 
 interface Props {
   open: boolean;
   initial?: any;
   existing: any[];
   onClose: () => void;
-  onSubmit: (data: { name: string; type?: string | null; description?: string | null }) => void | Promise<void>;
+  onSubmit: (data: { name: string; type?: string | null; description?: string | null; icon?: string | null }) => void | Promise<void>;
 }
 
 const EffectModal: React.FC<Props> = ({ open, initial, existing, onClose, onSubmit }) => {
@@ -16,6 +17,8 @@ const EffectModal: React.FC<Props> = ({ open, initial, existing, onClose, onSubm
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [description, setDescription] = useState(initial?.description ?? '');
+  const [icon, setIcon] = useState<string | null>(initial?.icon ?? '');
+  const [uploadingIcon, setUploadingIcon] = useState(false);
 
   const existingNames = useMemo(() => new Set((existing || []).filter((x) => x.id !== initial?.id).map((x) => (x.name || '').trim().toLowerCase())), [existing, initial?.id]);
 
@@ -24,8 +27,17 @@ const EffectModal: React.FC<Props> = ({ open, initial, existing, onClose, onSubm
     setName(initial?.name ?? '');
     setType(initial?.type ?? 'benefit');
     setDescription(initial?.description ?? '');
+    setIcon(initial?.icon ?? '');
     setError(null);
   }, [open, initial]);
+
+  function asImageUrl(raw?: string): string | undefined {
+    const v = (raw || '').trim();
+    if (!v) return undefined;
+    if (v.startsWith('data:') || v.startsWith('http://') || v.startsWith('https://')) return v;
+    if (v.startsWith('/')) return encodeURI(`http://localhost:4000/${v.replace(/^\/+/, '')}`);
+    return undefined;
+  }
 
   if (!open) return null;
 
@@ -47,6 +59,7 @@ const EffectModal: React.FC<Props> = ({ open, initial, existing, onClose, onSubm
             try {
               setSaving(true);
               const payload: any = { name: trimmed, type: type ?? undefined, description: description?.trim() || undefined };
+              if (icon && String(icon).trim()) payload.icon = String(icon).trim();
               await onSubmit(payload);
             } catch (err: any) {
               setError(err?.message || 'Error guardando');
@@ -63,6 +76,31 @@ const EffectModal: React.FC<Props> = ({ open, initial, existing, onClose, onSubm
           <label>
             Descripción
             <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ minHeight: 80 }} />
+          </label>
+
+
+
+          <label style={{ display: 'block', marginTop: 8 }}>
+            Subir icono local
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6 }}>
+              <input type="file" accept="image/*" onChange={async (e) => {
+                const f = e.target.files?.[0];
+                if (!f) return;
+                try {
+                  setUploadingIcon(true);
+                  const uploaded = await uploadEffectIcon(f);
+                  setIcon(uploaded);
+                } catch (err: any) {
+                  setError(err?.message || 'Error subiendo archivo');
+                } finally {
+                  setUploadingIcon(false);
+                }
+              }} />
+              {uploadingIcon ? <span style={{ opacity: 0.9 }}>Subiendo...</span> : null}
+              {icon ? (
+                <img src={asImageUrl(icon)} alt="preview" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4 }} />
+              ) : null}
+            </div>
           </label>
 
           <label>

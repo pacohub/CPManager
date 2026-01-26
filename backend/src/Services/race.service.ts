@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { Animation } from '../Entities/animation.entity';
+import { Skill } from '../Entities/skill.entity';
 import { ArmorType } from '../Entities/armorType.entity';
 import { Race, RACE_DEATH_TYPES, RACE_MOVEMENT_TYPES } from '../Entities/race.entity';
 import { Sound } from '../Entities/sound.entity';
@@ -17,6 +18,8 @@ export class RaceService {
 		private soundRepository: Repository<Sound>,
 		@InjectRepository(Animation)
 		private animationRepository: Repository<Animation>,
+		@InjectRepository(Skill)
+		private skillRepository: Repository<Skill>,
 	) {}
 
 	private async resolveArmorTypeId(data: any): Promise<number | null | undefined> {
@@ -69,6 +72,7 @@ export class RaceService {
 			.leftJoinAndSelect('ms.types', 'mst')
 			.leftJoinAndSelect('r.armorTypeEntity', 'at')
 			.leftJoinAndSelect('r.animations', 'a')
+			.leftJoinAndSelect('r.skills', 's')
 			.orderBy('LOWER(r.name)', 'ASC')
 			.addOrderBy('r.id', 'ASC')
 			.getMany();
@@ -77,7 +81,7 @@ export class RaceService {
 	async findOne(id: number): Promise<Race | null> {
 		return this.raceRepository.findOne({
 			where: { id },
-			relations: { movementSound: { types: true }, armorTypeEntity: true, animations: true },
+			relations: { movementSound: { types: true }, armorTypeEntity: true, animations: true, skills: true },
 		});
 	}
 
@@ -97,7 +101,7 @@ export class RaceService {
 
 	private normalize(data: Partial<Race>) {
 		if (typeof data.name === 'string') data.name = data.name.trim();
-		for (const key of ['icon', 'deathType', 'movementType', 'attack1', 'attack2', 'defenseType', 'armorType'] as const) {
+		for (const key of ['icon', 'description', 'deathType', 'movementType', 'attack1', 'attack2', 'defenseType', 'armorType'] as const) {
 			const v = (data as any)[key];
 			if (typeof v === 'string') (data as any)[key] = v.trim();
 		}
@@ -166,6 +170,10 @@ export class RaceService {
 		const animationIdsRaw = (data as any)?.animationIds;
 		const shouldUpdateAnimations = animationIdsRaw !== undefined;
 		delete (data as any).animationIds;
+
+		const skillIdsRaw = (data as any)?.skillIds;
+		const shouldUpdateSkills = skillIdsRaw !== undefined;
+		delete (data as any).skillIds;
 		delete (data as any).armorTypeEntity;
 
 		const existing = await this.raceRepository.findOne({
@@ -192,6 +200,11 @@ export class RaceService {
 		if (shouldUpdateAnimations) {
 			const ids = this.coerceIdArray(animationIdsRaw);
 			existing.animations = ids.length ? await this.animationRepository.find({ where: { id: In(ids) } }) : [];
+		}
+
+		if (shouldUpdateSkills) {
+			const ids = this.coerceIdArray(skillIdsRaw);
+			existing.skills = ids.length ? await this.skillRepository.find({ where: { id: In(ids) } }) : [];
 		}
 
 		if (resolvedArmorTypeId !== undefined) {

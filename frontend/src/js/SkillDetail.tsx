@@ -1,9 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { FaArrowLeft, FaEdit, FaTrash, FaPlus, FaTimes } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaTrash, FaPlus, FaTimes, FaStar } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
 import SkillModal from '../components/SkillModal';
+import EffectModal from '../components/EffectModal';
+import AssociateEffectModal from '../components/AssociateEffectModal';
 import { getSkill, updateSkill, deleteSkill } from './skillApi';
 import { getVisualEffects } from './visualEffectApi';
+import { createEffect } from './effectApi';
 import { getSkillEffects, createSkillEffect, updateSkillEffect, deleteSkillEffect } from './skillEffectApi';
 import { getEffects } from './effectApi';
 import { useNavigate } from 'react-router-dom';
@@ -29,8 +32,7 @@ const SkillDetail: React.FC<{ skillId: number; onBack: () => void }> = ({ skillI
   const [visuals, setVisuals] = useState<any[]>([]);
   const [effects, setEffects] = useState<any[]>([]);
   const [skillEffects, setSkillEffects] = useState<any[]>([]);
-  const [newEffectId, setNewEffectId] = useState<number | null>(null);
-  const [newAppliesTo, setNewAppliesTo] = useState<string>('TARGET');
+  const [associateOpen, setAssociateOpen] = useState(false);
   const [pendingDeleteSkillEffectId, setPendingDeleteSkillEffectId] = useState<number | null>(null);
   const [editingSkillEffectId, setEditingSkillEffectId] = useState<number | null>(null);
   const [editingAppliesToValue, setEditingAppliesToValue] = useState<string>('TARGET');
@@ -60,8 +62,8 @@ const SkillDetail: React.FC<{ skillId: number; onBack: () => void }> = ({ skillI
           <div style={{fontSize:22, fontWeight:900}}>{item?.name ?? 'Habilidad'}</div>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <button className="icon" title="Editar" aria-label="Editar" onClick={() => setEditOpen(true)} disabled={!item}><FaEdit size={18} color="#FFD700" /></button>
-          <button className="icon" title="Eliminar" aria-label="Eliminar" onClick={() => setConfirmOpen(true)} disabled={!item}><FaTrash size={18} color="#FFD700" /></button>
+          <button className="icon" title="Editar" aria-label="Editar" onClick={() => setEditOpen(true)} disabled={!item}><FaEdit size={18} style={{ color: 'currentColor' }} /></button>
+          <button className="icon" title="Eliminar" aria-label="Eliminar" onClick={() => setConfirmOpen(true)} disabled={!item}><FaTrash size={18} style={{ color: 'currentColor' }} /></button>
         </div>
       </div>
 
@@ -70,7 +72,7 @@ const SkillDetail: React.FC<{ skillId: number; onBack: () => void }> = ({ skillI
         {!item ? <div>Cargando...</div> : (
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              {item.icon ? <CpImage rawSrc={item.icon} width={64} height={64} fit="cover" frameClassName="metallic-border metallic-border-square" /> : null}
+              <CpImage rawSrc={item.icon} width={96} height={96} fit="cover" frameClassName={item.passive ? 'metallic-border metallic-border-square passive-inner' : 'metallic-border metallic-border-square'} />
               <div>
                 <div style={{ fontWeight: 900, fontSize: 18 }}>{item.name}</div>
                 <div style={{ opacity: 0.9 }}>Levels: {item.levels ?? '-'}</div>
@@ -102,25 +104,9 @@ const SkillDetail: React.FC<{ skillId: number; onBack: () => void }> = ({ skillI
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontWeight: 900 }}>Efectos asociados</div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <select value={newAppliesTo} onChange={(e) => setNewAppliesTo(e.target.value)}>
-              <option value="TARGET">Target</option>
-              <option value="CASTER">Caster</option>
-              <option value="ZONAL_ALL">Zonal All</option>
-              <option value="ZONAL_ENEMY">Zonal enemy</option>
-              <option value="ZONAL_ALLY">Zonal ally</option>
-            </select>
-            <select value={newEffectId ?? ''} onChange={(e) => setNewEffectId(e.target.value ? Number(e.target.value) : null)}>
-              <option value="">(seleccionar efecto)</option>
-              {(effects || []).map((ef: any) => <option key={ef.id} value={ef.id}>{ef.name}</option>)}
-            </select>
-            <button className="icon" title="Añadir" onClick={async () => {
-              if (!newEffectId) return;
-              try {
-                await createSkillEffect({ skillId: skillId, effectId: newEffectId, appliesTo: newAppliesTo });
-                setNewEffectId(null);
-                await refresh();
-              } catch (err) { console.error(err); }
-            }}><FaPlus size={16} color="#FFD700" /></button>
+            <button className="icon" aria-label="Asociar efecto" style={{ color: 'inherit' }} onClick={() => setAssociateOpen(true)}>
+              <FaStar size={16} />
+            </button>
           </div>
         </div>
 
@@ -148,15 +134,14 @@ const SkillDetail: React.FC<{ skillId: number; onBack: () => void }> = ({ skillI
                         await refresh();
                       } catch (err) { console.error(err); }
                     }}>
-                      <svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24"><path fill="#FFD700" d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
+                      <svg style={{ width: 16, height: 16, color: 'currentColor' }} viewBox="0 0 24 24"><path fill="currentColor" d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg>
                     </button>
-                    <button className="icon option" title="Cancelar" onClick={() => setEditingSkillEffectId(null)}><FaTimes size={16} color="#FFD700" /></button>
+                    <button className="icon option" title="Cancelar" onClick={() => setEditingSkillEffectId(null)}><FaTimes size={16} style={{ color: 'currentColor' }} /></button>
                   </>
                 ) : (
                   <>
-                    <button className="icon option" title="Editar" onClick={() => { setEditingSkillEffectId(se.id); setEditingAppliesToValue(se.appliesTo); }}><FaEdit size={16} color="#FFD700" /></button>
-                    <button className="icon option" title="Eliminar" onClick={() => setPendingDeleteSkillEffectId(se.id)}>
-                      <svg style={{ width: 16, height: 16 }} viewBox="0 0 24 24"><path fill="#FFD700" d="M9,3V4H4V6H5V19A2,2 0 0,0 7,21H17A2,2 0 0,0 19,19V6H20V4H15V3H9Z"/></svg>
+                    <button className="icon" aria-label="Eliminar vínculo" style={{ color: 'inherit' }} onClick={() => setPendingDeleteSkillEffectId(se.id)}>
+                      <FaTimes size={16} />
                     </button>
                   </>
                 )}
@@ -192,6 +177,16 @@ const SkillDetail: React.FC<{ skillId: number; onBack: () => void }> = ({ skillI
         }}
         onCancel={() => setPendingDeleteSkillEffectId(null)}
       />
+      {associateOpen ? (
+        <AssociateEffectModal
+          open={associateOpen}
+          skillId={skillId}
+          existing={effects}
+          skillName={item?.name}
+          onClose={() => setAssociateOpen(false)}
+          onDone={() => refresh()}
+        />
+      ) : null}
     </div>
   );
 };

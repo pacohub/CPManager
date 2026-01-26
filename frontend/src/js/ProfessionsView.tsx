@@ -112,20 +112,7 @@ const ProfessionsView: React.FC<Props> = ({ onBack, onOpenProfession }) => {
 							style={{ padding: 12, cursor: onOpenProfession ? 'pointer' : 'default' }}
 							onClick={() => onOpenProfession?.(p.id)}
 						>
-							{(!(p.description || '').trim() || !(p.link || '').trim()) ? (
-								<span
-									className="campaign-warning"
-									title={`Falta: ${[
-										!(p.description || '').trim() ? 'descripción' : null,
-										!(p.link || '').trim() ? 'link' : null,
-									].filter(Boolean).join(', ')}.`}
-									aria-label="Faltan datos"
-									onClick={(e) => e.stopPropagation()}
-									onPointerDown={(e) => e.stopPropagation()}
-								>
-									<FaExclamation size={14} />
-								</span>
-							) : null}
+							{/* ...eliminado warning visual... */}
 							<div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
 								<div style={{ minWidth: 0 }}>
 									<div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

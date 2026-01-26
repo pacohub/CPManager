@@ -7,5 +7,12 @@ export declare class SoundTypeController {
     findOne(id: string): Promise<SoundType | null>;
     create(data: any): Promise<SoundType>;
     update(id: string, data: any): Promise<SoundType | null>;
-    remove(id: string): Promise<void>;
+    usage(id: string): Promise<{
+        count: number;
+        soundIds: number[];
+    }>;
+    remove(id: string): Promise<{
+        removedCount: number;
+        removedSoundIds: number[];
+    }>;
 }

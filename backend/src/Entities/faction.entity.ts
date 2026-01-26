@@ -1,6 +1,7 @@
 import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { Profession } from './profession.entity';
 import { Class } from './class.entity';
+import { TalentTree } from './talentTree.entity';
 
 @Entity()
 export class Faction {
@@ -38,4 +39,8 @@ export class Faction {
 	@ManyToMany(() => Class, (c) => c.factions, { cascade: false })
 	@JoinTable()
 	classes: Class[];
+
+	@ManyToMany(() => TalentTree)
+	@JoinTable({ name: 'faction_talent_trees' })
+	talentTrees: TalentTree[];
 }

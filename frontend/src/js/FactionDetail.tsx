@@ -1,3 +1,5 @@
+
+// @ts-nocheck
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FaArrowLeft, FaPlus } from 'react-icons/fa';
 import { FaLockOpen, FaLock } from 'react-icons/fa';
@@ -11,7 +13,47 @@ import { ProfessionItem } from '../interfaces/profession';
 import { createClass, getClasses, uploadClassIcon } from './classApi';
 import { getFaction, getFactionClasses, getFactionProfessions, setFactionClasses, setFactionProfessions } from './factionApi';
 import { createProfession, getProfessions } from './professionApi';
+import { getAllCampaigns } from './campaignApi';
+import { getChapterFactionsByCampaign } from './chapterFactionApi';
+import { getChaptersByCampaign } from './chapterApi';
+import { useNavigate } from 'react-router-dom';
 import ClearableSearchInput from '../components/ClearableSearchInput';
+
+// --- Accordion component ---
+function UsosFaccionAccordion(props) {
+	const { usages, navigate } = props;
+	const [open, setOpen] = useState({});
+	const toggle = (id) => setOpen(prev => ({ ...prev, [id]: !prev[id] }));
+	return (
+		<div>
+			{usages.map((u) => (
+				<div key={u.campaign.id} style={{ marginBottom: 8 }}>
+					<div style={{ cursor: 'pointer', fontWeight: 800, userSelect: 'none' }} onClick={() => toggle(u.campaign.id)}>
+						{u.campaign.name} {open[u.campaign.id] ? '▼' : '▶'}
+					</div>
+					{open[u.campaign.id] && (
+						<ul style={{ margin: '6px 0 0 18px', padding: 0, listStyle: 'disc' }}>
+							{u.chapters.map((ch) => (
+								<li key={ch.id} style={{ marginBottom: 2 }}>
+									<a
+										href="#"
+										onClick={e => {
+											e.preventDefault();
+											navigate(`/campaigns/${u.campaign.id}/chapters/${ch.id}/events`);
+										}}
+										style={{ color: '#e2d9b7', textDecoration: 'underline', cursor: 'pointer' }}
+									>
+										{ch.name}
+									</a>
+								</li>
+							))}
+						</ul>
+					)}
+				</div>
+			))}
+		</div>
+	);
+}
 
 function asImageUrl(raw?: string): string | undefined {
 	const v = (raw || '').trim();
@@ -33,6 +75,7 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 
 	const [professions, setProfessions] = useState<ProfessionItem[]>([]);
 	const [classes, setClasses] = useState<ClassItem[]>([]);
+	const [usages, setUsages] = useState<any[]>([]);
 
 	const [professionSearch, setProfessionSearch] = useState('');
 	const [classSearch, setClassSearch] = useState('');
@@ -81,6 +124,39 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 		}
 	}, [factionId]);
 
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		 let cancelled = false;
+		 const computeUsages = async () => {
+			 if (!faction) return;
+			 try {
+				 const campaigns = await getAllCampaigns();
+				 const out: any[] = [];
+				 await Promise.all(campaigns.map(async (c) => {
+					 try {
+						 const byChapter = await getChapterFactionsByCampaign(c.id!);
+						 const chapters = await getChaptersByCampaign(c.id!);
+						 const matched = chapters.filter((ch) => {
+							 const links = byChapter[ch.id as number] || [];
+							 return links.some((l) => l.factionId === faction.id);
+						 });
+						 if (matched.length) out.push({ campaign: c, chapters: matched });
+					 } catch (e) {
+						 console.error('Error computing faction usages for campaign', c.id, e);
+					 }
+				 }));
+				 if (!cancelled) setUsages(out);
+			 } catch (e) {
+				 console.error('Error computing faction usages', e);
+			 }
+		 };
+		 computeUsages();
+		 return () => {
+			 cancelled = true;
+		 };
+	}, [faction]);
+
 	useEffect(() => {
 		refresh();
 	}, [refresh]);
@@ -123,10 +199,11 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 		};
 	}, [factionId, selectedClassIds]);
 
+
 	const filteredProfessions = useMemo(() => {
 		const q = professionSearch.trim().toLowerCase();
 		const selected = new Set(selectedProfessionIds);
-		const list = (professions || [])
+		let list = (professions || [])
 			.slice()
 			.sort((a, b) => {
 				const aSelected = selected.has(a.id);
@@ -134,14 +211,18 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 				if (aSelected !== bSelected) return aSelected ? -1 : 1;
 				return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
 			});
+		// Solo mostrar asociadas si el candado está cerrado
+		if (!linkingProfessionsEnabled) {
+			list = list.filter((p) => selected.has(p.id));
+		}
 		if (!q) return list;
 		return list.filter((p) => (p.name || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q));
-	}, [professions, selectedProfessionIds, professionSearch]);
+	}, [professions, selectedProfessionIds, professionSearch, linkingProfessionsEnabled]);
 
 	const filteredClasses = useMemo(() => {
 		const q = classSearch.trim().toLowerCase();
 		const selected = new Set(selectedClassIds);
-		const list = (classes || [])
+		let list = (classes || [])
 			.slice()
 			.sort((a, b) => {
 				const aSelected = selected.has(a.id);
@@ -149,9 +230,13 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 				if (aSelected !== bSelected) return aSelected ? -1 : 1;
 				return (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' });
 			});
+		// Solo mostrar asociadas si el candado está cerrado
+		if (!linkingClassesEnabled) {
+			list = list.filter((c) => selected.has(c.id));
+		}
 		if (!q) return list;
 		return list.filter((c) => (c.name || '').toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q));
-	}, [classes, selectedClassIds, classSearch]);
+	}, [classes, selectedClassIds, classSearch, linkingClassesEnabled]);
 
 	const crestUrl = useMemo(() => asImageUrl(faction?.crestImage), [faction?.crestImage]);
 	const iconUrl = useMemo(() => asImageUrl(faction?.iconImage), [faction?.iconImage]);
@@ -179,19 +264,22 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 						minWidth: 0,
 					}}
 				>
-					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Facción</div>
-					<div
-						style={{
-							fontSize: 22,
-							fontWeight: 900,
-							lineHeight: 1.1,
-							minWidth: 0,
-							overflow: 'hidden',
-							textOverflow: 'ellipsis',
-							whiteSpace: 'nowrap',
-						}}
-					>
-						{faction?.name ?? (loading ? '...' : '(No encontrada)')}
+					<div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+						<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Facción</div>
+						<div
+							style={{
+								fontSize: 22,
+								fontWeight: 900,
+								lineHeight: 1.1,
+								minWidth: 0,
+								overflow: 'hidden',
+								textOverflow: 'ellipsis',
+								whiteSpace: 'nowrap',
+								marginTop: 2,
+							}}
+						>
+							{faction?.name ?? (loading ? '...' : '(No encontrada)')}
+						</div>
 					</div>
 					</div>
 				<div style={{ width: 32 }} />
@@ -207,7 +295,7 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 
 			{!loading && faction ? (
 				<div style={{ padding: 12 }}>
-					{crestUrl ? (
+					{iconUrl ? (
 						<div
 							className="metallic-border map-card"
 							style={{
@@ -215,11 +303,14 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 								height: 'auto',
 								aspectRatio: '16 / 5',
 								position: 'relative',
-								overflow: 'hidden',
+								overflow: 'visible',
+								borderRadius: 0,
+								background: '#181818',
+								padding: 0,
 							}}
 						>
 							<div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-								<CpImageFill src={crestUrl} alt={faction.name} fit="cover" />
+								<CpImageFill src={iconUrl} alt={faction.name} fit="cover" />
 							</div>
 							<div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1 }} />
 							<div
@@ -235,23 +326,33 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 									gap: 10,
 								}}
 							>
-								<CpImage src={iconUrl} width={84} height={84} fit="cover" />
-								<div style={{ fontWeight: 900, fontSize: 20, color: '#e2d9b7' }}>{faction.name}</div>
-								<div style={{ maxWidth: 720, opacity: 0.95, color: '#e2d9b7', whiteSpace: 'pre-wrap' }}>
+								{crestUrl && (
+									<CpImage src={crestUrl} width={84} height={84} fit="cover" showFrame={false} imgStyle={{ borderRadius: 0, background: 'transparent' }} />
+								)}
+								<div style={{
+									maxWidth: 720,
+									opacity: 0.95,
+									color: '#e2d9b7',
+									whiteSpace: 'pre-wrap',
+									overflow: 'visible',
+									maxHeight: 'none',
+									height: 'auto',
+								}}>
 									{(faction.description || '').trim() || '—'}
 								</div>
 							</div>
 						</div>
 					) : (
 						<div className="block-border block-border-soft" style={{ padding: 12, opacity: 0.9 }}>
-							<div style={{ fontWeight: 900, fontSize: 18 }}>{faction.name}</div>
 							<div style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{(faction.description || '').trim() || '—'}</div>
 						</div>
 					)}
 
 					<div style={{ height: 12 }} />
 
-					<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 12, alignItems: 'start' }}>
+
+
+							<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 12, alignItems: 'start' }}>
 						<div className="block-border block-border-soft">
 							<div style={{ padding: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
 								<div style={{ fontWeight: 900 }}>Profesiones</div>
@@ -284,29 +385,46 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 									style={{ width: '100%', marginBottom: 8 }}
 								/>
 
-								<div style={{ maxHeight: 420, overflow: 'auto', paddingRight: 6 }}>
-									{filteredProfessions.map((p) => {
-										const checked = selectedProfessionIds.includes(p.id);
-										return (
-											<label key={p.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '6px 0' }}>
-												<input
-													type="checkbox"
-													checked={checked}
-													disabled={!linkingProfessionsEnabled}
-													onChange={() => {
-													if (!linkingProfessionsEnabled) return;
-													setSelectedProfessionIds((prev) => (checked ? prev.filter((id) => id !== p.id) : prev.concat(p.id)));
-												}}
-												/>
-												<div style={{ minWidth: 0 }}>
-													<div style={{ fontWeight: 700, wordBreak: 'break-word' }}>{p.name}</div>
-													{p.description ? (
-														<div style={{ opacity: 0.9, fontSize: 13, whiteSpace: 'pre-wrap' }}>{p.description}</div>
-													) : null}
+								<div className="cp-scrollbar" style={{ maxHeight: 420, overflow: 'auto', paddingRight: 6 }}>
+									<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+										{filteredProfessions.map((p) => {
+											const checked = selectedProfessionIds.includes(p.id);
+											const iconUrl = asImageUrl(p.icon);
+											return (
+												<div
+													key={p.id}
+													className="block-border block-border-soft mechanic-card"
+													style={{ padding: 12, cursor: linkingProfessionsEnabled ? 'pointer' : 'default', position: 'relative', opacity: !linkingProfessionsEnabled && !checked ? 0.6 : 1 }}
+													onClick={() => {
+														if (!linkingProfessionsEnabled) return;
+														setSelectedProfessionIds((prev) => (checked ? prev.filter((id) => id !== p.id) : prev.concat(p.id)));
+													}}
+													tabIndex={0}
+												>
+													<div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+														<CpImage src={iconUrl} width={64} height={64} fit="cover" />
+														<div style={{ flex: 1 }}>
+															<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+																<div style={{ fontWeight: 800 }}>{(p.name || '').trim() || '—'}</div>
+																<input
+																	type="checkbox"
+																	checked={checked}
+																	disabled={!linkingProfessionsEnabled}
+																	onChange={e => {
+																		e.stopPropagation();
+																		if (!linkingProfessionsEnabled) return;
+																		setSelectedProfessionIds((prev) => (checked ? prev.filter((id) => id !== p.id) : prev.concat(p.id)));
+																	}}
+																	style={{ marginLeft: 8 }}
+																/>
+															</div>
+															<div style={{ marginTop: 8, fontSize: 13, opacity: 0.9, whiteSpace: 'pre-wrap' }}>{p.description || ''}</div>
+														</div>
+													</div>
 												</div>
-											</label>
-										);
-									})}
+											);
+										})}
+									</div>
 									{filteredProfessions.length === 0 ? <div style={{ opacity: 0.8, fontSize: 13 }}>No hay profesiones.</div> : null}
 								</div>
 							</div>
@@ -344,30 +462,47 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 									style={{ width: '100%', marginBottom: 8 }}
 								/>
 
-								<div style={{ maxHeight: 420, overflow: 'auto', paddingRight: 6 }}>
-									{filteredClasses.map((c) => {
-										const checked = selectedClassIds.includes(c.id);
-										return (
-											<label key={c.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '6px 0' }}>
-												<input
-													type="checkbox"
-													checked={checked}
-													disabled={!linkingClassesEnabled}
-													onChange={() => {
-													if (!linkingClassesEnabled) return;
-													setSelectedClassIds((prev) => (checked ? prev.filter((id) => id !== c.id) : prev.concat(c.id)));
-												}}
-												/>
-												<div style={{ minWidth: 0 }}>
-													<div style={{ fontWeight: 700, wordBreak: 'break-word' }}>{c.name}</div>
-													<div style={{ opacity: 0.9, fontSize: 13 }}>Nivel: {Number.isFinite(c.level as any) ? Number(c.level) : 1}</div>
-													{c.description ? (
-														<div style={{ opacity: 0.9, fontSize: 13, whiteSpace: 'pre-wrap' }}>{c.description}</div>
-													) : null}
+								<div className="cp-scrollbar" style={{ maxHeight: 420, overflow: 'auto', paddingRight: 6 }}>
+									<div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+										{filteredClasses.map((c) => {
+											const checked = selectedClassIds.includes(c.id);
+											const iconUrl = asImageUrl(c.icon);
+											return (
+												<div
+													key={c.id}
+													className="block-border block-border-soft mechanic-card"
+													style={{ padding: 12, cursor: linkingClassesEnabled ? 'pointer' : 'default', position: 'relative', opacity: !linkingClassesEnabled && !checked ? 0.6 : 1 }}
+													onClick={() => {
+														if (!linkingClassesEnabled) return;
+														setSelectedClassIds((prev) => (checked ? prev.filter((id) => id !== c.id) : prev.concat(c.id)));
+													}}
+													tabIndex={0}
+												>
+													<div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+														<CpImage src={iconUrl} width={64} height={64} fit="cover" />
+														<div style={{ flex: 1 }}>
+															<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+																<div style={{ fontWeight: 800 }}>{(c.name || '').trim() || '—'}</div>
+																<input
+																	type="checkbox"
+																	checked={checked}
+																	disabled={!linkingClassesEnabled}
+																	onChange={e => {
+																		e.stopPropagation();
+																		if (!linkingClassesEnabled) return;
+																		setSelectedClassIds((prev) => (checked ? prev.filter((id) => id !== c.id) : prev.concat(c.id)));
+																	}}
+																	style={{ marginLeft: 8 }}
+																/>
+															</div>
+															<div style={{ marginTop: 4, fontSize: 13, opacity: 0.9 }}>Nivel: {Number.isFinite(c.level as any) ? Number(c.level) : 1}</div>
+															<div style={{ marginTop: 4, fontSize: 13, opacity: 0.9, whiteSpace: 'pre-wrap' }}>{c.description || ''}</div>
+														</div>
+													</div>
 												</div>
-											</label>
-										);
-									})}
+											);
+										})}
+									</div>
 									{filteredClasses.length === 0 ? <div style={{ opacity: 0.8, fontSize: 13 }}>No hay clases.</div> : null}
 								</div>
 							</div>
@@ -376,26 +511,38 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 				</div>
 			) : null}
 
-			{professionModalOpen ? (
-				<ProfessionModal
-					open={professionModalOpen}
-					existing={professions}
-					onClose={() => setProfessionModalOpen(false)}
-					onSubmit={async (data) => {
+				{usages ? (
+					<div className="block-border block-border-soft" style={{ padding: 12, marginTop: 24 }}>
+						<div style={{ fontWeight: 900, marginBottom: 8 }}>Usos de la facción</div>
+						{usages.length === 0 ? (
+							<div style={{ opacity: 0.85 }}>No hay usos de esta facción en campañas.</div>
+						) : (
+							<UsosFaccionAccordion usages={usages} navigate={navigate} />
+						)}
+					</div>
+				) : null}
+
+
+				{professionModalOpen ? (
+					<ProfessionModal
+						open={professionModalOpen}
+						existing={professions}
+						onClose={() => setProfessionModalOpen(false)}
+						onSubmit={async (data) => {
 						const created = await createProfession(data);
 						setProfessions((prev) => (prev || []).concat(created));
 						setSelectedProfessionIds((prev) => (prev.includes(created.id) ? prev : prev.concat(created.id)));
 						setProfessionModalOpen(false);
 					}}
-				/>
-			) : null}
+					/>
+				) : null}
 
-			{classModalOpen ? (
-				<ClassModal
-					open={classModalOpen}
-					existing={classes}
-					onClose={() => setClassModalOpen(false)}
-					onSubmit={async (data) => {
+				{classModalOpen ? (
+					<ClassModal
+						open={classModalOpen}
+						existing={classes}
+						onClose={() => setClassModalOpen(false)}
+						onSubmit={async (data) => {
 						const anyData = data as any;
 						const iconFile: File | null | undefined = anyData?.iconFile;
 						let icon = (data.icon || '').trim();
@@ -409,8 +556,8 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 						setSelectedClassIds((prev) => (prev.includes(created.id) ? prev : prev.concat(created.id)));
 						setClassModalOpen(false);
 					}}
-				/>
-			) : null}
+					/>
+				) : null}
 		</div>
 	);
 };

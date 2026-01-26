@@ -10,6 +10,8 @@ import { ClassItem } from '../interfaces/class';
 import { FactionItem } from '../interfaces/faction';
 import { ProfessionItem } from '../interfaces/profession';
 import { createFaction, deleteFaction, getFactionClasses, getFactionProfessions, getFactions, updateFaction } from './factionApi';
+import { getAllCampaigns } from './campaignApi';
+import { getChapterFactionsByCampaign } from './chapterFactionApi';
 
 const toBackendUrl = (path?: string) => {
 	if (!path) return undefined;
@@ -29,8 +31,9 @@ const FactionsView: React.FC<Props> = ({ onBack, onOpenFaction }) => {
 	 const [initial, setInitial] = useState<Partial<FactionItem> | undefined>(undefined);
 	 const [confirmOpen, setConfirmOpen] = useState(false);
 	 const [pendingDelete, setPendingDelete] = useState<FactionItem | null>(null);
-	 const [factionProfessions, setFactionProfessionsState] = useState<Record<number, ProfessionItem[]>>({});
-	 const [factionClasses, setFactionClassesState] = useState<Record<number, ClassItem[]>>({});
+ 	 const [factionProfessions, setFactionProfessionsState] = useState<Record<number, ProfessionItem[]>>({});
+ 	 const [factionClasses, setFactionClassesState] = useState<Record<number, ClassItem[]>>({});
+	 const [usageCounts, setUsageCounts] = useState<Record<number, number>>({});
 	 const [selectedFaction, setSelectedFaction] = useState<FactionItem | null>(null);
 
 	 const refresh = useCallback(async () => {
@@ -48,8 +51,34 @@ const FactionsView: React.FC<Props> = ({ onBack, onOpenFaction }) => {
 		 if (!list.length) {
 			 setFactionProfessionsState({});
 			 setFactionClassesState({});
+			 setUsageCounts({});
 			 return;
 		 }
+
+		 const compute = async () => {
+			 try {
+				 const campaigns = await getAllCampaigns();
+				 const counts: Record<number, number> = {};
+				 await Promise.all(campaigns.map(async (c) => {
+					 try {
+						 const byChapter = await getChapterFactionsByCampaign(c.id!);
+						 Object.values(byChapter).forEach((links) => {
+							 links.forEach((link) => {
+								 if (!link || !link.factionId) return;
+								 counts[link.factionId] = (counts[link.factionId] || 0) + 1;
+							 });
+						});
+					 } catch (e) {
+						 console.error('Error loading chapter-faction links for campaign', c.id, e);
+					 }
+				 }));
+				 if (!cancelled) setUsageCounts(counts);
+			 } catch (e) {
+				 console.error('Error computing faction usage counts', e);
+			 }
+		 };
+
+		 compute();
 
 		 Promise.allSettled(list.map((f) => getFactionProfessions(f.id))).then((results) => {
 			 if (cancelled) return;
@@ -205,7 +234,8 @@ const FactionsView: React.FC<Props> = ({ onBack, onOpenFaction }) => {
 							 faction={f}
 							 professions={factionProfessions[f.id] || []}
 							 classes={factionClasses[f.id] || []}
-							 onOpen={() => setSelectedFaction(f)}
+							 onOpen={() => (onOpenFaction ? onOpenFaction(f.id) : setSelectedFaction(f))}
+							 campaignCount={usageCounts[f.id] || 0}
 							 onRemoveCrest={async () => {
 								 try {
 									 const fd = new FormData();

@@ -66,6 +66,11 @@ import { VisualEffect } from './Entities/visualEffect.entity';
 import { Effect } from './Entities/effect.entity';
 import { Skill } from './Entities/skill.entity';
 import { SkillEffect } from './Entities/skillEffect.entity';
+import { Talent } from './Entities/talent.entity';
+import { TalentTree } from './Entities/talentTree.entity';
+import { TalentTreeTalent } from './Entities/talentTreeTalent.entity';
+import { TalentTreeLink } from './Entities/talentTreeLink.entity';
+import { CharacterTalentTree } from './Entities/characterTalentTree.entity';
 import { SoundTypeService } from './Services/soundType.service';
 import { SoundService } from './Services/sound.service';
 import { RaceService } from './Services/race.service';
@@ -76,6 +81,9 @@ import { VisualEffectService } from './Services/visualEffect.service';
 import { EffectService } from './Services/effect.service';
 import { SkillService } from './Services/skill.service';
 import { SkillEffectService } from './Services/skillEffect.service';
+import { TalentService } from './Services/talent.service';
+import { TalentTreeService } from './Services/talentTree.service';
+import { CharacterTalentTreeService } from './Services/characterTalentTree.service';
 import { SoundTypeController } from './Controller/soundType.controller';
 import { SoundController } from './Controller/sound.controller';
 import { RaceController } from './Controller/race.controller';
@@ -87,16 +95,19 @@ import { EffectController } from './Controller/effect.controller';
 import { SkillController } from './Controller/skill.controller';
 import { SkillEffectController } from './Controller/skillEffect.controller';
 import { BackupController } from './Controller/backup.controller';
+import { TalentController } from './Controller/talent.controller';
+import { TalentTreeController } from './Controller/talentTree.controller';
+import { CharacterTalentTreeController } from './Controller/characterTalentTree.controller';
 
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
+		TypeOrmModule.forRoot({
       type: 'sqlite',
       database: 'database.sqlite',
-			entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, Character, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType, SoundType, Sound, Race, Animation, ArmorType, DefenseType, VisualEffect, Effect, Skill, SkillEffect],
+			entities: [Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, Character, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType, SoundType, Sound, Race, Animation, ArmorType, DefenseType, VisualEffect, Effect, Skill, SkillEffect, Talent, TalentTree, TalentTreeTalent, TalentTreeLink, CharacterTalentTree],
       synchronize: true, // Solo para desarrollo
     }),
-			TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, Character, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType, SoundType, Sound, Race, Animation, ArmorType, DefenseType, VisualEffect, Effect, Skill, SkillEffect]),
+		TypeOrmModule.forFeature([Saga, Campaign, Chapter, Map, Event, Mechanic, Objective, Faction, ChapterFaction, Profession, Class, Character, ProfessionObject, ProfessionObjectResource, GameObject, Component, Resource, ResourceType, SoundType, Sound, Race, Animation, ArmorType, DefenseType, VisualEffect, Effect, Skill, SkillEffect, Talent, TalentTree, TalentTreeTalent, TalentTreeLink, CharacterTalentTree]),
   ],
   controllers: [
 		AppController,
@@ -129,7 +140,10 @@ import { BackupController } from './Controller/backup.controller';
 		SkillController,
 		SkillEffectController,
 		BackupController,
+		TalentController,
+		TalentTreeController,
+		CharacterTalentTreeController,
 	],
-	providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService, ProfessionService, ClassService, CharacterService, ProfessionObjectService, ProfessionObjectResourceService, GameObjectService, ComponentService, ResourceService, ResourceTypeService, SoundTypeService, SoundService, RaceService, AnimationService, ArmorTypeService, DefenseTypeService, VisualEffectService, EffectService, SkillService, SkillEffectService],
+providers: [AppService, SagaService, CampaignService, ChapterService, MapService, EventService, MechanicService, ObjectiveService, FactionService, ChapterFactionService, ProfessionService, ClassService, CharacterService, ProfessionObjectService, ProfessionObjectResourceService, GameObjectService, ComponentService, ResourceService, ResourceTypeService, SoundTypeService, SoundService, RaceService, AnimationService, ArmorTypeService, DefenseTypeService, VisualEffectService, EffectService, SkillService, SkillEffectService, TalentService, TalentTreeService, CharacterTalentTreeService],
 })
 export class AppModule {}

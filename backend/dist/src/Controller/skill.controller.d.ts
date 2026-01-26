@@ -19,4 +19,13 @@ export declare class SkillController {
         locale?: string;
         limit?: number;
     }): Promise<any>;
+    lastImport(): Promise<{
+        ok: boolean;
+        info: any;
+        error?: undefined;
+    } | {
+        ok: boolean;
+        error: string;
+        info?: undefined;
+    }>;
 }

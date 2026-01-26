@@ -26,8 +26,13 @@ export class SoundTypeController {
 		return this.soundTypeService.update(Number(id), data);
 	}
 
+	@Get(':id/usage')
+	async usage(@Param('id') id: string): Promise<{ count: number; soundIds: number[] }> {
+		return this.soundTypeService.getUsage(Number(id));
+	}
+
 	@Delete(':id')
-	async remove(@Param('id') id: string): Promise<void> {
+	async remove(@Param('id') id: string): Promise<{ removedCount: number; removedSoundIds: number[] }> {
 		return this.soundTypeService.remove(Number(id));
 	}
 }

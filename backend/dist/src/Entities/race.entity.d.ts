@@ -1,4 +1,5 @@
 import { Animation } from './animation.entity';
+import { Skill } from './skill.entity';
 import { ArmorType } from './armorType.entity';
 import { Sound } from './sound.entity';
 export declare const RACE_DEATH_TYPES: readonly ["no revive, no se pudre", "revive, no se pudre", "revive, se pudre", "no revive, se pudre"];
@@ -9,6 +10,7 @@ export declare class Race {
     id: number;
     name: string;
     icon: string;
+    description: string;
     deathType: string;
     baseDefense: number;
     movementSpeed: number;
@@ -28,4 +30,5 @@ export declare class Race {
     armorTypeEntity?: ArmorType | null;
     armorTypeId?: number | null;
     animations: Animation[];
+    skills: Skill[];
 }

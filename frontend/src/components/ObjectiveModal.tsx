@@ -4,6 +4,7 @@ import { FaTimes } from 'react-icons/fa';
 import { EventDifficulty } from '../interfaces/event';
 import { MechanicItem } from '../interfaces/mechanic';
 import { ObjectiveItem } from '../interfaces/objective';
+import { GameObjectItem } from '../interfaces/gameObject';
 import MechanicModal from './MechanicModal';
 import { createMechanic } from '../js/mechanicApi';
 
@@ -11,6 +12,7 @@ interface Props {
 	open: boolean;
 	eventId: number;
 	mechanics: MechanicItem[];
+	objects?: GameObjectItem[];
 	onMechanicCreated?: (created: MechanicItem) => void;
 	initial?: Partial<ObjectiveItem>;
 	onSubmit: (data: {
@@ -21,11 +23,12 @@ interface Props {
 		initialValue: number;
 		difficultyIncrement: number;
 		mechanicId: number;
+		objectIds?: number[];
 	}) => void;
 	onClose: () => void;
 }
 
-const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, onMechanicCreated, initial, onSubmit, onClose }) => {
+const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, objects, onMechanicCreated, initial, onSubmit, onClose }) => {
 	const [localMechanics, setLocalMechanics] = useState<MechanicItem[]>(mechanics || []);
 	const [mechanicModalOpen, setMechanicModalOpen] = useState(false);
 	const [mechanicInitial, setMechanicInitial] = useState<Partial<MechanicItem> | undefined>(undefined);
@@ -47,6 +50,11 @@ const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, onMechanicC
 		return fromInitial;
 	});
 
+	const [selectedObjectIds, setSelectedObjectIds] = useState<number[]>(() => {
+		const fromInit = (initial as any)?.objectIds || (Array.isArray((initial as any)?.objects) ? ((initial as any).objects || []).map((o: any) => o.id) : []);
+		return Array.isArray(fromInit) ? fromInit.map((v: any) => Number(v)).filter(Number.isFinite) : [];
+	});
+
 	const [mechTooltip, setMechTooltip] = useState<{ visible: boolean; text?: string; x?: number; y?: number }>({ visible: false });
 	const [mechanicOpen, setMechanicOpen] = useState(false);
 
@@ -66,6 +74,8 @@ const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, onMechanicC
 		setDifficultyIncrement(Number.isFinite(initial?.difficultyIncrement as any) ? Number(initial?.difficultyIncrement) : 0);
 		const fromInitial = Number((initial as any)?.mechanicId) || Number((initial as any)?.mechanic?.id) || 0;
 		setMechanicId(fromInitial);
+		const fromObjects = (initial as any)?.objectIds || (Array.isArray((initial as any)?.objects) ? ((initial as any).objects || []).map((o: any) => o.id) : []);
+		setSelectedObjectIds(Array.isArray(fromObjects) ? fromObjects.map((v: any) => Number(v)).filter(Number.isFinite) : []);
 	}, [open, initial, mechanics]);
 
 	useEffect(() => {
@@ -92,6 +102,7 @@ const ObjectiveModal: React.FC<Props> = ({ open, eventId, mechanics, onMechanicC
 			initialValue: Math.trunc(Number(initialValue) || 0),
 			difficultyIncrement: Math.trunc(Number(difficultyIncrement) || 0),
 			mechanicId,
+			objectIds: selectedObjectIds.length ? selectedObjectIds.slice() : undefined,
 		});
 	};
 

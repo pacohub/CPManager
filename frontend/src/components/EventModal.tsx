@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { FaExclamation, FaUser, FaFlag } from 'react-icons/fa';
+import { FaExclamation, FaUser, FaFlag, FaFilm } from 'react-icons/fa';
 import { FaPlus } from 'react-icons/fa';
 import { FaTimes } from 'react-icons/fa';
 import { EventDifficulty, EventItem, EventType } from '../interfaces/event';
@@ -99,7 +99,7 @@ const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, 
 			case 'MOBA':
 				return <FaUser size={size} color={gold} />;
 			case 'CINEMATIC':
-				return <FaExclamation size={size} color={gold} />;
+				return <FaFilm size={size} color={gold} />;
 			default:
 				return null;
 		}
@@ -196,7 +196,7 @@ const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, 
 	return (
 		<>
 			<div className="modal-overlay">
-				<div className="modal-content" style={{ maxWidth: 560, minWidth: 340 }}>
+				<div className="modal-content" style={{ maxWidth: 960, minWidth: 560 }}>
 					<button className="icon option" onClick={onClose} title="Cerrar" style={{ position: 'absolute', top: 12, right: 12 }}>
 						<FaTimes size={18} />
 					</button>
@@ -204,6 +204,7 @@ const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, 
 						{initial?.id ? 'Editar Evento' : 'Nuevo Evento'}
 					</h2>
 
+					<div className="modal-body" style={{ maxHeight: '76vh', overflowY: 'auto', padding: '0 16px 16px' }}>
 					<form onSubmit={handleSubmit} autoComplete="off">
 					<input
 						name="name"
@@ -272,32 +273,39 @@ const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, 
 											}}
 											role="listbox"
 										>
-											{EVENT_TYPES.map((et) => (
-												<button
-													key={et}
-													type="button"
-													onClick={() => {
-														setType(et);
-														setTypeOpen(false);
-													}}
-													style={{
-														width: '100%',
-														textAlign: 'left',
-														display: 'flex',
-														alignItems: 'center',
-														gap: 8,
-														padding: '8px 8px',
-														borderRadius: 6,
-														border: '1px solid rgba(255,215,0,0.12)',
-														background: 'rgba(0,0,0,0.35)',
-														color: '#e2d9b7',
-														cursor: 'pointer',
-													}}
-												>
-													<span style={{ width: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><EventTypeIcon t={et} /></span>
-													<span>{typeLabel(et)}</span>
-												</button>
-											))}
+											{EVENT_TYPES.slice()
+												.sort((a, b) => typeLabel(a).localeCompare(typeLabel(b), undefined, { sensitivity: 'base' }))
+												.map((et) => (
+													<button
+														key={et}
+														type="button"
+														onClick={(e: React.MouseEvent) => {
+															e.stopPropagation();
+															e.preventDefault();
+															setType(et);
+															setTypeOpen(false);
+															try {
+																(document.activeElement as HTMLElement | null)?.blur();
+															} catch {}
+														}}
+														style={{
+															width: '100%',
+															textAlign: 'left',
+															display: 'flex',
+															alignItems: 'center',
+															gap: 8,
+															padding: '8px 8px',
+															borderRadius: 6,
+															border: '1px solid rgba(255,215,0,0.12)',
+															background: 'rgba(0,0,0,0.35)',
+															color: '#e2d9b7',
+															cursor: 'pointer',
+														}}
+													>
+														<span style={{ width: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><EventTypeIcon t={et} /></span>
+														<span>{typeLabel(et)}</span>
+													</button>
+												))}
 										</div>
 									) : null}
 								</div>
@@ -359,6 +367,7 @@ const EventModal: React.FC<Props> = ({ open, initial, fixedType, maps, onClose, 
 					</div>
 					{error ? <div style={{ color: 'red', marginTop: 8 }}>{error}</div> : null}
 					</form>
+					</div>
 				</div>
 			</div>
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { FaArrowLeft, FaEdit, FaTrash, FaStar } from 'react-icons/fa';
+import { FaArrowLeft, FaEdit, FaTrash, FaStar, FaExclamation } from 'react-icons/fa';
 import ConfirmModal from '../components/ConfirmModal';
+import CpImage from '../components/CpImage';
 import { getEffects, createEffect, updateEffect, deleteEffect } from './effectApi';
 import ClearableSearchInput from '../components/ClearableSearchInput';
 import EffectModal from '../components/EffectModal';
@@ -54,7 +55,13 @@ const EffectsView: React.FC<{ onBack: () => void; onOpenEffect?: (id: number) =>
 
       <div style={{ padding: 12 }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-          {filtered.map((it) => (
+          {filtered.map((it) => {
+            const missing: string[] = [];
+            if (!((it.icon || '') + '').trim()) missing.push('icono');
+            const showWarning = missing.length > 0;
+            const warningText = `Falta: ${missing.join(', ')}.`;
+
+            return (
             <div
               key={it.id}
               className="block-border block-border-soft mechanic-card"
@@ -63,15 +70,27 @@ const EffectsView: React.FC<{ onBack: () => void; onOpenEffect?: (id: number) =>
               onMouseLeave={() => setHoveredId(undefined)}
               onClick={() => { if (onOpenEffect) onOpenEffect(it.id); }}
             >
+              {showWarning ? (
+                <span className="campaign-warning" title={warningText} aria-label={warningText} onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()}>
+                  <FaExclamation size={14} />
+                </span>
+              ) : null}
+
               <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 8, opacity: hoveredId === it.id ? 1 : 0, transition: 'opacity 0.18s' }}>
                 <button className="icon option" title="Editar" onClick={(e) => { e.stopPropagation(); setInitial(it); setModalOpen(true); }}><FaEdit size={16} /></button>
                 <button className="icon option" title="Eliminar" onClick={(e) => { e.stopPropagation(); setPendingDeleteId(it.id); setConfirmOpen(true); }}><FaTrash size={16} /></button>
               </div>
 
-              <div style={{ fontWeight: 900 }}>{it.name}</div>
-              {it.type ? <div style={{ marginTop: 6, fontSize: 13 }}>{it.type === 'benefit' ? 'Beneficio' : it.type === 'harm' ? 'Perjuicio' : it.type}</div> : null}
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <CpImage rawSrc={it.icon} width={64} height={64} fit="cover" frameClassName={it.passive ? 'metallic-border metallic-border-square passive-inner' : 'metallic-border metallic-border-square'} />
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 900 }}>{it.name}</div>
+                  {it.type ? <div style={{ marginTop: 6, fontSize: 13 }}>{it.type === 'benefit' ? 'Beneficio' : it.type === 'harm' ? 'Perjuicio' : it.type}</div> : null}
+                </div>
+              </div>
             </div>
-          ))}
+          );
+          })}
         </div>
 
         {filtered.length === 0 ? <div style={{ marginTop: 12, opacity: 0.8, color: '#e2d9b7' }}>No hay efectos.</div> : null}

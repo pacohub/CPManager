@@ -6,6 +6,7 @@ import { FaEdit } from 'react-icons/fa';
 import { GiChest } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
 import GameObjectModal from '../components/GameObjectModal';
+import ProfessionModal from '../components/ProfessionModal';
 import IconSelect, { IconSelectItem } from '../components/IconSelect';
 import CpImage from '../components/CpImage';
 import { GameObjectItem } from '../interfaces/gameObject';
@@ -14,7 +15,7 @@ import { ProfessionObjectLink } from '../interfaces/professionObject';
 import { ProfessionObjectResourceLink } from '../interfaces/professionObjectResource';
 import { ResourceItem } from '../interfaces/resource';
 import { createObject, getObjects, uploadObjectIcon } from './gameObjectApi';
-import { getProfession } from './professionApi';
+import { getProfession, getProfessions, updateProfession, deleteProfession } from './professionApi';
 import { getProfessionObjects, replaceProfessionObjects } from './professionObjectApi';
 import { getProfessionObjectResourcesByProfession, replaceProfessionObjectResources } from './professionObjectResourceApi';
 import { getResources } from './resourceApi';
@@ -47,6 +48,7 @@ interface Props {
 const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 	const [profession, setProfession] = useState<ProfessionItem | null>(null);
 	const [objects, setObjects] = useState<GameObjectItem[]>([]);
+	const [allProfessions, setAllProfessions] = useState<any[]>([]);
 	const [resources, setResources] = useState<ResourceItem[]>([]);
 	const [links, setLinks] = useState<ProfessionObjectLink[]>([]);
 	const [resourcesByObjectId, setResourcesByObjectId] = useState<Record<number, ProfessionObjectResourceLink[]>>({});
@@ -60,7 +62,14 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 	const [newTimeSeconds, setNewTimeSeconds] = useState<number>(0);
 
 	const [editingObjectId, setEditingObjectId] = useState<number | null>(null);
-	const [resourcesOpenObjectId, setResourcesOpenObjectId] = useState<number | null>(null);
+	const [resourcesAddObjectId, setResourcesAddObjectId] = useState<number | null>(null);
+
+	// Resource inline-edit modal state
+	const [resourceEdit, setResourceEdit] = useState<{
+		objectId: number;
+		resourceId: number;
+		quantity: number;
+	} | null>(null);
 
 	const [selectedResourceId, setSelectedResourceId] = useState<number | ''>('');
 	const [newResourceQuantity, setNewResourceQuantity] = useState<number>(1);
@@ -69,6 +78,8 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 	const [pendingUnlink, setPendingUnlink] = useState<ProfessionObjectLink | null>(null);
 
 	const [objectModalOpen, setObjectModalOpen] = useState(false);
+	const [professionEditOpen, setProfessionEditOpen] = useState(false);
+	const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
 	const saveLinksTimerRef = useRef<number | null>(null);
 	const saveResourcesTimersRef = useRef<Record<number, number | null>>({});
@@ -78,18 +89,20 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 		setLoading(true);
 		setError(null);
 		try {
-			const [p, obj, res, rel, por] = await Promise.all([
+			const [p, obj, res, rel, por, allProf] = await Promise.all([
 				getProfession(professionId),
 				getObjects(),
 				getResources(),
 				getProfessionObjects(professionId),
 				getProfessionObjectResourcesByProfession(professionId),
+				getProfessions(),
 			]);
 			setProfession(p);
 			setObjects(obj || []);
 			setResources(res || []);
 			setLinks(rel || []);
 			setResourcesByObjectId(por || {});
+			setAllProfessions(allProf || []);
 			lastSavedResourcesRef.current = Object.fromEntries(
 				Object.entries(por || {}).map(([k, v]) => [Number(k), JSON.stringify((v || []).slice().sort((a, b) => a.resourceId - b.resourceId))]),
 			);
@@ -263,7 +276,14 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 					<div style={{ fontSize: 12, opacity: 0.85, lineHeight: 1.1 }}>Profesión</div>
 					<div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.1, minWidth: 0, wordBreak: 'break-word' }}>{profession.name || 'Profesión'}</div>
 				</div>
-				<div style={{ width: 32 }} />
+				<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+					<button className="icon" title="Editar" aria-label="Editar" onClick={() => setProfessionEditOpen(true)} disabled={!profession}>
+						<FaEdit size={18} style={{ color: 'currentColor' }} />
+					</button>
+					<button className="icon" title="Eliminar" aria-label="Eliminar" onClick={() => setConfirmDeleteOpen(true)} disabled={!profession}>
+						<FaTrash size={18} style={{ color: 'currentColor' }} />
+					</button>
+				</div>
 			</div>
 
 			<div style={{ padding: 12 }}>
@@ -344,15 +364,33 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 				<div style={{ marginTop: 14 }} className="block-border block-border-soft">
 					<div style={{ padding: 12, fontWeight: 900 }}>Objetos asociados</div>
 					<div style={{ padding: '0 12px 12px 12px', overflowX: 'auto' }}>
-						<table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 720 }}>
+						<table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 0 }}>
 							<thead>
+
+								<ConfirmModal
+									open={confirmDeleteOpen}
+									requireText="eliminar"
+									message={'¿Estás seguro de que deseas eliminar esta profesión?'}
+									onConfirm={async () => {
+										setConfirmDeleteOpen(false);
+										try {
+											if (!profession) return;
+											await deleteProfession(profession.id);
+											onBack();
+										} catch (e: any) {
+											console.error('Error deleting profession', e);
+											alert(e?.message || 'No se pudo eliminar la profesión');
+										}
+									}}
+									onCancel={() => setConfirmDeleteOpen(false)}
+								/>
 								<tr style={{ textAlign: 'left', fontSize: 13, opacity: 0.95 }}>
-									<th style={{ padding: '8px 6px' }}>Objeto</th>
-									<th style={{ padding: '8px 6px', width: 140 }}>Nivel</th>
-									<th style={{ padding: '8px 6px', width: 140 }}>Cantidad</th>
-									<th style={{ padding: '8px 6px', width: 180 }}>Tiempo (s)</th>
+									<th style={{ padding: '8px 6px', width: '100%' }}>Objeto</th>
+									<th style={{ padding: '8px 6px', width: '1%' }}>Nivel</th>
+									<th style={{ padding: '8px 6px', width: '1%' }}>Cantidad</th>
+									<th style={{ padding: '8px 6px', width: '1%' }}>Tiempo (s)</th>
 									<th style={{ padding: '8px 6px' }}>Recursos</th>
-									<th style={{ padding: '8px 6px', width: 120 }} />
+									<th style={{ padding: '8px 6px', width: '1%' }} />
 								</tr>
 							</thead>
 							<tbody>
@@ -361,19 +399,19 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 									const iconUrl = asImageUrl(o?.icon);
 									const isEditing = editingObjectId === l.objectId;
 									const resourceLinks = (resourcesByObjectId?.[l.objectId] || []).slice().sort((a, b) => a.resourceId - b.resourceId);
-									const isResourcesOpen = resourcesOpenObjectId === l.objectId;
+                                    
 
 									return (
 										<React.Fragment key={l.objectId}>
 											<tr style={{ borderTop: '1px solid rgba(255,215,0,0.12)' }}>
-												<td style={{ padding: '10px 6px' }}>
+												<td style={{ padding: '10px 6px', width: '100%' }}>
 													<div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
 														{iconUrl ? <CpImage src={iconUrl} width={28} height={28} fit="cover" /> : null}
 														<div style={{ fontWeight: 800, wordBreak: 'break-word' }}>{o?.name || `Objeto #${l.objectId}`}</div>
 													</div>
 												</td>
 
-												<td style={{ padding: '10px 6px' }}>
+												<td style={{ padding: '10px 6px', whiteSpace: 'nowrap' }}>
 													{isEditing ? (
 														<input
 															type="number"
@@ -390,7 +428,7 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 													)}
 												</td>
 
-												<td style={{ padding: '10px 6px' }}>
+												<td style={{ padding: '10px 6px', whiteSpace: 'nowrap' }}>
 													{isEditing ? (
 														<input
 															type="number"
@@ -407,7 +445,7 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 													)}
 												</td>
 
-												<td style={{ padding: '10px 6px' }}>
+												<td style={{ padding: '10px 6px', whiteSpace: 'nowrap' }}>
 													{isEditing ? (
 														<input
 															type="number"
@@ -432,7 +470,14 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 																const rIconUrl = asImageUrl(r?.icon);
 																const title = r?.name || `Recurso #${rl.resourceId}`;
 																return (
-																	<span key={rl.resourceId} title={title} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+																	<span
+																		key={rl.resourceId}
+																		title={title}
+																		style={{ display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+																		onClick={() => setResourceEdit({ objectId: l.objectId, resourceId: rl.resourceId, quantity: rl.quantity })}
+																		role="button"
+																		aria-label={`Editar recurso ${title}`}
+																	>
 																		{rIconUrl ? (
 																			<CpImage src={rIconUrl} width={18} height={18} fit="contain" showFrame={false} />
 																		) : (
@@ -445,12 +490,12 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 
 														<button
 															className="icon option"
-															title="Editar recursos"
-															aria-label="Editar recursos"
+															title="Añadir recurso"
+															aria-label="Añadir recurso"
 															onClick={() => {
 																setSelectedResourceId('');
 																setNewResourceQuantity(1);
-																setResourcesOpenObjectId(l.objectId);
+																setResourcesAddObjectId(l.objectId);
 															}}
 														>
 															<FaPlus size={16} />
@@ -459,118 +504,31 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 												</td>
 
 												<td style={{ padding: '10px 6px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-													<button
-														className="icon option"
-														title={isEditing ? 'Cerrar edición' : 'Editar'}
-														aria-label={isEditing ? 'Cerrar edición' : 'Editar'}
-														onClick={() => setEditingObjectId((prev) => (prev === l.objectId ? null : l.objectId))}
-													>
-														<FaEdit size={16} />
-													</button>
-													<button
-														className="icon option"
-														title="Desvincular"
-														aria-label="Desvincular"
-														onClick={() => {
-															setPendingUnlink(l);
-															setConfirmUnlinkOpen(true);
-														}}
-													>
-														<FaTrash size={16} />
-													</button>
+													<div className="mechanic-actions" style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+														<button
+															className="icon option"
+															title={isEditing ? 'Cerrar edición' : 'Editar'}
+															aria-label={isEditing ? 'Cerrar edición' : 'Editar'}
+															onClick={() => setEditingObjectId((prev) => (prev === l.objectId ? null : l.objectId))}
+														>
+															<FaEdit size={16} style={{ color: 'currentColor' }} />
+														</button>
+														<button
+															className="icon option"
+															title="Desvincular"
+															aria-label="Desvincular"
+															onClick={() => {
+																setPendingUnlink(l);
+																setConfirmUnlinkOpen(true);
+															}}
+														>
+															<FaTrash size={16} style={{ color: 'currentColor' }} />
+														</button>
+													</div>
 												</td>
 											</tr>
 
-											{isResourcesOpen ? (
-												<tr style={{ borderTop: '1px solid rgba(255,215,0,0.08)' }}>
-													<td colSpan={6} style={{ padding: '10px 6px' }}>
-														<div className="block-border block-border-soft" style={{ padding: 10 }}>
-															<div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-																<div style={{ fontWeight: 800 }}>Recursos del objeto</div>
-																<button className="icon option" title="Cerrar" aria-label="Cerrar" onClick={() => setResourcesOpenObjectId(null)}>
-																	<FaTimes size={16} />
-																</button>
-															</div>
-
-															<div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-																<IconSelect value={selectedResourceId} placeholder="Selecciona un recurso..." items={availableResourceItems} onChange={setSelectedResourceId} />
-																<label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, opacity: 0.9, width: 120 }}>
-																	Cantidad
-																	<input type="number" min={0} value={newResourceQuantity} onChange={(e) => setNewResourceQuantity(toInt(e.target.value, 1))} style={{ padding: 6 }} />
-																</label>
-																<button
-																	className="icon option"
-																	title="Añadir recurso"
-																	aria-label="Añadir recurso"
-																	disabled={!selectedResourceId}
-																	onClick={() => {
-																		if (!selectedResourceId) return;
-																		const rid = Number(selectedResourceId);
-																		const qty = Math.max(0, toInt(newResourceQuantity, 1));
-																		setResourcesByObjectId((prev) => {
-																			const current = (prev?.[l.objectId] || []).filter((x) => x.resourceId !== rid);
-																			const next = current.concat({ professionId, objectId: l.objectId, resourceId: rid, quantity: qty });
-																			return { ...prev, [l.objectId]: next };
-																		});
-																	setSelectedResourceId('');
-																	setNewResourceQuantity(1);
-																}}
-																>
-																	<FaPlus size={16} />
-																</button>
-															</div>
-
-															<div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-																{(resourcesByObjectId?.[l.objectId] || []).length === 0 ? (
-																	<div style={{ opacity: 0.85, fontSize: 13 }}>No hay recursos asociados a este objeto.</div>
-																) : null}
-																{(resourcesByObjectId?.[l.objectId] || []).map((rl) => {
-																	const r = resourcesById.get(rl.resourceId);
-																	const rIcon = asImageUrl(r?.icon);
-																	const rTitle = r?.name || `Recurso #${rl.resourceId}`;
-																	return (
-																		<div key={rl.resourceId} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-																			<span title={rTitle} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 0, flex: '1 1 auto' }}>
-																				{rIcon ? <CpImage src={rIcon} width={16} height={16} fit="contain" showFrame={false} /> : <div style={{ width: 16, height: 16 }} />}
-																				<span style={{ fontWeight: 700, opacity: 0.95 }}>{r?.name || `Recurso #${rl.resourceId}`}</span>
-																			</span>
-																			<label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, opacity: 0.9, width: 120 }}>
-																				Cantidad
-																				<input
-																					type="number"
-																					min={0}
-																					value={rl.quantity}
-																					onChange={(e) => {
-																						const v = Math.max(0, toInt(e.target.value, 1));
-																						setResourcesByObjectId((prev) => {
-																							const next = (prev?.[l.objectId] || []).map((x) => (x.resourceId === rl.resourceId ? { ...x, quantity: v } : x));
-																						return { ...prev, [l.objectId]: next };
-																					});
-																				}}
-																				style={{ padding: 6 }}
-																				/>
-																			</label>
-																			<button
-																				className="icon option"
-																				title="Quitar recurso"
-																				aria-label="Quitar recurso"
-																				onClick={() => {
-																					setResourcesByObjectId((prev) => {
-																							const next = (prev?.[l.objectId] || []).filter((x) => x.resourceId !== rl.resourceId);
-																							return { ...prev, [l.objectId]: next };
-																					});
-																				}}
-																			>
-																				<FaTrash size={16} />
-																			</button>
-																		</div>
-																	);
-																})}
-															</div>
-														</div>
-													</td>
-												</tr>
-											) : null}
+                                            
 										</React.Fragment>
 									);
 								})}
@@ -604,6 +562,104 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 				}}
 			/>
 
+			{professionEditOpen && profession ? (
+				<ProfessionModal
+					open={professionEditOpen}
+					initial={profession}
+					existing={allProfessions}
+					onClose={() => setProfessionEditOpen(false)}
+					onSubmit={async (data) => {
+						try {
+							await updateProfession(profession.id, data as any);
+							setProfessionEditOpen(false);
+							await refresh();
+						} catch (e) {
+							console.error('Error updating profession', e);
+						}
+					}}
+				/>
+			) : null}
+
+			{/* Add-resource modal: only allows adding new (not already linked) resources to the object */}
+			{resourcesAddObjectId != null && (
+				<div className="modal-overlay">
+					<div className="modal-content" style={{ maxWidth: 420 }}>
+						<button className="icon option" onClick={() => setResourcesAddObjectId(null)} style={{ position: 'absolute', top: 12, right: 12 }}><FaTimes /></button>
+						<h3>Añadir recurso</h3>
+						<div style={{ marginTop: 8 }}>
+							<div style={{ marginBottom: 8 }}>{objectsById.get(resourcesAddObjectId)?.name || `Objeto #${resourcesAddObjectId}`}</div>
+							<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+								{/* build items excluding already linked resources for this object */}
+								<IconSelect
+									value={selectedResourceId}
+									placeholder="Selecciona un recurso..."
+									items={availableResourceItems.filter((it) => !((resourcesByObjectId?.[resourcesAddObjectId] || []).some(r => r.resourceId === Number(it.value))))}
+									onChange={setSelectedResourceId}
+								/>
+								<label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, opacity: 0.9, width: 120 }}>
+									Cantidad
+									<input type="number" min={0} value={newResourceQuantity} onChange={(e) => setNewResourceQuantity(toInt(e.target.value, 1))} style={{ padding: 6 }} />
+								</label>
+							</div>
+						</div>
+						<div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'center' }}>
+							<button className="confirm" onClick={() => {
+								if (!selectedResourceId) return;
+								const rid = Number(selectedResourceId);
+								const qty = Math.max(0, toInt(newResourceQuantity, 1));
+								const objectId = resourcesAddObjectId;
+								setResourcesByObjectId((prev) => {
+									const current = (prev?.[objectId] || []).filter((x) => x.resourceId !== rid);
+									const next = current.concat({ professionId, objectId, resourceId: rid, quantity: qty });
+									return { ...prev, [objectId]: next };
+								});
+								setResourcesAddObjectId(null);
+								setSelectedResourceId('');
+								setNewResourceQuantity(1);
+							}}>Confirmar</button>
+							<button className="cancel" onClick={() => setResourcesAddObjectId(null)}>Cancelar</button>
+						</div>
+					</div>
+				</div>
+			)}
+
+			{/* Resource edit modal: edit quantity or remove if set to 0 */}
+			{resourceEdit && (
+				<div className="modal-overlay">
+					<div className="modal-content" style={{ maxWidth: 420 }}>
+						<button className="icon option" onClick={() => setResourceEdit(null)} style={{ position: 'absolute', top: 12, right: 12 }}><FaTimes /></button>
+						<h3>Editar cantidad</h3>
+						<div style={{ marginTop: 8 }}>
+							<div style={{ marginBottom: 8 }}>{objectsById.get(resourceEdit.objectId)?.name || `Objeto #${resourceEdit.objectId}`}</div>
+							<label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+								Cantidad
+								<input type="number" min={0} value={resourceEdit.quantity} onChange={(e) => setResourceEdit({ ...resourceEdit, quantity: Math.max(0, Number(e.target.value || 0)) })} style={{ padding: 8 }} />
+							</label>
+						</div>
+						<div style={{ marginTop: 12, display: 'flex', gap: 8, justifyContent: 'center' }}>
+							<button className="confirm" onClick={() => {
+								const { objectId, resourceId, quantity } = resourceEdit;
+								setResourcesByObjectId((prev) => {
+									const current = (prev?.[objectId] || []).slice();
+									if (quantity <= 0) {
+										// remove
+										const next = current.filter(x => x.resourceId !== resourceId);
+										return { ...prev, [objectId]: next };
+									} else {
+										const next = current.map(x => x.resourceId === resourceId ? { ...x, quantity } : x);
+										return { ...prev, [objectId]: next };
+									}
+								});
+								setResourceEdit(null);
+							}}>
+								Confirmar
+							</button>
+							<button className="cancel" onClick={() => setResourceEdit(null)}>Cancelar</button>
+						</div>
+					</div>
+				</div>
+			)}
+
 			<ConfirmModal
 				open={confirmUnlinkOpen}
 				message={'¿Desvincular este objeto de la profesión?'}
@@ -614,7 +670,7 @@ const ProfessionDetail: React.FC<Props> = ({ professionId, onBack }) => {
 					if (!target) return;
 					setLinks((prev) => (prev || []).filter((x) => x.objectId !== target.objectId));
 					setResourcesByObjectId((prev) => ({ ...prev, [target.objectId]: [] }));
-					if (resourcesOpenObjectId === target.objectId) setResourcesOpenObjectId(null);
+					if (resourcesAddObjectId === target.objectId) setResourcesAddObjectId(null);
 					if (editingObjectId === target.objectId) setEditingObjectId(null);
 				}}
 				onCancel={() => {

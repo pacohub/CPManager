@@ -2,6 +2,8 @@ import { Column, Entity, JoinColumn, JoinTable, ManyToMany, ManyToOne, OneToMany
 import { Animation } from './animation.entity';
 import { Class } from './class.entity';
 import { Race } from './race.entity';
+import { TalentTree } from './talentTree.entity';
+import { CharacterTalentTree } from './characterTalentTree.entity';
 
 @Entity()
 export class Character {
@@ -47,4 +49,11 @@ export class Character {
 	@ManyToMany(() => Animation, (animation) => animation.characters)
 	@JoinTable({ name: 'character_animations' })
 	animations: Animation[];
+
+	@ManyToMany(() => TalentTree)
+	@JoinTable({ name: 'character_talent_trees' })
+	talentTrees: TalentTree[];
+
+	@OneToMany(() => CharacterTalentTree, (ctt) => ctt.character, { cascade: true })
+	charTalentTreeFlags: CharacterTalentTree[];
 }
