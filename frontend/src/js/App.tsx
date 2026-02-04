@@ -2,6 +2,7 @@
 import React, { useLayoutEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom';
 import SagaPanel from './SagaPanel';
+import { DevModeProvider } from '../DevModeContext';
 import CampaignDetail from './CampaignDetail';
 import MapDetail from './MapDetail';
 import MapsView from './MapsView';
@@ -498,42 +499,44 @@ function App() {
 	}, []);
 
 	return (
-		    <BrowserRouter>
-			    <GlobalMenu />
-			    <ErrorBoundary>
-			    <Routes>
-				<Route path="/" element={<SagaPanelRoute />} />
-				<Route path="/campaigns/:id" element={<CampaignDetailRoute />} />
-				<Route path="/campaigns/:campaignId/chapters/:chapterId/events" element={<ChapterEventsRoute />} />
-				<Route path="/maps" element={<MapsRoute />} />
-				<Route path="/mechanics" element={<MechanicsRoute />} />
-				<Route path="/factions" element={<FactionsRoute />} />
-				<Route path="/factions/:id" element={<FactionDetailRoute />} />
-				<Route path="/professions" element={<ProfessionsRoute />} />
-				<Route path="/professions/:id" element={<ProfessionDetailRoute />} />
-				<Route path="/objects" element={<ObjectsRoute />} />
-				<Route path="/classes" element={<ClassesRoute />} />
-				<Route path="/characters" element={<CharactersRoute />} />
-				<Route path="/characters/:id" element={<CharacterDetailRoute />} />
-				<Route path="/components" element={<ComponentsRoute />} />
-				<Route path="/animations" element={<AnimationsRoute />} />
-				<Route path="/resources" element={<ResourcesRoute />} />
-				<Route path="/resources/:id" element={<ResourceDetailRoute />} />
-				<Route path="/objects/:id" element={<ObjectDetailRoute />} />
-				<Route path="/sounds" element={<SoundsRoute />} />
-				<Route path="/visual-effects" element={<VisualEffectsRoute />} />
-				<Route path="/effects" element={<EffectsRoute />} />
-				<Route path="/effects/:id" element={<EffectDetailRoute />} />
-				<Route path="/skills" element={<SkillsRoute />} />
-				<Route path="/skills/:id" element={<SkillDetailRoute />} />
-				<Route path="/skill-effects" element={<SkillEffectsRoute />} />
-				<Route path="/races" element={<RacesRoute />} />
-				<Route path="/armor-types" element={<ArmorTypesRoute />} />
-				<Route path="/defense-types" element={<DefenseTypesRoute />} />
-				<Route path="/maps/:id" element={<MapDetailRoute />} />
-			</Routes>
-			</ErrorBoundary>
-		</BrowserRouter>
+		<DevModeProvider>
+			<BrowserRouter>
+				<GlobalMenu />
+				<ErrorBoundary>
+					<Routes>
+						<Route path="/" element={<SagaPanelRoute />} />
+						<Route path="/campaigns/:id" element={<CampaignDetailRoute />} />
+						<Route path="/campaigns/:campaignId/chapters/:chapterId/events" element={<ChapterEventsRoute />} />
+						<Route path="/maps" element={<MapsRoute />} />
+						<Route path="/mechanics" element={<MechanicsRoute />} />
+						<Route path="/factions" element={<FactionsRoute />} />
+						<Route path="/factions/:id" element={<FactionDetailRoute />} />
+						<Route path="/professions" element={<ProfessionsRoute />} />
+						<Route path="/professions/:id" element={<ProfessionDetailRoute />} />
+						<Route path="/objects" element={<ObjectsRoute />} />
+						<Route path="/classes" element={<ClassesRoute />} />
+						<Route path="/characters" element={<CharactersRoute />} />
+						<Route path="/characters/:id" element={<CharacterDetailRoute />} />
+						<Route path="/components" element={<ComponentsRoute />} />
+						<Route path="/animations" element={<AnimationsRoute />} />
+						<Route path="/resources" element={<ResourcesRoute />} />
+						<Route path="/resources/:id" element={<ResourceDetailRoute />} />
+						<Route path="/objects/:id" element={<ObjectDetailRoute />} />
+						<Route path="/sounds" element={<SoundsRoute />} />
+						<Route path="/visual-effects" element={<VisualEffectsRoute />} />
+						<Route path="/effects" element={<EffectsRoute />} />
+						<Route path="/effects/:id" element={<EffectDetailRoute />} />
+						<Route path="/skills" element={<SkillsRoute />} />
+						<Route path="/skills/:id" element={<SkillDetailRoute />} />
+						<Route path="/skill-effects" element={<SkillEffectsRoute />} />
+						<Route path="/races" element={<RacesRoute />} />
+						<Route path="/armor-types" element={<ArmorTypesRoute />} />
+						<Route path="/defense-types" element={<DefenseTypesRoute />} />
+						<Route path="/maps/:id" element={<MapDetailRoute />} />
+					</Routes>
+				</ErrorBoundary>
+			</BrowserRouter>
+		</DevModeProvider>
 	);
 }
 

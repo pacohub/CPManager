@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useDevMode } from '../DevModeContext';
 import { FaCubes, FaExclamation } from 'react-icons/fa';
 import { FaArrowLeft } from 'react-icons/fa';
 import { FaEdit, FaExternalLinkAlt, FaTrash } from 'react-icons/fa';
@@ -29,6 +30,7 @@ interface Props {
 }
 
 const ComponentsView: React.FC<Props> = ({ onBack }) => {
+	const { devMode } = useDevMode();
 	const [items, setItems] = useState<ComponentItem[]>([]);
 	const [search, setSearch] = useState('');
 	const [modalOpen, setModalOpen] = useState(false);
@@ -47,15 +49,24 @@ const ComponentsView: React.FC<Props> = ({ onBack }) => {
 
 	const filtered = useMemo(() => {
 		const q = search.trim().toLowerCase();
-		const list = q
+		let list = q
 			? (items || []).filter((c) =>
-				(c.name || '').toLowerCase().includes(q) ||
-				(c.type || '').toLowerCase().includes(q) ||
-				(c.description || '').toLowerCase().includes(q),
-			)
+					(c.name || '').toLowerCase().includes(q) ||
+					(c.type || '').toLowerCase().includes(q) ||
+					(c.description || '').toLowerCase().includes(q),
+				)
 			: (items || []);
+		if (devMode) {
+			list = list.filter((c) => {
+				const missing: string[] = [];
+				if (!String(c.description ?? '').trim()) missing.push('descripción');
+				if (!String(c.image ?? '').trim()) missing.push('imagen');
+				if (!String(c.model ?? '').trim()) missing.push('modelo');
+				return missing.length > 0;
+			});
+		}
 		return list.slice().sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-	}, [items, search]);
+	}, [items, search, devMode]);
 
 	return (
 		<div className="panel panel-corners-soft block-border block-panel-border">

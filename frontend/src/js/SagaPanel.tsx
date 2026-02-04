@@ -1,5 +1,6 @@
 import WarningIcon from '../components/WarningIcon';
 import React, { useEffect, useState } from 'react';
+import { useDevMode } from '../DevModeContext';
 import { DndContext, closestCenter, PointerSensor, useDraggable, useDroppable, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -161,6 +162,7 @@ interface SagaPanelProps {
 }
 
 const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
+  // const { devMode } = useDevMode();
   // Campañas por saga
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [campaignModalOpen, setCampaignModalOpen] = useState(false);
@@ -441,6 +443,7 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
     }
   }
 
+  const { devMode } = useDevMode();
   let filteredSagas: SagaType[] = [];
   let filteredCampaignsBySaga: Record<number, Campaign[]> = {};
   if (search.trim()) {
@@ -454,7 +457,6 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
         )
       );
       if (sagaMatch) {
-        // Si la saga coincide, mostrar todas sus campañas
         filteredCampaignsBySaga[s.id] = campaigns.filter(c => c.sagaId === s.id);
         return true;
       } else if (matchingCampaigns.length > 0) {
@@ -468,6 +470,31 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
     filteredSagas.forEach(s => {
       filteredCampaignsBySaga[s.id] = campaigns.filter(c => c.sagaId === s.id);
     });
+  }
+  if (devMode) {
+    filteredSagas = filteredSagas.filter(s => {
+      const hasDescription = Boolean((s.description ?? '').trim());
+      const sagaCampaignsAll = campaigns.filter(c => c.sagaId === s.id);
+      const hasCampaigns = sagaCampaignsAll.length > 0;
+      // const hasIncompleteCampaigns = sagaCampaignsAll.some((c) => {
+      //   const chapterCount = chaptersByCampaignId[c.id] ?? 0;
+      //   const hasCDescription = Boolean((c.description ?? '').trim());
+      //   const hasCImage = Boolean(c.image);
+      //   const hasCFile = Boolean(c.file);
+      //   const hasCChapters = chapterCount > 0;
+      //   const chapterWarnings = (chapterWarningsByCampaignId[c.id] ?? 0) > 0;
+      //   return !hasCDescription || !hasCImage || !hasCFile || !hasCChapters || chapterWarnings;
+      // });
+      const missing: string[] = [];
+      if (!hasDescription) missing.push('descripción');
+      if (!hasCampaigns) missing.push('campañas');
+      // if (hasIncompleteCampaigns) missing.push('campañas incompletas');
+      if (missing.length > 0) {
+        console.log(`Saga '${s.name}' incluida en DevMode por:`, missing);
+      }
+      return missing.length > 0;
+    });
+    console.log('Sagas filtradas en DevMode:', filteredSagas.map(s => s.name));
   }
 
   // --- UI ---

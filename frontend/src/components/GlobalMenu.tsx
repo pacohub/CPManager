@@ -5,8 +5,10 @@ import ConfirmModal from './ConfirmModal';
 import { FaCogs, FaVolumeUp, FaRunning, FaShieldAlt } from 'react-icons/fa';
 import { GiArmorUpgrade, GiChest, GiCrossedSwords, GiWarPick } from 'react-icons/gi';
 
+import { useDevMode } from '../DevModeContext';
 const GlobalMenu: React.FC = () => {
 	const navigate = useNavigate();
+	const { devMode, toggleDevMode } = useDevMode();
 	const [backingUp, setBackingUp] = useState(false);
 	const [lastBackup, setLastBackup] = useState<any>(null);
 
@@ -182,8 +184,8 @@ const GlobalMenu: React.FC = () => {
 		   <div
 			   style={{
 				   width: '100%',
-				   background: '#222',
-				   color: '#FFD700',
+				   background: devMode ? '#FFD700' : '#222',
+				   color: devMode ? '#222' : '#FFD700',
 				   fontWeight: 700,
 				   fontSize: 14,
 				   textAlign: 'center',
@@ -194,19 +196,17 @@ const GlobalMenu: React.FC = () => {
 				   borderBottomLeftRadius: 0,
 				   borderBottomRightRadius: 0,
 				   borderTop: '1px solid #e2d9b7',
-				   transition: 'background 0.2s',
+				   transition: 'background 0.2s, color 0.2s',
 				   marginTop: 0,
 				   position: 'relative',
 				   zIndex: 1,
 			   }}
-			   onClick={() => navigate('/dev-mode')}
-			   onMouseEnter={e => (e.currentTarget.style.background = '#333')}
-			   onMouseLeave={e => (e.currentTarget.style.background = '#222')}
+			   onClick={toggleDevMode}
 			   role="button"
 			   tabIndex={0}
-			   onKeyDown={e => { if (e.key === 'Enter') navigate('/dev-mode'); }}
+			   onKeyDown={e => { if (e.key === 'Enter') toggleDevMode(); }}
 		   >
-			   Modo Desarrollo
+			   {devMode ? 'Modo Desarrollo ACTIVO' : 'Modo Desarrollo'}
 		   </div>
 	   </div>
 	 );
