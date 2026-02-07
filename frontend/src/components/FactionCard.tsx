@@ -5,6 +5,7 @@ import { ClassItem } from '../interfaces/class';
 import { FactionItem } from '../interfaces/faction';
 import { ProfessionItem } from '../interfaces/profession';
 import CpImage from './CpImage';
+import WarningIcon from './WarningIcon';
 
 interface Props {
 	faction: FactionItem;
@@ -68,33 +69,33 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRem
 	}, [professionNames]);
 
 	const hasPrimaryColor = Boolean((faction.primaryColor ?? '').trim());
+	const hasSecondaryColor = Boolean((faction.secondaryColor ?? '').trim());
+	const hasTertiaryColor = Boolean((faction.tertiaryColor ?? '').trim());
 	const hasImage = Boolean((faction.iconImage ?? '').trim());
 	const hasCrest = Boolean((faction.crestImage ?? '').trim());
 	const hasDescription = Boolean((faction.description ?? '').trim());
-	const hasProfessionWarnings = useMemo(() => {
-		return (professions || []).some((p) => !String(p.description ?? '').trim() || !String((p as any).link ?? '').trim());
-	}, [professions]);
-	const hasClassWarnings = useMemo(() => {
-		return (classes || []).some((c) => {
-			const icon = String((c as any).icon ?? '').trim();
-			const description = String((c as any).description ?? '').trim();
-			const level = Number((c as any).level);
-			return !icon || !description || !Number.isFinite(level) || level <= 0;
-		});
-	}, [classes]);
+	const hasFile = Boolean((faction.file ?? '').trim());
 	const missing: string[] = [];
-	if (!hasPrimaryColor) missing.push('color primario');
+	if (!hasDescription) missing.push('descripción');
 	if (!hasCrest) missing.push('escudo');
 	if (!hasImage) missing.push('imagen');
-	if (!hasDescription) missing.push('descripción');
-	if (hasProfessionWarnings) missing.push('profesiones incompletas');
-	if (hasClassWarnings) missing.push('clases incompletas');
+	if (!hasPrimaryColor) missing.push('color primario');
+	if (!hasSecondaryColor) missing.push('color secundario');
+	if (!hasTertiaryColor) missing.push('color terciario');
+	if (!hasFile) missing.push('archivo');
 	const showWarning = missing.length > 0;
 	const warningText = `Falta: ${missing.join(', ')}.`;
 
 	// Always apply the background image if an icon URL is provided
 	const backgroundStyle: React.CSSProperties = iconUrl
-		? { backgroundImage: `url(${iconUrl})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat' }
+		? {
+			backgroundImage: `url(${iconUrl})`,
+			backgroundSize: 'cover',
+			backgroundPosition: 'center',
+			backgroundRepeat: 'no-repeat',
+			// Si hay escudo, hacer la imagen de fondo más opaca
+			position: 'relative',
+		}
 		: { backgroundImage: 'none' };
 
 	const [showFullDesc, setShowFullDesc] = useState(false);
@@ -135,26 +136,11 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRem
 				}
 			}}
 		>
-				{/* ...eliminado warning visual... */}
-			{typeof campaignCount === 'number' && campaignCount > 0 ? (
-				<div
-					style={{
-						position: 'absolute',
-						right: 8,
-						top: 8,
-						background: 'rgba(0,0,0,0.6)',
-						color: '#fff',
-						padding: '4px 8px',
-						borderRadius: 12,
-						fontSize: 12,
-						fontWeight: 700,
-					}
-					}
-					title={`Capítulos asociados: ${campaignCount}`}
-				>
-					{campaignCount}
-				</div>
-			) : null}
+			{/* Fondo opaco si hay escudo */}
+			{crestUrl && crestExists && iconUrl && (
+				<div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.78)', zIndex: 1, pointerEvents: 'none' }} />
+			)}
+			{/* warning visual moved to next to the name */}
 			{crestUrl && crestExists ? (
 				<div aria-hidden="true" style={{ position: 'absolute', top: 36, left: '50%', transform: 'translateX(-50%)', width: 165, height: 165, zIndex: 20 }}>
 					<CpImage
@@ -182,7 +168,21 @@ const FactionCard: React.FC<Props> = ({ faction, onEdit, onDelete, onOpen, onRem
 							))}
 						</div>
 					) : null}
-					<div className="faction-name">{faction.name}</div>
+					<div className="faction-name" style={{ whiteSpace: 'normal', overflow: 'visible', textOverflow: 'unset', wordBreak: 'break-word', minHeight: 48, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+						   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>
+							   {showWarning && (
+								   <span style={{ display: 'inline-flex', pointerEvents: 'auto' }}>
+									   <WarningIcon tooltip={warningText} size={15} style={{ marginRight: 2, marginLeft: 0, verticalAlign: 'middle' }} />
+								   </span>
+							   )}
+							   {faction.name}
+						   </span>
+						   <div style={{ fontSize: 12, color: '#e2d9b7', opacity: 0.85, fontWeight: 500, marginTop: 2, lineHeight: 1 }}>
+							   {typeof campaignCount === 'number' && campaignCount > 0
+								   ? `${campaignCount} referencia${campaignCount === 1 ? '' : 's'}`
+								   : 'Sin referencias'}
+						   </div>
+					</div>
 				</div>
 			</div>
 

@@ -899,18 +899,50 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
                 ) : (
                   aggregatedFactions.length === 0 ? <div style={{ opacity: 0.7 }}>—</div> : (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
-                      {aggregatedFactions.map((f) => (
-                        <FactionCard
-                          key={f.id}
-                          faction={f}
-                          professions={[]}
-                          classes={[]}
-                          onEdit={() => {}}
-                          onDelete={() => {}}
-                          onOpen={() => navigate(`/factions/${f.id}`)}
-                          hideActions={true}
-                        />
-                      ))}
+                      {(devMode
+                        ? aggregatedFactions.filter(f => {
+                            // Replicate FactionCard warning logic
+                            const hasPrimaryColor = Boolean((f.primaryColor ?? '').trim());
+                            const hasSecondaryColor = Boolean((f.secondaryColor ?? '').trim());
+                            const hasTertiaryColor = Boolean((f.tertiaryColor ?? '').trim());
+                            const hasImage = Boolean((f.iconImage ?? '').trim());
+                            const hasCrest = Boolean((f.crestImage ?? '').trim());
+                            const hasDescription = Boolean((f.description ?? '').trim());
+                            const hasFile = Boolean((f.file ?? '').trim());
+                            const missing = [];
+                            if (!hasDescription) missing.push('descripción');
+                            if (!hasCrest) missing.push('escudo');
+                            if (!hasImage) missing.push('imagen');
+                            if (!hasPrimaryColor) missing.push('color primario');
+                            if (!hasSecondaryColor) missing.push('color secundario');
+                            if (!hasTertiaryColor) missing.push('color terciario');
+                            if (!hasFile) missing.push('archivo');
+                            return missing.length > 0;
+                          })
+                        : aggregatedFactions
+                      ).map((f) => {
+                        // Count how many chapters reference this faction
+                        let count = 0;
+                        for (const chapterId of Object.keys(chapterFactionsByChapterId)) {
+                          const links = chapterFactionsByChapterId[Number(chapterId)] || [];
+                          if (links.some((l) => Number(l.factionId) === Number(f.id))) {
+                            count++;
+                          }
+                        }
+                        return (
+                          <FactionCard
+                            key={f.id}
+                            faction={f}
+                            professions={[]}
+                            classes={[]}
+                            onEdit={() => {}}
+                            onDelete={() => {}}
+                            onOpen={() => navigate(`/factions/${f.id}`)}
+                            hideActions={true}
+                            campaignCount={count}
+                          />
+                        );
+                      })}
                     </div>
                   )
                 )}

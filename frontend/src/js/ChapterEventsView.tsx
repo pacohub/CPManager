@@ -4,6 +4,7 @@ import { DndContext, DragOverlay, PointerSensor, closestCenter, useDroppable, us
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { FaComment, FaArrowLeft, FaPlus, FaEdit, FaDownload, FaTrash, FaExclamation, FaUser, FaFilm, FaFlag, FaMountain, FaLockOpen, FaLock, FaExternalLinkAlt } from 'react-icons/fa';
+import WarningIcon from '../components/WarningIcon';
 import { GiChest } from 'react-icons/gi';
 import ConfirmModal from '../components/ConfirmModal';
 import FactionModal from '../components/FactionModal';
@@ -336,13 +337,13 @@ const ChapterFactionGroupDropZone: React.FC<{ id: string; children: React.ReactN
 };
 
 const SortableChapterFactionRow: React.FC<{
-	link: ChapterFactionLink;
-	faction: FactionItem;
-	assignedColor?: string;
-	missing: boolean;
-	onTogglePlayable: () => void;
-	onRemove: () => void;
-	onOpenOverride: () => void;
+ link: ChapterFactionLink;
+ faction: FactionItem;
+ assignedColor?: string;
+ missing: boolean;
+ onTogglePlayable: () => void;
+ onRemove: () => void;
+ onOpenOverride: () => void;
 }> = ({ link, faction, assignedColor, missing, onTogglePlayable, onRemove, onOpenOverride }) => {
 	const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
 		id: `cf:${link.factionId}`,
@@ -366,58 +367,82 @@ const SortableChapterFactionRow: React.FC<{
 		gap: 10,
 	};
 
-	return (
+	 // --- Warning logic: replicate FactionCard warning logic ---
+	 const hasPrimaryColor = Boolean((faction.primaryColor ?? '').trim());
+	 const hasSecondaryColor = Boolean((faction.secondaryColor ?? '').trim());
+	 const hasTertiaryColor = Boolean((faction.tertiaryColor ?? '').trim());
+	 const hasImage = Boolean((faction.iconImage ?? '').trim());
+	 const hasCrest = Boolean((faction.crestImage ?? '').trim());
+	 const hasDescription = Boolean((faction.description ?? '').trim());
+	 const hasFile = Boolean((faction.file ?? '').trim());
+	 const missingFields = [];
+	 if (!hasDescription) missingFields.push('descripción');
+	 if (!hasCrest) missingFields.push('escudo');
+	 if (!hasImage) missingFields.push('imagen');
+	 if (!hasPrimaryColor) missingFields.push('color primario');
+	 if (!hasSecondaryColor) missingFields.push('color secundario');
+	 if (!hasTertiaryColor) missingFields.push('color terciario');
+	 if (!hasFile) missingFields.push('archivo');
+	 const showWarning = missingFields.length > 0;
+	 const warningText = `Falta: ${missingFields.join(', ')}.`;
+
+	 return (
 		<div ref={setNodeRef} style={style}>
-			<div
-				{...attributes}
-				{...listeners}
-				title="Arrastrar para reordenar / mover"
+		 <div
+			{...attributes}
+			{...listeners}
+			title="Arrastrar para reordenar / mover"
+			style={{
+			 cursor: 'grab',
+			 userSelect: 'none',
+			 padding: '2px 6px',
+			 border: '1px solid rgba(255,215,0,0.25)',
+			 borderRadius: 6,
+			 opacity: 0.95,
+			}}
+		 >
+			⋮⋮
+		 </div>
+
+		 <input
+			type="radio"
+			name={`playable:${link.chapterId}`}
+			checked={isPlayable}
+			title="Marcar como jugable"
+			onChange={onTogglePlayable}
+		 />
+
+		 {iconUrl ? (
+			<CpImage src={iconUrl} width={24} height={24} fit="cover" showFrame={false} alt={faction.name} />
+		 ) : null}
+
+		 <div style={{ minWidth: 0, flex: '1 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 4 }}>
+			{showWarning && (
+				<span style={{ display: 'inline-flex', pointerEvents: 'auto' }}>
+					<WarningIcon tooltip={warningText} size={15} style={{ marginRight: 2, marginLeft: 0, verticalAlign: 'middle' }} />
+				</span>
+			)}
+			<span style={{ fontWeight: isPlayable ? 900 : 600 }}>{faction.name}</span>
+			{isPlayable ? (
+			 <span
 				style={{
-					cursor: 'grab',
-					userSelect: 'none',
-					padding: '2px 6px',
-					border: '1px solid rgba(255,215,0,0.25)',
-					borderRadius: 6,
-					opacity: 0.95,
+				 marginLeft: 8,
+				 fontSize: 11,
+				 fontWeight: 900,
+				 padding: '2px 6px',
+				 borderRadius: 999,
+				 border: '1px solid rgba(255,215,0,0.65)',
+				 opacity: 0.95,
 				}}
-			>
-				⋮⋮
-			</div>
+			 >
+				JUGABLE
+			 </span>
+			) : null}
+		 </div>
 
-			<input
-				type="radio"
-				name={`playable:${link.chapterId}`}
-				checked={isPlayable}
-				title="Marcar como jugable"
-				onChange={onTogglePlayable}
-			/>
-
-						{iconUrl ? (
-							<CpImage src={iconUrl} width={24} height={24} fit="cover" showFrame={false} alt={faction.name} />
-						) : null}
-
-			<div style={{ minWidth: 0, flex: '1 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-				<span style={{ fontWeight: isPlayable ? 900 : 600 }}>{faction.name}</span>
-				{isPlayable ? (
-					<span
-						style={{
-							marginLeft: 8,
-							fontSize: 11,
-							fontWeight: 900,
-							padding: '2px 6px',
-							borderRadius: 999,
-							border: '1px solid rgba(255,215,0,0.65)',
-							opacity: 0.95,
-						}}
-					>
-						JUGABLE
-					</span>
-				) : null}
-			</div>
-
-			{assignedColor ? (
-				<span
-					title="Color asignado"
+		 {assignedColor ? (
+			<span
+			 title="Color asignado"
 					style={{
 						width: 14,
 						height: 14,

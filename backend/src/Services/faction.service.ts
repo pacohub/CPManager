@@ -93,6 +93,9 @@ export class FactionService {
 		if (typeof data.name === 'string') data.name = data.name.trim();
 		if (typeof data.description === 'string') data.description = data.description.trim();
 		if (typeof data.file === 'string') data.file = data.file.trim();
+		// Si se recibe string vacío, eliminar la asociación de imagen/escudo
+		if (data.crestImage === '') data.crestImage = null;
+		if (data.iconImage === '') data.iconImage = null;
 		await this.factionRepository.update(id, data);
 		return this.findOne(id);
 	}

@@ -135,25 +135,27 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 	const [crestImage, setCrestImage] = useState<File | null>(null);
 	const [iconImage, setIconImage] = useState<File | null>(null);
 	const [removeIconImage, setRemoveIconImage] = useState(false);
+	const [removeCrestImage, setRemoveCrestImage] = useState(false);
 	const [primaryColor, setPrimaryColor] = useState(initial?.primaryColor || '');
 	const [secondaryColor, setSecondaryColor] = useState(initial?.secondaryColor || '');
 	const [tertiaryColor, setTertiaryColor] = useState(initial?.tertiaryColor || '');
 	const [fileLink, setFileLink] = useState(initial?.file || '');
 	const [error, setError] = useState<string | null>(null);
 
-	useEffect(() => {
-		if (!open) return;
-		setName(initial?.name || '');
-		setDescription(initial?.description || '');
-		setCrestImage(null);
-		setIconImage(null);
-		setRemoveIconImage(false);
-		setPrimaryColor(initial?.primaryColor || '');
-		setSecondaryColor(initial?.secondaryColor || '');
-		setTertiaryColor(initial?.tertiaryColor || '');
-		setFileLink(initial?.file || '');
-		setError(null);
-	}, [open, initial?.id, initial?.name, initial?.description, initial?.primaryColor, initial?.secondaryColor, initial?.tertiaryColor, initial?.file]);
+	   useEffect(() => {
+		   if (!open) return;
+		   setName(initial?.name || '');
+		   setDescription(initial?.description || '');
+		   setCrestImage(null);
+		   setIconImage(null);
+		   setRemoveIconImage(false);
+		   setRemoveCrestImage(false);
+		   setPrimaryColor(initial?.primaryColor || '');
+		   setSecondaryColor(initial?.secondaryColor || '');
+		   setTertiaryColor(initial?.tertiaryColor || '');
+		   setFileLink(initial?.file || '');
+		   setError(null);
+	   }, [open, initial?.id, initial?.name, initial?.description, initial?.primaryColor, initial?.secondaryColor, initial?.tertiaryColor, initial?.file]);
 
 	useEffect(() => {
 		if (!primaryColor) {
@@ -172,9 +174,11 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 
 	if (!open) return null;
 
-	const crestPreviewUrl = crestImage
-		? URL.createObjectURL(crestImage)
-		: toBackendUrl(initial?.crestImage);
+	   const crestPreviewUrl = crestImage
+		   ? URL.createObjectURL(crestImage)
+		   : removeCrestImage
+			   ? undefined
+			   : toBackendUrl(initial?.crestImage);
 
 	const iconPreviewUrl = iconImage
 		? URL.createObjectURL(iconImage)
@@ -182,26 +186,27 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 			? undefined
 			: toBackendUrl(initial?.iconImage);
 
-	const handleSubmit = (e: React.FormEvent) => {
-		e.preventDefault();
-		if (isDuplicateName) {
-			setError('Ya existe una facción con ese nombre.');
-			return;
-		}
-		setError(null);
+	   const handleSubmit = (e: React.FormEvent) => {
+		   e.preventDefault();
+		   if (isDuplicateName) {
+			   setError('Ya existe una facción con ese nombre.');
+			   return;
+		   }
+		   setError(null);
 
-		const formData = new FormData();
-		formData.append('name', name);
-		formData.append('description', description);
-		if (crestImage) formData.append('crestImage', crestImage);
-		if (removeIconImage) formData.append('iconImage', '');
-		else if (iconImage) formData.append('iconImage', iconImage);
-		formData.append('primaryColor', primaryColor);
-		formData.append('secondaryColor', secondaryColor);
-		formData.append('tertiaryColor', tertiaryColor);
-		formData.append('file', fileLink.trim());
-		onSubmit(formData);
-	};
+		   const formData = new FormData();
+		   formData.append('name', name);
+		   formData.append('description', description);
+		   if (crestImage) formData.append('crestImage', crestImage);
+		   if (removeCrestImage) formData.append('crestImage', '');
+		   if (removeIconImage) formData.append('iconImage', '');
+		   else if (iconImage) formData.append('iconImage', iconImage);
+		   formData.append('primaryColor', primaryColor);
+		   formData.append('secondaryColor', secondaryColor);
+		   formData.append('tertiaryColor', tertiaryColor);
+		   formData.append('file', fileLink.trim());
+		   onSubmit(formData);
+	   };
 
 	return (
 		<div className="modal-overlay">
@@ -261,13 +266,29 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 						) : null}
 					</label>
 
-					{crestPreviewUrl ? (
-						<div style={{ marginBottom: 8 }}>
-							<div style={{ width: '100%', height: 140, borderRadius: 8, border: '1px solid #ccc', overflow: 'hidden' }}>
-								<CpImageFill alt="Escudo" src={crestPreviewUrl} />
-							</div>
-						</div>
-					) : null}
+					   {crestPreviewUrl ? (
+						   <div style={{ marginBottom: 8 }} className="preview-container">
+							   <div style={{ width: 140, height: 140, borderRadius: 8, border: '1px solid #ccc', overflow: 'hidden', position: 'relative' }}>
+								   {initial?.id && initial?.crestImage && !crestImage ? (
+									   <button
+										   type="button"
+										   className="preview-remove-btn top-right"
+										   data-tooltip="Eliminar escudo"
+										   aria-label="Eliminar escudo"
+										   onClick={() => {
+											   setCrestImage(null);
+											   setRemoveCrestImage(true);
+										   }}
+										   style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.35)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}
+									   >
+										   <FaTimes size={16} color="inherit" />
+									   </button>
+								   ) : null}
+								   <CpImageFill alt="Escudo" src={crestPreviewUrl} />
+							   </div>
+							   {removeCrestImage ? <div style={{ fontSize: 12, opacity: 0.9, marginTop: 6 }}>Se eliminará al guardar.</div> : null}
+						   </div>
+					   ) : null}
 
 					<label style={{ marginBottom: 8, display: 'block' }}>
 						Imagen:
@@ -290,23 +311,24 @@ const FactionModal: React.FC<Props> = ({ open, initial, existing, onSubmit, onCl
 
 					{iconPreviewUrl ? (
 						<div style={{ marginBottom: 8 }} className="preview-container">
-							<div style={{ width: 140, height: 140, borderRadius: 8, border: '1px solid #ccc', overflow: 'hidden', position: 'relative' }}>
-                                {initial?.id && initial?.iconImage && !iconImage ? (
-											<button
-												type="button"
-												className="preview-remove-btn top-right"
-										data-tooltip="Eliminar imagen"
-										aria-label="Eliminar imagen"
-										onClick={() => {
-											setIconImage(null);
-											setRemoveIconImage(true);
-										}}
-									>
-								  				<FaTimes size={14} />
-						</button>
-								) : null}
-								<CpImageFill alt="Icono" src={iconPreviewUrl} />
-							</div>
+							   <div style={{ width: 140, height: 140, borderRadius: 8, border: '1px solid #ccc', overflow: 'hidden', position: 'relative' }}>
+									{initial?.id && initial?.iconImage && !iconImage ? (
+										<button
+											type="button"
+											className="preview-remove-btn top-right"
+											data-tooltip="Eliminar imagen"
+											aria-label="Eliminar imagen"
+											onClick={() => {
+												setIconImage(null);
+												setRemoveIconImage(true);
+											}}
+											style={{ position: 'absolute', top: 6, right: 6, background: 'rgba(0,0,0,0.35)', border: 'none', borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 2 }}
+										>
+											<FaTimes size={16} color="inherit" />
+										</button>
+									) : null}
+									<CpImageFill alt="Icono" src={iconPreviewUrl} />
+								</div>
 							{removeIconImage ? <div style={{ fontSize: 12, opacity: 0.9, marginTop: 6 }}>Se eliminará al guardar.</div> : null}
 						</div>
 					) : null}

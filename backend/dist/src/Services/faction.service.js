@@ -99,6 +99,10 @@ let FactionService = class FactionService {
             data.description = data.description.trim();
         if (typeof data.file === 'string')
             data.file = data.file.trim();
+        if (data.crestImage === '')
+            data.crestImage = null;
+        if (data.iconImage === '')
+            data.iconImage = null;
         await this.factionRepository.update(id, data);
         return this.findOne(id);
     }

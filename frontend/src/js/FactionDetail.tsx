@@ -295,58 +295,60 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 
 			{!loading && faction ? (
 				<div style={{ padding: 12 }}>
-					{iconUrl ? (
-						<div
-							className="metallic-border map-card"
-							style={{
-								width: '100%',
-								height: 'auto',
-								aspectRatio: '16 / 5',
-								position: 'relative',
-								overflow: 'visible',
-								borderRadius: 0,
-								background: '#181818',
-								padding: 0,
-							}}
-						>
-							<div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
-								<CpImageFill src={iconUrl} alt={faction.name} fit="cover" />
-							</div>
-							<div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1 }} />
-							<div
-								style={{
-									position: 'relative',
-									zIndex: 2,
-									display: 'flex',
-									flexDirection: 'column',
-									alignItems: 'center',
-									justifyContent: 'center',
-									padding: 14,
-									textAlign: 'center',
-									gap: 10,
-								}}
-							>
-								{crestUrl && (
-									<CpImage src={crestUrl} width={84} height={84} fit="cover" showFrame={false} imgStyle={{ borderRadius: 0, background: 'transparent' }} />
-								)}
-								<div style={{
-									maxWidth: 720,
-									opacity: 0.95,
-									color: '#e2d9b7',
-									whiteSpace: 'pre-wrap',
-									overflow: 'visible',
-									maxHeight: 'none',
-									height: 'auto',
-								}}>
-									{(faction.description || '').trim() || '—'}
-								</div>
-							</div>
-						</div>
-					) : (
-						<div className="block-border block-border-soft" style={{ padding: 12, opacity: 0.9 }}>
-							<div style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{(faction.description || '').trim() || '—'}</div>
-						</div>
-					)}
+					   {(iconUrl || (faction.description && faction.description.trim())) ? (
+						   iconUrl ? (
+							   <div
+								   className="metallic-border map-card"
+								   style={{
+									   width: '100%',
+									   height: 'auto',
+									   aspectRatio: '16 / 5',
+									   position: 'relative',
+									   overflow: 'visible',
+									   borderRadius: 0,
+									   background: '#181818',
+									   padding: 0,
+								   }}
+							   >
+								   <div style={{ position: 'absolute', inset: 0, zIndex: 0 }}>
+									   <CpImageFill src={iconUrl} alt={faction.name} fit="cover" style={{ opacity: 1, transition: 'opacity 0.2s' }} />
+								   </div>
+								   <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.78)', zIndex: 1 }} />
+								   <div
+									   style={{
+										   position: 'relative',
+										   zIndex: 2,
+										   display: 'flex',
+										   flexDirection: 'column',
+										   alignItems: 'center',
+										   justifyContent: 'center',
+										   padding: 14,
+										   textAlign: 'center',
+										   gap: 10,
+									   }}
+								   >
+									   {crestUrl && (
+										   <CpImage src={crestUrl} width={84} height={84} fit="cover" showFrame={false} imgStyle={{ borderRadius: 0, background: 'transparent' }} />
+									   )}
+									   <div style={{
+										   maxWidth: 720,
+										   opacity: 0.95,
+										   color: '#e2d9b7',
+										   whiteSpace: 'pre-wrap',
+										   overflow: 'visible',
+										   maxHeight: 'none',
+										   height: 'auto',
+									   }}>
+										   {(faction.description || '').trim() || '—'}
+									   </div>
+								   </div>
+							   </div>
+						   ) : (
+							   <div className="block-border block-border-soft" style={{ padding: 12, opacity: 0.9 }}>
+								   <div style={{ marginTop: 6, whiteSpace: 'pre-wrap' }}>{(faction.description || '').trim() || '—'}</div>
+							   </div>
+						   )
+					   ) : null}
 
 					<div style={{ height: 12 }} />
 
@@ -508,19 +510,22 @@ const FactionDetail: React.FC<Props> = ({ factionId, onBack }) => {
 							</div>
 						</div>
 					</div>
+					<div>
+					   {usages ? (
+						   <div className="block-border block-border-soft" style={{ padding: 12, marginTop: 12 }}>
+							   <div style={{ fontWeight: 900, marginBottom: 8 }}>Usos de la facción</div>
+							   {usages.length === 0 ? (
+								   <div style={{ opacity: 0.85 }}>No hay usos de esta facción en campañas.</div>
+							   ) : (
+								   <UsosFaccionAccordion usages={usages} navigate={navigate} />
+							   )}
+						   </div>
+					   ) : null}
+				   </div>
 				</div>
 			) : null}
 
-				{usages ? (
-					<div className="block-border block-border-soft" style={{ padding: 12, marginTop: 24 }}>
-						<div style={{ fontWeight: 900, marginBottom: 8 }}>Usos de la facción</div>
-						{usages.length === 0 ? (
-							<div style={{ opacity: 0.85 }}>No hay usos de esta facción en campañas.</div>
-						) : (
-							<UsosFaccionAccordion usages={usages} navigate={navigate} />
-						)}
-					</div>
-				) : null}
+				   
 
 
 				{professionModalOpen ? (
