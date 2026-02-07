@@ -180,8 +180,10 @@ const ChapterModal: React.FC<Props> = ({ open, campaignId, initial, onSubmit, on
                         setImage(null);
                         setRemoveImage(true);
                       }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 4, fontWeight: 900, fontSize: 16 }}
                     >
                       <FaTimes size={14} />
+                      <span style={{ fontSize: 16, fontWeight: 900, color: 'inherit', marginLeft: 2 }}>✖</span>
                     </button>
                   ) : null}
                   <CpImageFill alt="Previsualización" src={image ? URL.createObjectURL(image) : getImageUrl(initial?.image)} />

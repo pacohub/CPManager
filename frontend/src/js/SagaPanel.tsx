@@ -653,12 +653,22 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
                           // Filtrado de campañas con warning en modo desarrollo
                           let sagaCampaigns = campaigns.filter(c => c.sagaId === saga.id);
                           if (devMode) {
-                            sagaCampaigns = sagaCampaigns.filter(c => {
+                            sagaCampaigns = sagaCampaigns.filter((c: any) => {
                               const missing = [];
                               if (!c.description || !c.description.trim()) missing.push('descripción');
                               if (!c.image) missing.push('imagen');
                               if (!c.file) missing.push('archivo');
-                              return missing.length > 0;
+                              // Si la campaña tiene warning propio
+                              if (missing.length > 0) return true;
+                              // O si tiene capítulos con warning
+                              const chapters = (window.__ALL_CHAPTERS__?.filter?.((ch: any) => ch.campaignId === c.id) || []);
+                              return chapters.some((ch: any) => {
+                                const chMissing = [];
+                                if (!ch.description || !ch.description.trim()) chMissing.push('descripción');
+                                if (!ch.image) chMissing.push('imagen');
+                                if (!ch.file) chMissing.push('archivo');
+                                return chMissing.length > 0;
+                              });
                             });
                           }
                           sagaCampaigns = sagaCampaigns.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id - b.id);
@@ -827,5 +837,12 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
   );
 };
 
+
+// Extensión de window para __ALL_CHAPTERS__
+declare global {
+  interface Window {
+    __ALL_CHAPTERS__?: Array<any>;
+  }
+}
 
 export default SagaPanel;

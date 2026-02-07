@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useDevMode } from '../DevModeContext';
 import { DndContext, PointerSensor, closestCenter, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -100,6 +101,7 @@ function buildChapterUpdateFormData(chapter: Chapter, patch: Partial<Chapter> = 
 }
 
 const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEvents }) => {
+  const { devMode } = useDevMode();
   const navigate = useNavigate();
   const [campaign, setCampaign] = useState<Campaign | null>(null);
   const [chapters, setChapters] = useState<Chapter[]>([]);
@@ -580,7 +582,16 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
                 strategy={verticalListSortingStrategy}
               >
                 <div className="chapters-scroll" style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {chapters.map((ch, idx) => (
+                  {(devMode
+                    ? chapters.filter(ch => {
+                        const missing = [];
+                        if (!String(ch.description ?? '').trim()) missing.push('descripción');
+                        if (!ch.image) missing.push('imagen');
+                        if (!ch.file) missing.push('archivo');
+                        return missing.length > 0;
+                      })
+                    : chapters
+                  ).map((ch, idx) => (
                     <SortableChapterRow key={ch.id} chapter={ch} enabled={chaptersDndEnabled && !isCreditsChapter(ch)}>
                       <div
                         className="chapter-row"
@@ -630,25 +641,30 @@ const CampaignDetail: React.FC<Props> = ({ campaignId, onBack, onOpenChapterEven
                         <div className="chapter-content" style={{ minWidth: 0 }}>
                           <div className="chapter-label">{chapterLabelById[ch.id] ?? `Capítulo ${idx + 1}`}</div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, marginTop: 2 }}>
-                            <span style={{ minWidth: 0, wordBreak: 'break-word' }}>{ch.name}</span>
-                            {(() => {
-                              const missing: string[] = [];
-                              const warnings: string[] = [];
-                              if (!String(ch.description ?? '').trim()) missing.push('descripción');
-                              if (eventCountsLoaded) {
-                                const stats = eventCountsByChapterId[ch.id];
-                                const count = stats?.count ?? 0;
-                                const warningCount = stats?.warningCount ?? 0;
-                                if (count <= 0) missing.push('eventos');
-                                if (warningCount > 0) warnings.push(`Eventos sin descripción: ${warningCount}.`);
-                              }
-                              // Check chapter-faction associations
-                              const factionLinks = chapterFactionsByChapterId[ch.id] || [];
-                              if (factionLinks.length === 0) missing.push('facciones');
-                              if (missing.length === 0 && warnings.length === 0) return null;
-                              const parts: string[] = [];
-                              // ...eliminado warning visual...
-                            })()}
+                            <span style={{ minWidth: 0, wordBreak: 'break-word', display: 'inline-flex', alignItems: 'center' }}>
+                              {(() => {
+                                const missing: string[] = [];
+                                if (!String(ch.description ?? '').trim()) missing.push('descripción');
+                                if (!ch.image) missing.push('imagen');
+                                if (!ch.file) missing.push('archivo');
+                                if (missing.length === 0) return null;
+                                const tooltip = `Falta: ${missing.join(', ')}.`;
+                                return (
+                                  <span
+                                    className="saga-warning"
+                                    title={tooltip}
+                                    aria-label={tooltip}
+                                    data-tooltip={tooltip}
+                                    style={{ marginRight: '0.25em' }}
+                                    onPointerDown={e => e.stopPropagation()}
+                                    onClick={e => e.stopPropagation()}
+                                  >
+                                    <FaExclamation title="warning" />
+                                  </span>
+                                );
+                              })()}
+                              {ch.name}
+                            </span>
                           </div>
                         </div>
 
