@@ -176,27 +176,27 @@ input[type="number"] {
     aspect-ratio: 4 / 3;
 }
 
-.campaign-title {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    padding: 20px 14px;
-    margin: 0;
-    box-sizing: border-box;
-    background: linear-gradient(0deg, rgba(0, 0, 0, 0.7) 70%, rgba(0, 0, 0, 0.1) 100%);
-    color: #fff;
-    text-shadow: 0 2px 8px #000a;
-    font-weight: 700;
-    font-size: 22px;
-    min-height: 80px;
-    line-height: 1.1;
-    z-index: 20;
-    pointer-events: none;
-    width: 100%;
-    white-space: normal;
-    display: block;
-    overflow: visible;
+    .campaign-title {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 8px 10px;
+        margin: 0;
+        box-sizing: border-box;
+        background: linear-gradient(0deg, rgba(0,0,0,0.35) 70%, rgba(0,0,0,0.05) 100%);
+        color: #fff;
+        text-shadow: 0 2px 8px #000a;
+        font-weight: 700;
+        font-size: 22px;
+        min-height: 36px;
+        line-height: 1.1;
+        z-index: 20;
+        pointer-events: none;
+        width: 100%;
+        white-space: normal;
+        display: block;
+        overflow: visible;
     text-overflow: unset;
     line-height: 1.15;
     word-break: break-word;
@@ -208,6 +208,9 @@ input[type="number"] {
     font-size: 12px;
     color: #e2c044;
     opacity: 0.95;
+    background: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
 }
 
 .campaign-actions {
@@ -220,12 +223,31 @@ input[type="number"] {
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s;
+    background: #111;
+    border-radius: 8px;
+    padding: 6px 8px;
 }
 
 .campaign-card:hover .campaign-actions,
 .campaign-card:focus-within .campaign-actions {
     opacity: 1 !important;
     pointer-events: auto !important;
+}
+
+.campaign-actions .icon.option {
+    background: #111 !important;
+    border-radius: 4px;
+    transition: background 0.2s;
+    box-shadow: none !important;
+}
+
+.campaign-actions .icon.option:hover {
+    background: #222 !important;
+    box-shadow: none !important;
+}
+
+.campaign-actions .icon.option:hover svg {
+    filter: drop-shadow(0 0 6px #FFD700) brightness(1.3);
 }
 
 .campaign-desc {
@@ -1221,12 +1243,16 @@ button.icon {
 
 /* Ensure icon buttons inherit the site's font color */
 button.icon,
+/* Elimina brillo global en iconos */
 .icon.option {
     color: inherit;
+    box-shadow: none !important;
+    filter: none !important;
 }
 
 button.icon:hover {
-    filter: drop-shadow(0 0 4px #e2c044);
+    filter: none !important;
+    box-shadow: none !important;
 }
 
 /* Make menu icons scale on hover when inside the sticky header */

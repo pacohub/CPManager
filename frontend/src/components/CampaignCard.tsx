@@ -1,5 +1,6 @@
 
 import React, { useEffect, useState } from 'react';
+import WarningIcon from './WarningIcon';
 import { createCampaign, updateCampaign } from '../js/campaignApi';
 import { FaExclamation } from 'react-icons/fa';
 import { missingFor, RequiredField } from '../js/warningUtils';
@@ -41,11 +42,11 @@ const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete, onOpen, cha
   };
   console.log('CampaignCard debug:', debugInfo);
 
+  // Solo advertencias para descripción, imagen o archivo (no capítulos)
   const spec: RequiredField[] = [
     { key: 'description', label: 'descripción' },
     { key: 'image', label: 'imagen' },
     { key: 'file', label: 'archivo' },
-    { key: 'chapters', label: 'capítulos', validator: (v) => Number(v) > 0 },
   ];
 
   // Build a lightweight object matching expected keys for validation
@@ -57,7 +58,7 @@ const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete, onOpen, cha
   };
 
   const missing = missingFor(sample, spec);
-  if ((chapterWarningCount ?? 0) > 0) missing.push('capítulos con problemas');
+  // No advertencia por capítulos aquí
   const showWarning = missing.length > 0;
   const warningText = `Falta: ${missing.join(', ')}.`;
 
@@ -74,9 +75,17 @@ const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete, onOpen, cha
       {/* ...eliminado warning visual... */}
       {/* Overlay hover handled by CSS */}
       {/* Nombre de la campaña */}
-      <div className="campaign-title">
-        <div>{campaign.name}</div>
-        <div className="campaign-subtitle">{chapterCount} capítulos</div>
+      <div className="campaign-title" style={{ display: 'flex', alignItems: 'flex-start', gap: 0, flexDirection: 'column', width: '100%' }}>
+        <span style={{ display: 'flex', alignItems: 'flex-start', pointerEvents: 'none', width: '100%' }}>
+          {showWarning && (
+            <span style={{ display: 'inline-flex', pointerEvents: 'auto' }}>
+              <WarningIcon tooltip={warningText} size={15} style={{ marginRight: 2, marginLeft: 0, verticalAlign: 'top' }} />
+            </span>
+          )}
+          <span style={{ verticalAlign: 'top', wordBreak: 'break-word', whiteSpace: 'pre-line', pointerEvents: 'auto', width: '100%' }}>{campaign.name}</span>
+        </span>
+        <div style={{ width: '100%', height: 1, background: 'currentColor', opacity: 0.5 }} />
+        <div className="campaign-subtitle" style={{ textAlign: 'center', width: '100%', fontWeight: 500, fontSize: 15, background: 'none', boxShadow: 'none' }}>{chapterCount} Capítulos</div>
       </div>
       {/* Acciones solo en hover */}
       <div className="campaign-actions">
@@ -127,7 +136,7 @@ const CampaignCard: React.FC<Props> = ({ campaign, onEdit, onDelete, onOpen, cha
         <button className="icon option" title="Eliminar" onClick={e => { e.stopPropagation(); onDelete(); }} onPointerDown={e => e.stopPropagation()} tabIndex={-1}><FaTrash size={14} /></button>
       </div>
       {/* Descripción solo en hover */}
-      <div className="campaign-desc">
+      <div className="campaign-desc" style={{ paddingBottom: 4 }}>
         {campaign.description}
       </div>
     </div>

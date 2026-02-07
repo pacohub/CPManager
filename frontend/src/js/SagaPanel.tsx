@@ -649,50 +649,51 @@ const SagaPanel: React.FC<SagaPanelProps> = ({ onOpenCampaign }) => {
                     <div className="saga-card-body">
                       <p className="saga-desc">{saga.description}</p>
                       <div className="campaigns-responsive-table">
-                        {[0, 1, 2, 3].map((idx) => {
-                          const sagaCampaigns = campaigns
-                            .filter(c => c.sagaId === saga.id)
-                            .slice()
-                            .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id - b.id);
-
-                          const byOrder = new Map<number, Campaign>();
-                          sagaCampaigns.forEach((c, i) => {
-                            const ord = (typeof c.order === 'number' ? c.order : i);
-                            if (!byOrder.has(ord)) byOrder.set(ord, c);
+                        {(() => {
+                          // Filtrado de campañas con warning en modo desarrollo
+                          let sagaCampaigns = campaigns.filter(c => c.sagaId === saga.id);
+                          if (devMode) {
+                            sagaCampaigns = sagaCampaigns.filter(c => {
+                              const missing = [];
+                              if (!c.description || !c.description.trim()) missing.push('descripción');
+                              if (!c.image) missing.push('imagen');
+                              if (!c.file) missing.push('archivo');
+                              return missing.length > 0;
+                            });
+                          }
+                          sagaCampaigns = sagaCampaigns.slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id - b.id);
+                          // Solo mostrar hasta 4 campañas (por las celdas)
+                          return [0, 1, 2, 3].map((idx) => {
+                            const cellCampaign = sagaCampaigns[idx] ?? null;
+                            const cellId = `cell:${saga.id}:${idx}`;
+                            return (
+                              <CampaignCell key={idx} id={cellId}>
+                                {cellCampaign ? (
+                                  <DraggableCampaign campaign={cellCampaign} enabled={dndEnabled}>
+                                    <CampaignCard
+                                      campaign={cellCampaign}
+                                      chapterCount={chaptersByCampaignId[cellCampaign.id] ?? 0}
+                                      chapterWarningCount={chapterWarningsByCampaignId[cellCampaign.id] ?? 0}
+                                      onOpen={() => {
+                                        if (shouldSuppressCampaignOpen()) return;
+                                        onOpenCampaign?.(cellCampaign.id);
+                                      }}
+                                      onEdit={() => {
+                                        setCampaignInitial(cellCampaign);
+                                        setCampaignSagaId(saga.id);
+                                        setCampaignModalOpen(true);
+                                      }}
+                                      onDelete={() => {
+                                        setPendingDeleteCampaign(cellCampaign);
+                                        setConfirmCampaignOpen(true);
+                                      }}
+                                    />
+                                  </DraggableCampaign>
+                                ) : null}
+                              </CampaignCell>
+                            );
                           });
-
-                          const cellCampaign = byOrder.get(idx) ?? null;
-                          const visibleIds = new Set((filteredCampaignsBySaga[saga.id] ?? []).map(c => c.id));
-                          const shouldRender = !search.trim() || (cellCampaign ? visibleIds.has(cellCampaign.id) : false);
-
-                          const cellId = `cell:${saga.id}:${idx}`;
-                          return (
-                            <CampaignCell key={idx} id={cellId}>
-                              {cellCampaign && shouldRender ? (
-                                <DraggableCampaign campaign={cellCampaign} enabled={dndEnabled}>
-                                  <CampaignCard
-                                    campaign={cellCampaign}
-                                    chapterCount={chaptersByCampaignId[cellCampaign.id] ?? 0}
-                                    chapterWarningCount={chapterWarningsByCampaignId[cellCampaign.id] ?? 0}
-                                    onOpen={() => {
-                                      if (shouldSuppressCampaignOpen()) return;
-                                      onOpenCampaign?.(cellCampaign.id);
-                                    }}
-                                    onEdit={() => {
-                                      setCampaignInitial(cellCampaign);
-                                      setCampaignSagaId(saga.id);
-                                      setCampaignModalOpen(true);
-                                    }}
-                                    onDelete={() => {
-                                      setPendingDeleteCampaign(cellCampaign);
-                                      setConfirmCampaignOpen(true);
-                                    }}
-                                  />
-                                </DraggableCampaign>
-                              ) : null}
-                            </CampaignCell>
-                          );
-                        })}
+                        })()}
                       </div>
                     </div>
                   ) : null}

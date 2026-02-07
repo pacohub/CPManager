@@ -52,8 +52,13 @@ const WarningIcon: React.FC<WarningIconProps> = ({ tooltip, size = 15, style }) 
         aria-label={tooltip}
         tabIndex={0}
         onClick={e => {
+          e.preventDefault();
           e.stopPropagation();
           setShowTooltip(v => !v);
+        }}
+        onMouseDown={e => {
+          e.preventDefault();
+          e.stopPropagation();
         }}
         onBlur={() => setShowTooltip(false)}
       >
